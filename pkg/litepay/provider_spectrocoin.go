@@ -72,7 +72,7 @@ func (c *spectrocoin) Pay(cart Cart) (*Payment, error) {
 	var totalAmount float64
 	receiveCurrency := strings.ToUpper(cart.Currency)
 
-	if !findInSlice(c.currency, receiveCurrency) {
+	if !supportsCurrency(c.currency, receiveCurrency) {
 		return nil, errors.New("this currency is not supported")
 	}
 

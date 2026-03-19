@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/litecart/internal/mailer"
 	"github.com/shurco/litecart/internal/models"
@@ -41,8 +41,15 @@ func sendPaymentWebhook(event webhook.Event, paymentSystem litepay.PaymentSystem
 }
 
 // PaymentList returns a list of available payment systems.
-// [get] /api/cart/payment
-func PaymentList(c *fiber.Ctx) error {
+//
+// @Summary      List payment providers
+// @Description  Get active/inactive status of all payment providers
+// @Tags         Cart
+// @Produce      json
+// @Success      200 {object} webutil.HTTPResponse "Payment provider statuses"
+// @Failure      400 {object} webutil.HTTPResponse "Bad request"
+// @Router       /api/cart/payment [get]
+func PaymentList(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 	paymentList, err := db.PaymentList(c.Context())
@@ -55,8 +62,18 @@ func PaymentList(c *fiber.Ctx) error {
 }
 
 // GetCart returns cart information by cart_id.
-// [get] /api/cart/:cart_id
-func GetCart(c *fiber.Ctx) error {
+//
+// @Summary      Get cart (public)
+// @Description  Get cart details including product items by cart ID
+// @Tags         Cart
+// @Produce      json
+// @Param        cart_id path string true "Cart ID"
+// @Success      200 {object} webutil.HTTPResponse "Cart details"
+// @Failure      400 {object} webutil.HTTPResponse "Missing cart_id"
+// @Failure      404 {object} webutil.HTTPResponse "Cart not found"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/cart/{cart_id} [get]
+func GetCart(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 	cartID := c.Params("cart_id")
@@ -68,7 +85,7 @@ func GetCart(c *fiber.Ctx) error {
 	cart, err := db.Cart(c.Context(), cartID)
 	if err != nil {
 		log.ErrorStack(err)
-		if err == errors.ErrProductNotFound {
+		if errors.Is(err, errors.ErrProductNotFound) {
 			return webutil.StatusNotFound(c)
 		}
 		return webutil.StatusInternalServerError(c)
@@ -76,7 +93,7 @@ func GetCart(c *fiber.Ctx) error {
 
 	// Load full product information for cart items
 	// Pass cartID to include digital products purchased in this cart
-	var cartItems []map[string]interface{}
+	var cartItems []map[string]any
 	if len(cart.Cart) > 0 {
 		products, err := db.ListProducts(c.Context(), false, 0, 0, cartID, cart.Cart...)
 		if err != nil {
@@ -86,7 +103,7 @@ func GetCart(c *fiber.Ctx) error {
 		cartItems = queries.BuildCartItems(cart, products)
 	}
 
-	return webutil.Response(c, fiber.StatusOK, "Cart", map[string]interface{}{
+	return webutil.Response(c, fiber.StatusOK, "Cart", map[string]any{
 		"id":             cart.ID,
 		"email":          cart.Email,
 		"amount_total":   cart.AmountTotal,
@@ -98,13 +115,23 @@ func GetCart(c *fiber.Ctx) error {
 }
 
 // Payment initiates a payment process for a cart.
-// [post] /cart/payment
-func Payment(c *fiber.Ctx) error {
+//
+// @Summary      Initiate payment
+// @Description  Create a payment session and return a redirect URL for the selected provider
+// @Tags         Cart
+// @Accept       json
+// @Produce      json
+// @Param        request body models.CartPayment true "Payment request"
+// @Success      200 {object} webutil.HTTPResponse "Payment URL"
+// @Failure      400 {object} webutil.HTTPResponse "Validation error or dummy provider for paid cart"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /cart/payment [post]
+func Payment(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 	payment := new(models.CartPayment)
 
-	if err := c.BodyParser(payment); err != nil {
+	if err := c.Bind().Body(payment); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusBadRequest(c, err.Error())
 	}
@@ -234,6 +261,24 @@ func Payment(c *fiber.Ctx) error {
 		}
 		paymentURL = response.URL
 
+	case litepay.COINBASE:
+		setting, err := queries.GetSettingByGroup[models.Coinbase](c.Context(), db)
+		if err != nil {
+			log.ErrorStack(err)
+			return webutil.StatusInternalServerError(c)
+		}
+
+		if !setting.Active {
+			return webutil.Response(c, fiber.StatusOK, "Payment url", paymentURL)
+		}
+		session := pay.Coinbase(setting.ApiKey)
+		response, err := session.Pay(cart)
+		if err != nil {
+			log.ErrorStack(err)
+			return webutil.StatusInternalServerError(c)
+		}
+		paymentURL = response.URL
+
 	case litepay.DUMMY:
 		// Dummy provider is always active and only for free carts (already validated above)
 		session := pay.Dummy()
@@ -288,8 +333,19 @@ func Payment(c *fiber.Ctx) error {
 }
 
 // PaymentCallback handles payment callback from payment providers.
-// [post] /cart/payment/callback
-func PaymentCallback(c *fiber.Ctx) error {
+//
+// @Summary      Payment callback
+// @Description  Webhook endpoint for payment providers to report status changes
+// @Tags         Cart
+// @Accept       json
+// @Produce      plain
+// @Param        cart_id        query string true "Cart ID"
+// @Param        payment_system query string true "Payment system"
+// @Success      200 {string} string "*ok*"
+// @Failure      400 {object} webutil.HTTPResponse "Bad request"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /cart/payment/callback [post]
+func PaymentCallback(c fiber.Ctx) error {
 	log := logging.New()
 	payment := &litepay.Payment{
 		CartID:        c.Query("cart_id"),
@@ -301,7 +357,7 @@ func PaymentCallback(c *fiber.Ctx) error {
 	//	return webutil.Response(c, fiber.StatusOK, "Callback", payment)
 	case litepay.SPECTROCOIN:
 		response := new(litepay.CallbackSpectrocoin)
-		if err := c.BodyParser(response); err != nil {
+		if err := c.Bind().Body(response); err != nil {
 			log.ErrorStack(err)
 			return webutil.StatusBadRequest(c, err.Error())
 		}
@@ -344,8 +400,21 @@ func PaymentCallback(c *fiber.Ctx) error {
 }
 
 // PaymentSuccess handles successful payment redirects.
-// [get] /cart/payment/success
-func PaymentSuccess(c *fiber.Ctx) error {
+//
+// @Summary      Payment success
+// @Description  Handle successful payment redirect, verify with provider, and update cart
+// @Tags         Cart
+// @Produce      json
+// @Param        cart_id        query string true  "Cart ID"
+// @Param        payment_system query string true  "Payment system"
+// @Param        session        query string false "Stripe session ID"
+// @Param        token          query string false "PayPal token"
+// @Param        charge_id      query string false "Coinbase charge ID"
+// @Success      200 "Passes to SPA handler"
+// @Failure      400 {object} webutil.HTTPResponse "Validation error"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /cart/payment/success [get]
+func PaymentSuccess(c fiber.Ctx) error {
 	// Only process GET requests
 	if c.Method() != fiber.MethodGet {
 		return c.Next()
@@ -362,7 +431,7 @@ func PaymentSuccess(c *fiber.Ctx) error {
 	}
 
 	if err := payment.Validate(); err != nil {
-		return c.Redirect("/")
+		return c.Redirect().To("/")
 	}
 
 	db := queries.DB()
@@ -425,6 +494,28 @@ func PaymentSuccess(c *fiber.Ctx) error {
 	case litepay.SPECTROCOIN:
 		// Spectrocoin payment processing handled in callback
 
+	case litepay.COINBASE:
+		chargeID := c.Query("charge_id")
+		if chargeID == "" {
+			chargeID = payment.CartID // Fallback to cart ID if charge_id not provided
+		}
+		setting, err := queries.GetSettingByGroup[models.Coinbase](c.Context(), db)
+		if err != nil {
+			log.ErrorStack(err)
+			return webutil.StatusInternalServerError(c)
+		}
+
+		if !setting.Active {
+			return webutil.StatusNotFound(c)
+		}
+		response, err := litepay.New("", "", "").Coinbase(setting.ApiKey).Checkout(payment, chargeID)
+		if err != nil {
+			log.ErrorStack(err)
+			return webutil.StatusInternalServerError(c)
+		}
+		payment.MerchantID = response.MerchantID
+		payment.Status = response.Status
+
 	case litepay.DUMMY:
 		// Dummy provider is always active and only for free carts (already validated above)
 		response, err := litepay.New("", "", "").Dummy().Checkout(payment, "")
@@ -466,8 +557,17 @@ func PaymentSuccess(c *fiber.Ctx) error {
 }
 
 // PaymentCancel handles canceled payment redirects.
-// [get] /cart/payment/cancel
-func PaymentCancel(c *fiber.Ctx) error {
+//
+// @Summary      Payment cancel
+// @Description  Handle canceled payment, update cart status, and redirect to SPA
+// @Tags         Cart
+// @Produce      json
+// @Param        cart_id        query string false "Cart ID"
+// @Param        payment_system query string false "Payment system"
+// @Success      302 "Redirect to cancel page"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /cart/payment/cancel [get]
+func PaymentCancel(c fiber.Ctx) error {
 	// Only process GET requests
 	if c.Method() != fiber.MethodGet {
 		return c.Next()
@@ -503,5 +603,5 @@ func PaymentCancel(c *fiber.Ctx) error {
 			redirectURL += "&payment_system=" + string(payment.PaymentSystem)
 		}
 	}
-	return c.Redirect(redirectURL)
+	return c.Redirect().To(redirectURL)
 }

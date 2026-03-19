@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	stderrors "errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -23,7 +24,7 @@ type CartQueries struct {
 func (q *CartQueries) PaymentList(ctx context.Context) (map[string]bool, error) {
 	payments := map[string]bool{}
 	keys := []any{
-		"stripe_active", "paypal_active", "spectrocoin_active",
+		"stripe_active", "paypal_active", "spectrocoin_active", "coinbase_active",
 	}
 
 	query := fmt.Sprintf("SELECT key, value FROM setting WHERE key IN (%s)", strings.Repeat("?, ", len(keys)-1)+"?")
@@ -130,7 +131,7 @@ func (q *CartQueries) Carts(ctx context.Context, limit, offset int) ([]*models.C
 	// Count total records
 	var total int
 	err = q.DB.QueryRowContext(ctx, `SELECT COUNT(*) FROM cart`).Scan(&total)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !stderrors.Is(err, sql.ErrNoRows) {
 		return nil, 0, err
 	}
 
@@ -173,7 +174,7 @@ func (q *CartQueries) Cart(ctx context.Context, cartId string) (*models.Cart, er
 			&updated,
 		)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if stderrors.Is(err, sql.ErrNoRows) {
 			return nil, errors.ErrProductNotFound
 		}
 		return nil, err
@@ -200,7 +201,7 @@ func (q *CartQueries) Cart(ctx context.Context, cartId string) (*models.Cart, er
 }
 
 // BuildCartItems builds cart items with full product information
-func BuildCartItems(cart *models.Cart, products *models.Products) []map[string]interface{} {
+func BuildCartItems(cart *models.Cart, products *models.Products) []map[string]any {
 	if len(cart.Cart) == 0 || len(products.Products) == 0 {
 		return nil
 	}
@@ -210,14 +211,14 @@ func BuildCartItems(cart *models.Cart, products *models.Products) []map[string]i
 		productMap[products.Products[i].ID] = &products.Products[i]
 	}
 
-	cartItems := make([]map[string]interface{}, 0, len(cart.Cart))
+	cartItems := make([]map[string]any, 0, len(cart.Cart))
 	for _, cartItem := range cart.Cart {
 		product, ok := productMap[cartItem.ProductID]
 		if !ok {
 			continue
 		}
 
-		item := map[string]interface{}{
+		item := map[string]any{
 			"id":       product.ID,
 			"name":     product.Name,
 			"slug":     product.Slug,
@@ -250,7 +251,7 @@ func (q *CartQueries) AddCart(ctx context.Context, cart *models.Cart) error {
 // UpdateCart updates the cart details in the database.
 func (q *CartQueries) UpdateCart(ctx context.Context, cart *models.Cart) error {
 	var (
-		args []interface{}
+		args []any
 		sql  strings.Builder
 	)
 
@@ -309,7 +310,7 @@ func (q *CartQueries) CartLetterPurchase(ctx context.Context, cartID string) (*m
         WHERE payment_status = ? AND id = ?
     `, litepay.PAID, cartID).Scan(&mail.To, &cartJSON)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if stderrors.Is(err, sql.ErrNoRows) {
 			return nil, errors.ErrPageNotFound
 		}
 		return nil, err
@@ -334,7 +335,7 @@ func (q *CartQueries) CartLetterPurchase(ctx context.Context, cartID string) (*m
 		var digitalType string
 		err := tx.QueryRowContext(ctx, `SELECT digital FROM product WHERE id = ?`, cart.ProductID).Scan(&digitalType)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if stderrors.Is(err, sql.ErrNoRows) {
 				return nil, errors.ErrPageNotFound
 			}
 			return nil, err
@@ -361,10 +362,10 @@ func (q *CartQueries) CartLetterPurchase(ctx context.Context, cartID string) (*m
 			key := models.Data{}
 			err := tx.QueryRowContext(ctx, `SELECT id, content FROM digital_data WHERE cart_id = ?`, cartID).Scan(&key.ID, &key.Content)
 			if err != nil {
-				if err == sql.ErrNoRows {
+				if stderrors.Is(err, sql.ErrNoRows) {
 					err = tx.QueryRowContext(ctx, `SELECT id, content FROM digital_data WHERE cart_id IS NULL AND product_id = ? LIMIT 1`, cart.ProductID).Scan(&key.ID, &key.Content)
 					if err != nil {
-						if err == sql.ErrNoRows {
+						if stderrors.Is(err, sql.ErrNoRows) {
 							return nil, errors.ErrPageNotFound
 						}
 						return nil, err

@@ -11,15 +11,11 @@ import (
 	"encoding/pem"
 	"errors"
 	"io"
+	"slices"
 )
 
-func findInSlice(slice []string, value string) bool {
-	for _, val := range slice {
-		if val == value {
-			return true
-		}
-	}
-	return false
+func supportsCurrency(supported []string, currency string) bool {
+	return slices.Contains(supported, currency)
 }
 
 func signMessage(message, privKey string) (string, error) {
@@ -64,75 +60,56 @@ func parseBody(r io.Reader) (map[string]any, error) {
 	return data, nil
 }
 
+var (
+	stripeStatuses = map[string]Status{
+		"pay": PAID, "paid": PAID, "unpaid": UNPAID, "open": PROCESSED,
+		"complete": PAID, "expired": CANCELED, "requires_payment_method": FAILED,
+		"requires_confirmation": FAILED, "requires_action": FAILED,
+		"processing": PROCESSED, "requires_capture": PROCESSED,
+		"canceled": CANCELED, "succeeded": PAID,
+	}
+	paypalStatuses = map[string]Status{
+		"CREATED": PROCESSED, "SAVED": PROCESSED, "APPROVED": PROCESSED,
+		"VOIDED": CANCELED, "COMPLETED": PAID, "PAYER_ACTION_REQUIRED": PROCESSED,
+	}
+	spectrocoinStatuses = map[string]Status{
+		"1": UNPAID, "2": PROCESSED, "3": PAID, "4": FAILED, "5": FAILED, "6": TEST,
+	}
+	coinbaseStatuses = map[string]Status{
+		"NEW": UNPAID, "PENDING": PROCESSED, "COMPLETED": PAID,
+		"EXPIRED": CANCELED, "CANCELED": CANCELED, "RESOLVED": PAID, "UNRESOLVED": FAILED,
+	}
+	dummyStatuses = map[string]Status{
+		"paid": PAID,
+	}
+)
+
 // StatusPayment maps provider-specific payment statuses to internal Status values.
-// Each payment provider has its own status codes, and this function normalizes them
-// to the internal status system (NEW, UNPAID, PAID, CANCELED, FAILED, PROCESSED, TEST).
 //
 // Parameters:
-//   - system: The payment provider (STRIPE, PAYPAL, SPECTROCOIN, DUMMY)
+//   - system: The payment provider (STRIPE, PAYPAL, SPECTROCOIN, COINBASE, DUMMY)
 //   - status: The status string from the provider
 //
 // Returns:
 //   - Status: The normalized internal status (defaults to FAILED for unknown statuses)
-//
-// Example:
-//
-//	status := StatusPayment(STRIPE, "succeeded")
-//	// Returns: PAID
-//
-//	status := StatusPayment(PAYPAL, "COMPLETED")
-//	// Returns: PAID
 func StatusPayment(system PaymentSystem, status string) Status {
-	statusBase := map[string]Status{}
+	var statusBase map[string]Status
 
 	switch system {
 	case STRIPE:
-		statusBase = map[string]Status{
-			"pay":                     PAID,
-			"paid":                    PAID,
-			"unpaid":                  UNPAID,
-			"open":                    PROCESSED,
-			"complete":                PAID,
-			"expired":                 CANCELED,
-			"requires_payment_method": FAILED,
-			"requires_confirmation":   FAILED,
-			"requires_action":         FAILED,
-			"processing":              PROCESSED,
-			"requires_capture":        PROCESSED,
-			"canceled":                CANCELED,
-			"succeeded":               PAID,
-		}
-
+		statusBase = stripeStatuses
 	case PAYPAL:
-		statusBase = map[string]Status{
-			"CREATED":               PROCESSED,
-			"SAVED":                 PROCESSED,
-			"APPROVED":              PROCESSED,
-			"VOIDED":                CANCELED,
-			"COMPLETED":             PAID,
-			"PAYER_ACTION_REQUIRED": PROCESSED,
-		}
-
+		statusBase = paypalStatuses
 	case SPECTROCOIN:
-		statusBase = map[string]Status{
-			"1": UNPAID,    // new
-			"2": PROCESSED, // pending, Payment (or part of it) was received, but still waiting for confirmation
-			"3": PAID,      // paid, Order is completed
-			"4": FAILED,    // failed, Some error occurred
-			"5": FAILED,    // expired, Payment was not received in time
-			"6": TEST,      // test, Test order
-		}
-
+		statusBase = spectrocoinStatuses
+	case COINBASE:
+		statusBase = coinbaseStatuses
 	case DUMMY:
-		statusBase = map[string]Status{
-			"paid": PAID,
-		}
+		statusBase = dummyStatuses
 	}
 
-	statusTmp := statusBase[status]
-	if statusTmp == "" {
-		statusTmp = FAILED
+	if s := statusBase[status]; s != "" {
+		return s
 	}
-
-	return statusTmp
+	return FAILED
 }

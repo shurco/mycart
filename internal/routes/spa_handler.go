@@ -5,36 +5,34 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 const (
-	indexHTML     = "index.html"
+	indexHTML       = "index.html"
 	contentTypeHTML = "text/html"
 )
 
-// setupSPAHandler creates a handler for serving SPA static files
-func setupSPAHandler(embedFS fs.FS, skipPaths func(string) bool) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+func setupSPAHandler(embedFS fs.FS, skipPaths func(string) bool, stripPrefix string) fiber.Handler {
+	return func(c fiber.Ctx) error {
 		path := c.Path()
 
-		// Skip paths that should be handled by other routes
 		if skipPaths(path) {
 			return c.Next()
 		}
 
-		// Normalize path for fs.Open
+		if stripPrefix != "" {
+			path = strings.TrimPrefix(path, stripPrefix)
+		}
+
 		normalizedPath := normalizePath(path)
 
-		// Try to open the file from embed FS
 		file, err := embedFS.Open(normalizedPath)
 		if err == nil {
 			defer file.Close()
 
-			// Check if it's a directory
 			stat, err := file.Stat()
 			if err == nil && stat.IsDir() {
-				// For directories, serve index.html
 				file.Close()
 				file, err = embedFS.Open(indexHTML)
 				if err != nil {
@@ -44,19 +42,16 @@ func setupSPAHandler(embedFS fs.FS, skipPaths func(string) bool) fiber.Handler {
 				normalizedPath = indexHTML
 			}
 
-			// Determine content type and serve the file
 			ext := filepath.Ext(normalizedPath)
 			contentType := getContentType(ext)
 			c.Set("Content-Type", contentType)
 			return c.SendStream(file)
 		}
 
-		// If file not found and it's a static asset request, return 404
 		if isStaticAsset(normalizedPath) {
 			return c.Status(fiber.StatusNotFound).SendString("Not Found")
 		}
 
-		// For SPA routes, serve index.html
 		indexFile, err := embedFS.Open(indexHTML)
 		if err != nil {
 			return c.Next()
@@ -67,7 +62,6 @@ func setupSPAHandler(embedFS fs.FS, skipPaths func(string) bool) fiber.Handler {
 	}
 }
 
-// normalizePath converts URL path to filesystem path
 func normalizePath(path string) string {
 	if path == "" || path == "/" {
 		return indexHTML
@@ -75,7 +69,6 @@ func normalizePath(path string) string {
 	return strings.TrimPrefix(path, "/")
 }
 
-// isStaticAsset checks if the path is a static asset (JS, CSS, images, etc.)
 func isStaticAsset(path string) bool {
 	staticExts := map[string]bool{
 		".js": true, ".css": true, ".png": true, ".jpg": true, ".jpeg": true,
@@ -86,7 +79,6 @@ func isStaticAsset(path string) bool {
 	return staticExts[ext]
 }
 
-// getContentType returns the appropriate content type for a file extension
 func getContentType(ext string) string {
 	ext = strings.ToLower(ext)
 	contentTypes := map[string]string{

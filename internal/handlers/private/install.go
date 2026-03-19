@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/litecart/internal/models"
 	"github.com/shurco/litecart/internal/queries"
@@ -10,13 +10,23 @@ import (
 )
 
 // Install performs the initial installation of the application.
-// [post] /api/install
-func Install(c *fiber.Ctx) error {
+//
+// @Summary      Install application
+// @Description  Perform initial setup with admin credentials and domain
+// @Tags         Install
+// @Accept       json
+// @Produce      json
+// @Param        request body models.Install true "Installation data"
+// @Success      200 {object} webutil.HTTPResponse "Cart installed"
+// @Failure      400 {object} webutil.HTTPResponse "Validation error"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/install [post]
+func Install(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 	request := new(models.Install)
 
-	if err := c.BodyParser(request); err != nil {
+	if err := c.Bind().Body(request); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusBadRequest(c, err.Error())
 	}

@@ -48,7 +48,7 @@
       return
     }
 
-    await savePaymentSettings('stripe', settings, 'stripe')
+    await savePaymentSettings('stripe', settings)
   }
 
   async function handleToggleActive() {

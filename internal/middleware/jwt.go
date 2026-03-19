@@ -7,8 +7,9 @@ import (
 	"strings"
 	"time"
 
-	jwtMiddleware "github.com/gofiber/contrib/jwt"
-	"github.com/gofiber/fiber/v2"
+	jwtMiddleware "github.com/gofiber/contrib/v3/jwt"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/extractors"
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/shurco/litecart/internal/models"
@@ -16,24 +17,20 @@ import (
 	"github.com/shurco/litecart/pkg/webutil"
 )
 
-// JWTProtected returns a middleware function that validates JWT tokens.
-func JWTProtected() func(*fiber.Ctx) error {
+func JWTProtected() fiber.Handler {
 	config := jwtMiddleware.Config{
 		KeyFunc:      customKeyFunc(),
-		ContextKey:   "jwt",
 		ErrorHandler: jwtError,
-		TokenLookup:  "header:Authorization,cookie:token",
-		AuthScheme:   "Bearer",
+		Extractor:    extractors.Chain(extractors.FromAuthHeader("Bearer"), extractors.FromCookie("token")),
 	}
 
 	return jwtMiddleware.New(config)
 }
 
-func jwtError(c *fiber.Ctx, err error) error {
+func jwtError(c fiber.Ctx, err error) error {
 	path := strings.Split(c.Path(), "/")[1]
 	if path == "api" {
 		if err != nil {
-			// Map common JWT errors to appropriate status codes
 			if strings.Contains(err.Error(), "Missing") || strings.Contains(err.Error(), "malformed") {
 				return webutil.Response(c, http.StatusBadRequest, "bad request", "missing or malformed token")
 			}
@@ -41,27 +38,22 @@ func jwtError(c *fiber.Ctx, err error) error {
 		}
 	}
 
-	return c.Redirect("/_/signin")
+	return c.Redirect().To("/_/signin")
 }
 
 func customKeyFunc() jwt.Keyfunc {
-	return func(t *jwt.Token) (interface{}, error) {
-		// Set a timeout of 5 secs to prevent indefinite blocking
+	return func(t *jwt.Token) (any, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		db := queries.DB()
 		settingJWT, err := queries.GetSettingByGroup[models.JWT](ctx, db)
-		// Handles database errors when retrieving the JWT secret
 		if err != nil {
 			if ctx.Err() == context.DeadlineExceeded {
-				// Database time out
 				return nil, fmt.Errorf("database took too long to respond")
 			}
-			// Database error
 			return nil, fmt.Errorf("database error: %w", err)
 		}
-		//Add secret validation
 		if settingJWT.Secret == "" {
 			return nil, fmt.Errorf("JWT secret is empty or not configured")
 		}

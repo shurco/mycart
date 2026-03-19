@@ -45,7 +45,7 @@ func (c Cfg) Stripe(apiToken string) LitePay {
 
 func (c *stripe) Pay(cart Cart) (*Payment, error) {
 	currency := strings.ToUpper(cart.Currency)
-	if !findInSlice(c.currency, strings.ToUpper(currency)) {
+	if !supportsCurrency(c.currency, currency) {
 		return nil, errors.New("this currency is not supported")
 	}
 
@@ -81,6 +81,10 @@ func (c *stripe) Pay(cart Cart) (*Payment, error) {
 		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("the server returned an error")
+	}
 
 	data, err := parseBody(resp.Body)
 	if err != nil {

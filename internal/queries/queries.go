@@ -41,6 +41,18 @@ func New(embed embed.FS) (err error) {
 	return
 }
 
+// NewFromDB initializes Base from an existing *sql.DB (e.g. in-memory SQLite for tests).
+func NewFromDB(sqlite *sql.DB) {
+	db = &Base{
+		AuthQueries:    AuthQueries{DB: sqlite},
+		InstallQueries: InstallQueries{DB: sqlite},
+		SettingQueries: SettingQueries{DB: sqlite},
+		PageQueries:    PageQueries{DB: sqlite},
+		ProductQueries: ProductQueries{DB: sqlite},
+		CartQueries:    CartQueries{DB: sqlite},
+	}
+}
+
 // DB returns the Base instance. If the database is not initialized, returns nil.
 // Use New() to initialize the database before calling DB().
 func DB() *Base {

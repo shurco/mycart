@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_find_in_slice(t *testing.T) {
+func Test_supports_currency(t *testing.T) {
 	slice := []string{"apple", "banana", "cherry"}
 	cases := []struct {
 		slice  []string
@@ -25,7 +25,7 @@ func Test_find_in_slice(t *testing.T) {
 	}
 
 	for _, tt := range cases {
-		found := findInSlice(tt.slice, tt.value)
+		found := supportsCurrency(tt.slice, tt.value)
 		assert.Equal(t, tt.result, found)
 	}
 }
@@ -115,6 +115,14 @@ func Test_status_payment(t *testing.T) {
 		{SPECTROCOIN, "5", FAILED},
 		{SPECTROCOIN, "6", TEST},
 		{SPECTROCOIN, "", FAILED},
+		{COINBASE, "NEW", UNPAID},
+		{COINBASE, "PENDING", PROCESSED},
+		{COINBASE, "COMPLETED", PAID},
+		{COINBASE, "EXPIRED", CANCELED},
+		{COINBASE, "CANCELED", CANCELED},
+		{COINBASE, "RESOLVED", PAID},
+		{COINBASE, "UNRESOLVED", FAILED},
+		{COINBASE, "", FAILED},
 		{DUMMY, "paid", PAID},
 		{DUMMY, "", FAILED},
 	}

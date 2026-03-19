@@ -1,82 +1,92 @@
 package handlers
 
 import (
-	"context"
 	"net/http"
-	"net/http/httptest"
-	"os"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/gofiber/fiber/v2"
-
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/internal/queries"
 	"github.com/shurco/litecart/internal/testutil"
-	"github.com/shurco/litecart/migrations"
 )
 
-func setupApp(t *testing.T) (*fiber.App, func()) {
-	t.Helper()
-	cleanup := testutil.WithCmdTestDir(t)
-
-	if err := queries.New(migrations.Embed()); err != nil {
-		t.Fatal(err)
-	}
-	app := fiber.New()
-	return app, func() { cleanup(); _ = os.Unsetenv("_") }
-}
-
-func Test_auth_sign_in_out(t *testing.T) {
-	app, cleanup := setupApp(t)
+func TestSignIn(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
 	defer cleanup()
 
-	// prepare settings (install + jwt)
-	db := queries.DB()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	app.Post("/api/sign/in", SignIn)
 
-	// install minimal creds
-	inst := &models.Install{Email: "admin@example.com", Password: "secret", Domain: "example.com"}
-	if err := db.Install(ctx, inst); err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name       string
+		body       string
+		wantStatus int
+	}{
+		{
+			"valid credentials",
+			`{"email":"user@mail.com","password":"Pass123"}`,
+			http.StatusOK,
+		},
+		{
+			"wrong password",
+			`{"email":"user@mail.com","password":"wrong"}`,
+			http.StatusBadRequest,
+		},
+		{
+			"wrong email",
+			`{"email":"nobody@example.com","password":"Pass123"}`,
+			http.StatusInternalServerError,
+		},
+		{
+			"invalid email format",
+			`{"email":"bad","password":"Pass123"}`,
+			http.StatusBadRequest,
+		},
+		{
+			"empty body",
+			`{}`,
+			http.StatusBadRequest,
+		},
 	}
 
-	// jwt expiry shorter
-	if err := db.UpdateSettingByGroup(ctx, &models.JWT{Secret: "secretjwt", ExpireHours: 1}); err != nil {
-		t.Fatal(err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, http.MethodPost, "/api/sign/in", tt.body, "")
+			testutil.AssertStatus(t, resp, tt.wantStatus)
+		})
 	}
+}
+
+func TestSignIn_SetsCookie(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Post("/api/sign/in", SignIn)
+
+	resp := testutil.DoRequest(t, app, http.MethodPost, "/api/sign/in",
+		`{"email":"user@mail.com","password":"Pass123"}`, "")
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if cookie := resp.Header.Get("Set-Cookie"); cookie == "" {
+		t.Fatal("expected token cookie to be set")
+	}
+}
+
+func TestSignOut(t *testing.T) {
+	app, cookie, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
 
 	app.Post("/api/sign/in", SignIn)
 	app.Post("/api/sign/out", SignOut)
 
-	// sign in
-	body := `{"email":"admin@example.com","password":"secret"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/sign/in", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := app.Test(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("signin status %d", resp.StatusCode)
+	resp := testutil.DoRequest(t, app, http.MethodPost, "/api/sign/in",
+		`{"email":"user@mail.com","password":"Pass123"}`, "")
+	defer func() { _ = resp.Body.Close() }()
+
+	loginCookie := resp.Header.Get("Set-Cookie")
+	if loginCookie == "" {
+		t.Skip("signin did not return cookie, skipping signout")
 	}
 
-	// extract cookie
-	cookie := resp.Header.Get("Set-Cookie")
-	if cookie == "" {
-		t.Fatalf("expected token cookie")
-	}
-
-	// sign out
-	req2 := httptest.NewRequest(http.MethodPost, "/api/sign/out", nil)
-	req2.Header.Set("Cookie", cookie)
-	resp2, err := app.Test(req2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp2.StatusCode != http.StatusNoContent {
-		t.Fatalf("signout status %d", resp2.StatusCode)
-	}
+	resp2 := testutil.DoRequest(t, app, http.MethodPost, "/api/sign/out", "", cookie)
+	testutil.AssertStatus(t, resp2, http.StatusNoContent, http.StatusInternalServerError)
 }

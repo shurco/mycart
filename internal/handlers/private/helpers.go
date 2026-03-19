@@ -6,6 +6,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/google/uuid"
 
@@ -17,9 +18,7 @@ const (
 	dirDigitals = "./lc_digitals"
 )
 
-var (
-	validImageMIMETypes = []string{"image/png", "image/jpeg"}
-)
+var validImageMIMETypes = []string{"image/png", "image/jpeg"}
 
 // saveFile atomically saves the uploaded file to a temporary file, then renames it.
 func saveFile(file *multipart.FileHeader, filePath string) error {
@@ -53,14 +52,8 @@ func saveFile(file *multipart.FileHeader, filePath string) error {
 	return os.Rename(tmpPath, filePath)
 }
 
-// validateImageMIME checks if the file MIME type is a valid image.
 func validateImageMIME(mimeType string) bool {
-	for _, validMIME := range validImageMIMETypes {
-		if mimeType == validMIME {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(validImageMIMETypes, mimeType)
 }
 
 // generateFileName generates a unique file name with extension.

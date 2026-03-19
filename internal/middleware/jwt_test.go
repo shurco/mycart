@@ -1,59 +1,60 @@
 package middleware
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/internal/queries"
-	"github.com/shurco/litecart/migrations"
+	"github.com/shurco/litecart/internal/testutil"
 	"github.com/shurco/litecart/pkg/jwtutil"
 )
 
-func Test_jwt_protected_bearer_flow(t *testing.T) {
-	// init temp DB
+func TestJWTProtected(t *testing.T) {
+	_, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
 	app := fiber.New()
-	if err := queries.New(migrations.Embed()); err != nil {
-		t.Fatalf("init queries: %v", err)
-	}
-	db := queries.DB()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// write JWT settings
-	setting := &models.JWT{Secret: "secret", ExpireHours: 1}
-	if err := db.UpdateSettingByGroup(ctx, setting); err != nil {
-		t.Fatalf("update jwt setting: %v", err)
-	}
-
 	app.Use(JWTProtected())
-	app.Get("/api/test", func(c *fiber.Ctx) error { return c.SendStatus(200) })
+	app.Get("/api/test", func(c fiber.Ctx) error { return c.SendStatus(http.StatusOK) })
 
-	// no token → 401
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
-	resp, _ := app.Test(req)
-	if resp.StatusCode != http.StatusUnauthorized && resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected 401/400, got %d", resp.StatusCode)
+	validTok := mustGenerateToken(t, testutil.FixtureJWTSecret)
+	wrongTok := mustGenerateToken(t, "wrongsecret")
+
+	tests := []struct {
+		name        string
+		tokenHeader string
+		wantStatus  []int
+	}{
+		{"no token", "", []int{http.StatusUnauthorized, http.StatusBadRequest}},
+		{"valid token", "Bearer " + validTok, []int{http.StatusOK}},
+		{"invalid token", "Bearer badtoken", []int{http.StatusUnauthorized, http.StatusBadRequest}},
+		{"wrong secret", "Bearer " + wrongTok, []int{http.StatusUnauthorized, http.StatusBadRequest}},
 	}
 
-	// valid token
-	userID := uuid.NewString()
-	exp := time.Now().Add(time.Hour).Unix()
-	tok, err := jwtutil.GenerateNewToken("secret", userID, exp, nil)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+			if tt.tokenHeader != "" {
+				req.Header.Set("Authorization", tt.tokenHeader)
+			}
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatalf("app.Test: %v", err)
+			}
+			testutil.AssertStatus(t, resp, tt.wantStatus...)
+		})
+	}
+}
+
+func mustGenerateToken(t *testing.T, secret string) string {
+	t.Helper()
+	tok, err := jwtutil.GenerateNewToken(secret, uuid.NewString(), time.Now().Add(time.Hour).Unix(), nil)
 	if err != nil {
-		t.Fatalf("token gen: %v", err)
+		t.Fatalf("generate token: %v", err)
 	}
-
-	req2 := httptest.NewRequest(http.MethodGet, "/api/test", nil)
-	req2.Header.Set("Authorization", "Bearer "+tok)
-	resp2, _ := app.Test(req2)
-	if resp2.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", resp2.StatusCode)
-	}
+	return tok
 }

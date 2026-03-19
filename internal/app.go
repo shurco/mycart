@@ -14,7 +14,8 @@ import (
 
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/static"
 
 	"github.com/shurco/litecart/internal/middleware"
 	"github.com/shurco/litecart/internal/queries"
@@ -79,8 +80,7 @@ func determineSchemaAndAddr(httpAddr, httpsAddr string) (schema, mainAddr string
 // setupFiberApp configures and returns a Fiber application instance.
 func setupFiberApp(noSite bool) (*fiber.App, error) {
 	config := fiber.Config{
-		DisableStartupMessage: true,
-		BodyLimit:             DefaultBodyLimit,
+		BodyLimit: DefaultBodyLimit,
 	}
 
 	// Site is now a SPA, no need for HTML templates
@@ -93,8 +93,8 @@ func setupFiberApp(noSite bool) (*fiber.App, error) {
 
 // setupRoutes configures application routes.
 func setupRoutes(app *fiber.App, noSite bool) {
-	app.Static("/uploads", "./lc_uploads")
-	app.Static("/secrets", "./lc_digitals")
+	app.Use("/uploads", static.New("./lc_uploads"))
+	app.Use("/secrets", static.New("./lc_digitals"))
 
 	// Register API routes before SPA routes to ensure they are processed first
 	routes.ApiPrivateRoutes(app)
@@ -148,7 +148,7 @@ func startHTTPS(app *fiber.App, mainAddr, httpsAddr string) error {
 		os.Exit(1)
 	}
 
-	if err := app.Listener(ln); err != nil {
+	if err := app.Listener(ln, fiber.ListenConfig{DisableStartupMessage: true}); err != nil {
 		log.Err(err).Send()
 		os.Exit(1)
 	}
@@ -205,7 +205,7 @@ func handleShutdown(ctx context.Context, app *fiber.App, idleConnsClosed chan st
 }
 
 // InstallCheck checks the installation status and redirects to the installation page if necessary.
-func InstallCheck(c *fiber.Ctx) error {
+func InstallCheck(c fiber.Ctx) error {
 	db := queries.DB()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -221,10 +221,10 @@ func InstallCheck(c *fiber.Ctx) error {
 
 	if !install {
 		if !isInstallPath(path) {
-			return c.Redirect("/_/install")
+			return c.Redirect().To("/_/install")
 		}
 	} else if strings.HasPrefix(path, "/_/install") {
-		return c.Redirect("/_")
+		return c.Redirect().To("/_")
 	}
 
 	return c.Next()
@@ -245,7 +245,7 @@ func StartServer(ctx context.Context, addr string, a *fiber.App) error {
 	errCh := make(chan error)
 
 	go func() {
-		if err := a.Listen(addr); err != nil {
+		if err := a.Listen(addr, fiber.ListenConfig{DisableStartupMessage: true}); err != nil {
 			log.Err(err).Send()
 			errCh <- err
 		}

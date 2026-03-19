@@ -3,7 +3,7 @@ package handlers
 import (
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 
 	"github.com/shurco/litecart/internal/models"
@@ -15,13 +15,23 @@ import (
 )
 
 // SignIn authenticates a user and returns a JWT token.
-// [post] /api/sign/in
-func SignIn(c *fiber.Ctx) error {
+//
+// @Summary      Sign in
+// @Description  Authenticate admin user with email and password, returns JWT token
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        request body models.SignIn true "Credentials"
+// @Success      200 {object} webutil.HTTPResponse{result=string} "JWT token"
+// @Failure      400 {object} webutil.HTTPResponse "Invalid credentials or validation error"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/sign/in [post]
+func SignIn(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 	request := new(models.SignIn)
 
-	if err := c.BodyParser(request); err != nil {
+	if err := c.Bind().Body(request); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusBadRequest(c, err.Error())
 	}
@@ -69,15 +79,22 @@ func SignIn(c *fiber.Ctx) error {
 		Expires:  time.Unix(expires, 0),
 		HTTPOnly: true,
 		Secure:   c.Protocol() == "https",
-		SameSite: fiber.CookieSameSiteStrictMode,
+		SameSite: "Strict",
 	})
 
 	return webutil.StatusOK(c, "Token", token)
 }
 
 // SignOut invalidates the user session and clears the authentication token.
-// [post] /api/sign/out
-func SignOut(c *fiber.Ctx) error {
+//
+// @Summary      Sign out
+// @Description  Invalidate current session and clear token cookie
+// @Tags         Auth
+// @Security     BearerAuth
+// @Success      204 "Session invalidated"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/sign/out [post]
+func SignOut(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 
@@ -103,7 +120,7 @@ func SignOut(c *fiber.Ctx) error {
 		Expires:  time.Now().Add(-(time.Hour * 2)),
 		HTTPOnly: true,
 		Secure:   c.Protocol() == "https",
-		SameSite: fiber.CookieSameSiteStrictMode,
+		SameSite: "Strict",
 	})
 
 	return c.SendStatus(fiber.StatusNoContent)

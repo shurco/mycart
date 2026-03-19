@@ -2,24 +2,20 @@ package testutil
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 )
 
-// WithCmdTestDir changes CWD to tmp/test/<testName> and returns a cleanup func.
-// All relative artifacts (e.g., ./lc_base, ./lc_uploads) will be created inside it.
+// WithCmdTestDir changes CWD to a temp directory managed by t.TempDir().
+// Go automatically cleans it up when the test finishes.
+// All relative artifacts (e.g. ./lc_uploads) will be created inside it.
 func WithCmdTestDir(t *testing.T) func() {
 	t.Helper()
 	oldwd, _ := os.Getwd()
-	base := filepath.Join(oldwd, "tmp", "test", t.Name())
-	if err := os.MkdirAll(base, 0o775); err != nil {
-		t.Fatalf("failed to create %s: %v", base, err)
-	}
-	if err := os.Chdir(base); err != nil {
-		t.Fatalf("failed to chdir to %s: %v", base, err)
+	tmpDir := t.TempDir()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("chdir to %s: %v", tmpDir, err)
 	}
 	return func() {
 		_ = os.Chdir(oldwd)
-		_ = os.RemoveAll(filepath.Join(oldwd, "tmp", "test", t.Name()))
 	}
 }

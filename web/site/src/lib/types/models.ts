@@ -50,4 +50,5 @@ export interface PaymentMethods {
   stripe?: boolean
   paypal?: boolean
   spectrocoin?: boolean
+  coinbase?: boolean
 }

@@ -3,6 +3,7 @@ package queries
 import (
 	"context"
 	"database/sql"
+	stderrors "errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -67,6 +68,11 @@ func (q *SettingQueries) GroupFieldMap(settings any) map[string]any {
 			"spectrocoin_project_id":  &s.ProjectID,
 			"spectrocoin_private_key": &s.PrivateKey,
 			"spectrocoin_active":      &s.Active,
+		}
+	case *models.Coinbase:
+		return map[string]any{
+			"coinbase_api_key": &s.ApiKey,
+			"coinbase_active":  &s.Active,
 		}
 	case *models.Dummy:
 		return map[string]any{
@@ -158,6 +164,7 @@ func (q *SettingQueries) GetSettingByGroup(ctx context.Context, settings any) (a
 
 // UpdateSettingByGroup updates the settings in the database using a transaction.
 // It takes a context and a settings object of any type as arguments.
+// Creates new settings if they don't exist, updates existing ones otherwise.
 func (q *SettingQueries) UpdateSettingByGroup(ctx context.Context, settings any) error {
 	fieldMap := q.GroupFieldMap(settings)
 
@@ -167,16 +174,53 @@ func (q *SettingQueries) UpdateSettingByGroup(ctx context.Context, settings any)
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	query := `UPDATE setting SET value = ? WHERE key = ?`
-	stmt, err := tx.PrepareContext(ctx, query)
+	updateStmt, err := tx.PrepareContext(ctx, `UPDATE setting SET value = ? WHERE key = ?`)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = stmt.Close() }()
+	defer func() { _ = updateStmt.Close() }()
 
-	for key, value := range fieldMap {
-		if _, err = stmt.ExecContext(ctx, value, key); err != nil {
+	insertStmt, err := tx.PrepareContext(ctx, `INSERT INTO setting (id, key, value) VALUES (?, ?, ?)`)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = insertStmt.Close() }()
+
+	checkStmt, err := tx.PrepareContext(ctx, `SELECT id FROM setting WHERE key = ?`)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = checkStmt.Close() }()
+
+	for key, valuePtr := range fieldMap {
+		var value string
+		switch v := valuePtr.(type) {
+		case *string:
+			value = *v
+		case *bool:
+			value = strconv.FormatBool(*v)
+		case *int:
+			value = strconv.Itoa(*v)
+		default:
+			continue
+		}
+
+		// Check if setting exists
+		var existingID string
+		err := checkStmt.QueryRowContext(ctx, key).Scan(&existingID)
+		if stderrors.Is(err, sql.ErrNoRows) {
+			// Setting doesn't exist, insert new one
+			newID := security.RandomString()
+			if _, err = insertStmt.ExecContext(ctx, newID, key, value); err != nil {
+				return err
+			}
+		} else if err != nil {
 			return err
+		} else {
+			// Setting exists, update it
+			if _, err = updateStmt.ExecContext(ctx, value, key); err != nil {
+				return err
+			}
 		}
 	}
 

@@ -68,16 +68,8 @@
       const res = await apiGet<PaymentMethods>('/api/cart/payment')
       if (res.success && res.result) {
         payments = res.result
-
-        // Don't auto-select provider - user must explicitly choose
-        if (!hasPaymentProviders(payments)) {
-          removeLocalStorage('provider')
-          provider = ''
-        } else {
-          // Reset provider - user must choose explicitly
-          provider = ''
-          removeLocalStorage('provider')
-        }
+        provider = ''
+        removeLocalStorage('provider')
       } else {
         throw new Error(res.message || 'Failed to load payment methods')
       }
@@ -101,9 +93,7 @@
     // Don't auto-set provider for free carts on mount to prevent accidental checkout
   })
 
-  // Computed values instead of functions - more efficient
   let showPayments = $derived(!isFree && hasPaymentProviders(payments))
-  let showSelectPayments = $derived(!isFree && hasPaymentProviders(payments))
 
   // Computed value instead of function
   let totalCartAmount = $derived(costFormat(cartTotal) === 'free' ? t('product.free') : costFormat(cartTotal))
@@ -114,21 +104,9 @@
     setLocalStorage('email', email)
     error = undefined
 
-    // Recalculate cart total right before checkout to ensure accuracy
-    const currentCartTotal = cart.reduce((sum, item) => sum + item.amount, 0)
-    const currentIsFree = currentCartTotal === 0
+    const finalProvider = isFree ? 'dummy' : provider
 
-    // Determine final provider based on current cart state
-    const finalProvider = currentIsFree ? 'dummy' : provider
-    
-    // Validate: don't allow dummy provider for paid carts
-    if (!currentIsFree && finalProvider === 'dummy') {
-      error = t('cart.selectPaymentErrorPaid')
-      showOverlay = true
-      return
-    }
-    
-    if (!currentIsFree && !finalProvider) {
+    if (!isFree && !finalProvider) {
       error = t('cart.selectPaymentError')
       showOverlay = true
       return
@@ -274,7 +252,7 @@
             </div>
 
             <!-- Payment Provider Selection -->
-            {#if showSelectPayments}
+            {#if showPayments}
               <div class="mt-16 mb-8">
                 <h2 class="mb-6 text-3xl font-black tracking-tighter text-black uppercase">{t('cart.selectPaymentSystem')}</h2>
                 <fieldset class="space-y-4">
@@ -319,6 +297,25 @@
                       >
                         <p class="mb-2 text-xl font-black tracking-tight text-black uppercase">{t('cart.spectrocoin')}</p>
                         <p class="text-lg text-black">{t('cart.spectrocoinDescription')}</p>
+                      </label>
+                    </div>
+                  {/if}
+
+                  {#if payments.coinbase}
+                    <div>
+                      <input
+                        type="radio"
+                        bind:group={provider}
+                        value="coinbase"
+                        id="coinbase"
+                        class="peer hidden"
+                      />
+                      <label
+                        for="coinbase"
+                        class="block cursor-pointer border-4 border-black bg-white p-6 peer-checked:border-yellow-300 peer-checked:bg-yellow-300"
+                      >
+                        <p class="mb-2 text-xl font-black tracking-tight text-black uppercase">{t('cart.coinbase')}</p>
+                        <p class="text-lg text-black">{t('cart.coinbaseDescription')}</p>
                       </label>
                     </div>
                   {/if}

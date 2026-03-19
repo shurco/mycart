@@ -55,6 +55,7 @@ Add SVG logos to `web/site/static/assets/img/payments/`:
 - `stripe.svg`
 - `paypal.svg`
 - `spectrocoin.svg`
+- `coinbase.svg`
 
 Then in the component:
 
@@ -100,7 +101,7 @@ Replace `class="space-y-4"` with grid:
 Create `web/site/src/lib/config/payment.ts`:
 
 ```typescript
-export const PAYMENT_PROVIDER_ORDER = ['stripe', 'paypal', 'spectrocoin'] as const;
+export const PAYMENT_PROVIDER_ORDER = ['stripe', 'paypal', 'spectrocoin', 'coinbase'] as const;
 
 export const PAYMENT_PROVIDER_INFO = {
   stripe: {
@@ -122,6 +123,12 @@ export const PAYMENT_PROVIDER_INFO = {
     description: 'Cryptocurrencies',
     icon: '/assets/img/payments/spectrocoin.svg',
     fee: 'From 1%'
+  },
+  coinbase: {
+    name: 'Coinbase Commerce',
+    description: 'Cryptocurrencies via Coinbase',
+    icon: '/assets/img/payments/coinbase.svg',
+    fee: '1%'
   }
 };
 ```
@@ -215,6 +222,8 @@ All texts are stored in `web/site/src/lib/i18n/locales/`:
     "paypalDescription": "PayPal account or card",
     "spectrocoin": "Cryptocurrency",
     "spectrocoinDescription": "Bitcoin, Ethereum, and more",
+    "coinbase": "Coinbase Commerce",
+    "coinbaseDescription": "Pay with Bitcoin, Ethereum, and other crypto",
     "paymentSecure": "🔒 All payments are secure and encrypted",
     "recommended": "Recommended"
   }

@@ -7,6 +7,7 @@ export const MIN_PRIVATE_KEY_LENGTH = 1500
 export const MIN_SECRET_KEY_LENGTH = 100
 export const MIN_CLIENT_ID_LENGTH = 80
 export const MIN_PAYPAL_SECRET_KEY_LENGTH = 80
+export const MIN_COINBASE_API_KEY_LENGTH = 20
 
 // Error messages
 export const ERROR_MESSAGES = {
@@ -18,6 +19,7 @@ export const ERROR_MESSAGES = {
   SECRET_KEY_TOO_SHORT: `Secret key must be at least ${MIN_SECRET_KEY_LENGTH} characters`,
   CLIENT_ID_TOO_SHORT: `Client ID must be at least ${MIN_CLIENT_ID_LENGTH} characters`,
   PAYPAL_SECRET_KEY_TOO_SHORT: `Secret key must be at least ${MIN_PAYPAL_SECRET_KEY_LENGTH} characters`,
+  COINBASE_API_KEY_TOO_SHORT: `API key must be at least ${MIN_COINBASE_API_KEY_LENGTH} characters`,
   AMOUNT_INVALID: 'Amount must be a non-negative number',
   DIGITAL_TYPE_REQUIRED: 'Digital type is required'
 } as const

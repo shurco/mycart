@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/litecart/internal/models"
 	"github.com/shurco/litecart/internal/queries"
@@ -11,13 +11,23 @@ import (
 )
 
 // Pages returns a list of all pages.
-// [get] /api/_/pages
-func Pages(c *fiber.Ctx) error {
+//
+// @Summary      List pages
+// @Description  Get paginated list of all pages (including inactive)
+// @Tags         Pages
+// @Security     BearerAuth
+// @Produce      json
+// @Param        page  query int false "Page number" default(1)
+// @Param        limit query int false "Items per page" default(20)
+// @Success      200 {object} webutil.HTTPResponse "Pages list with pagination"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/pages [get]
+func Pages(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 
-	page := c.QueryInt("page", 1)
-	limit := c.QueryInt("limit", 20)
+	page := fiber.Query[int](c, "page", 1)
+	limit := fiber.Query[int](c, "limit", 20)
 	if page < 1 {
 		page = 1
 	}
@@ -37,22 +47,32 @@ func Pages(c *fiber.Ctx) error {
 
 	return webutil.Response(c, fiber.StatusOK, "Pages", map[string]any{
 		"pages": pages,
-		"total":  total,
-		"page":   page,
-		"limit":  limit,
+		"total": total,
+		"page":  page,
+		"limit": limit,
 	})
 }
 
 // GetPage returns a single page by ID.
-// [get] /api/_/pages/:page_id
-func GetPage(c *fiber.Ctx) error {
+//
+// @Summary      Get page
+// @Description  Get a single page by its ID
+// @Tags         Pages
+// @Security     BearerAuth
+// @Produce      json
+// @Param        page_id path string true "Page ID"
+// @Success      200 {object} webutil.HTTPResponse{result=models.Page} "Page details"
+// @Failure      404 {object} webutil.HTTPResponse "Page not found"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/pages/{page_id} [get]
+func GetPage(c fiber.Ctx) error {
 	pageID := c.Params("page_id")
 	db := queries.DB()
 	log := logging.New()
 
 	page, err := db.PageByID(c.Context(), pageID)
 	if err != nil {
-		if err == errors.ErrPageNotFound {
+		if errors.Is(err, errors.ErrPageNotFound) {
 			return webutil.StatusNotFound(c)
 		}
 		log.ErrorStack(err)
@@ -63,13 +83,24 @@ func GetPage(c *fiber.Ctx) error {
 }
 
 // AddPage creates a new page.
-// [post] /api/_/pages
-func AddPage(c *fiber.Ctx) error {
+//
+// @Summary      Create page
+// @Description  Create a new page with name, slug, and optional content
+// @Tags         Pages
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request body models.Page true "Page data"
+// @Success      200 {object} webutil.HTTPResponse{result=models.Page} "Created page"
+// @Failure      400 {object} webutil.HTTPResponse "Validation error"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/pages [post]
+func AddPage(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 	request := new(models.Page)
 
-	if err := c.BodyParser(request); err != nil {
+	if err := c.Bind().Body(request); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusBadRequest(c, err.Error())
 	}
@@ -84,15 +115,27 @@ func AddPage(c *fiber.Ctx) error {
 }
 
 // UpdatePage updates an existing page.
-// [patch] /api/_/pages/:page_id
-func UpdatePage(c *fiber.Ctx) error {
+//
+// @Summary      Update page
+// @Description  Update page metadata (name, slug, position, SEO)
+// @Tags         Pages
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        page_id path string true "Page ID"
+// @Param        request body models.Page true "Page data"
+// @Success      200 {object} webutil.HTTPResponse "Page updated"
+// @Failure      400 {object} webutil.HTTPResponse "Validation error"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/pages/{page_id} [patch]
+func UpdatePage(c fiber.Ctx) error {
 	pageID := c.Params("page_id")
 	db := queries.DB()
 	log := logging.New()
 	request := new(models.Page)
 	request.ID = pageID
 
-	if err := c.BodyParser(request); err != nil {
+	if err := c.Bind().Body(request); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusBadRequest(c, err.Error())
 	}
@@ -106,8 +149,17 @@ func UpdatePage(c *fiber.Ctx) error {
 }
 
 // DeletePage deletes a page by ID.
-// [delete] /api/_/pages/:page_id
-func DeletePage(c *fiber.Ctx) error {
+//
+// @Summary      Delete page
+// @Description  Delete a page by its ID
+// @Tags         Pages
+// @Security     BearerAuth
+// @Produce      json
+// @Param        page_id path string true "Page ID"
+// @Success      200 {object} webutil.HTTPResponse "Page deleted"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/pages/{page_id} [delete]
+func DeletePage(c fiber.Ctx) error {
 	pageID := c.Params("page_id")
 	db := queries.DB()
 	log := logging.New()
@@ -121,8 +173,20 @@ func DeletePage(c *fiber.Ctx) error {
 }
 
 // UpdatePageContent updates the content of a page.
-// [patch] /api/_/pages/:page_id/content
-func UpdatePageContent(c *fiber.Ctx) error {
+//
+// @Summary      Update page content
+// @Description  Update only the HTML content of a page
+// @Tags         Pages
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        page_id path string true "Page ID"
+// @Param        request body object{content=string} true "Content"
+// @Success      200 {object} webutil.HTTPResponse "Content updated"
+// @Failure      400 {object} webutil.HTTPResponse "Validation error"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/pages/{page_id}/content [patch]
+func UpdatePageContent(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 	pageID := c.Params("page_id")
@@ -133,7 +197,7 @@ func UpdatePageContent(c *fiber.Ctx) error {
 		},
 	}
 
-	if err := c.BodyParser(request); err != nil {
+	if err := c.Bind().Body(request); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusBadRequest(c, err.Error())
 	}
@@ -147,8 +211,17 @@ func UpdatePageContent(c *fiber.Ctx) error {
 }
 
 // UpdatePageActive updates the active status of a page.
-// [patch] /api/_/pages/:page_id/active
-func UpdatePageActive(c *fiber.Ctx) error {
+//
+// @Summary      Toggle page active
+// @Description  Toggle the active/inactive status of a page
+// @Tags         Pages
+// @Security     BearerAuth
+// @Produce      json
+// @Param        page_id path string true "Page ID"
+// @Success      200 {object} webutil.HTTPResponse{result=models.Page} "Updated page"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/pages/{page_id}/active [patch]
+func UpdatePageActive(c fiber.Ctx) error {
 	pageID := c.Params("page_id")
 	db := queries.DB()
 	log := logging.New()

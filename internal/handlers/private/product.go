@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/disintegration/imaging"
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/litecart/internal/models"
 	"github.com/shurco/litecart/internal/queries"
@@ -14,13 +14,23 @@ import (
 )
 
 // Products returns a list of all products.
-// [get] /api/_/products
-func Products(c *fiber.Ctx) error {
+//
+// @Summary      List products
+// @Description  Get paginated list of all products (including inactive)
+// @Tags         Products
+// @Security     BearerAuth
+// @Produce      json
+// @Param        page  query int false "Page number" default(1)
+// @Param        limit query int false "Items per page" default(20)
+// @Success      200 {object} webutil.HTTPResponse{result=models.Products} "Products list"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products [get]
+func Products(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 
-	page := c.QueryInt("page", 1)
-	limit := c.QueryInt("limit", 20)
+	page := fiber.Query[int](c, "page", 1)
+	limit := fiber.Query[int](c, "limit", 20)
 	if page < 1 {
 		page = 1
 	}
@@ -42,13 +52,24 @@ func Products(c *fiber.Ctx) error {
 }
 
 // AddProduct creates a new product.
-// [post] /api/_/products
-func AddProduct(c *fiber.Ctx) error {
+//
+// @Summary      Create product
+// @Description  Create a new product with name, slug, price, and digital type
+// @Tags         Products
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request body models.Product true "Product data"
+// @Success      200 {object} webutil.HTTPResponse{result=models.Product} "Created product"
+// @Failure      400 {object} webutil.HTTPResponse "Validation error"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products [post]
+func AddProduct(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 	request := &models.Product{}
 
-	if err := c.BodyParser(request); err != nil {
+	if err := c.Bind().Body(request); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusBadRequest(c, err.Error())
 	}
@@ -74,8 +95,17 @@ func AddProduct(c *fiber.Ctx) error {
 }
 
 // Product returns a single product by ID.
-// [get] /api/_/products/:product_id
-func Product(c *fiber.Ctx) error {
+//
+// @Summary      Get product
+// @Description  Get a single product by its ID (including inactive)
+// @Tags         Products
+// @Security     BearerAuth
+// @Produce      json
+// @Param        product_id path string true "Product ID"
+// @Success      200 {object} webutil.HTTPResponse{result=models.Product} "Product details"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products/{product_id} [get]
+func Product(c fiber.Ctx) error {
 	productID := c.Params("product_id")
 	db := queries.DB()
 	log := logging.New()
@@ -90,15 +120,27 @@ func Product(c *fiber.Ctx) error {
 }
 
 // UpdateProduct updates an existing product.
-// [patch] /api/_/products/:product_id
-func UpdateProduct(c *fiber.Ctx) error {
+//
+// @Summary      Update product
+// @Description  Update product metadata and return the updated product
+// @Tags         Products
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        product_id path string true "Product ID"
+// @Param        request body models.Product true "Product data"
+// @Success      200 {object} webutil.HTTPResponse{result=models.Product} "Updated product"
+// @Failure      400 {object} webutil.HTTPResponse "Validation error"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products/{product_id} [patch]
+func UpdateProduct(c fiber.Ctx) error {
 	productID := c.Params("product_id")
 	db := queries.DB()
 	log := logging.New()
 	request := new(models.Product)
 	request.ID = productID
 
-	if err := c.BodyParser(request); err != nil {
+	if err := c.Bind().Body(request); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusBadRequest(c, err.Error())
 	}
@@ -119,8 +161,17 @@ func UpdateProduct(c *fiber.Ctx) error {
 }
 
 // DeleteProduct deletes a product by ID.
-// [delete] /api/_/products/:product_id
-func DeleteProduct(c *fiber.Ctx) error {
+//
+// @Summary      Delete product
+// @Description  Delete a product by its ID
+// @Tags         Products
+// @Security     BearerAuth
+// @Produce      json
+// @Param        product_id path string true "Product ID"
+// @Success      200 {object} webutil.HTTPResponse "Product deleted"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products/{product_id} [delete]
+func DeleteProduct(c fiber.Ctx) error {
 	productID := c.Params("product_id")
 	db := queries.DB()
 	log := logging.New()
@@ -134,8 +185,17 @@ func DeleteProduct(c *fiber.Ctx) error {
 }
 
 // UpdateProductActive updates the active status of a product.
-// [patch] /api/_/products/:product_id/active
-func UpdateProductActive(c *fiber.Ctx) error {
+//
+// @Summary      Toggle product active
+// @Description  Toggle the active/inactive status of a product
+// @Tags         Products
+// @Security     BearerAuth
+// @Produce      json
+// @Param        product_id path string true "Product ID"
+// @Success      200 {object} webutil.HTTPResponse "Product active updated"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products/{product_id}/active [patch]
+func UpdateProductActive(c fiber.Ctx) error {
 	productID := c.Params("product_id")
 	db := queries.DB()
 	log := logging.New()
@@ -149,8 +209,17 @@ func UpdateProductActive(c *fiber.Ctx) error {
 }
 
 // ProductImages returns a list of images for a product.
-// [get] /api/_/products/:product_id/image
-func ProductImages(c *fiber.Ctx) error {
+//
+// @Summary      List product images
+// @Description  Get all images for a product
+// @Tags         Products
+// @Security     BearerAuth
+// @Produce      json
+// @Param        product_id path string true "Product ID"
+// @Success      200 {object} webutil.HTTPResponse{result=[]models.File} "Product images"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products/{product_id}/image [get]
+func ProductImages(c fiber.Ctx) error {
 	productID := c.Params("product_id")
 	db := queries.DB()
 	log := logging.New()
@@ -165,8 +234,20 @@ func ProductImages(c *fiber.Ctx) error {
 }
 
 // AddProductImage uploads and adds an image to a product.
-// [post] /api/_/products/:product_id/image
-func AddProductImage(c *fiber.Ctx) error {
+//
+// @Summary      Upload product image
+// @Description  Upload an image (PNG/JPEG) and create sm (147x147) and md (400x400) variants
+// @Tags         Products
+// @Security     BearerAuth
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        product_id path string true "Product ID"
+// @Param        document   formData file true "Image file (PNG or JPEG)"
+// @Success      200 {object} webutil.HTTPResponse{result=models.File} "Added image"
+// @Failure      400 {object} webutil.HTTPResponse "Invalid file format"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products/{product_id}/image [post]
+func AddProductImage(c fiber.Ctx) error {
 	productID := c.Params("product_id")
 	db := queries.DB()
 	log := logging.New()
@@ -224,8 +305,18 @@ func AddProductImage(c *fiber.Ctx) error {
 }
 
 // DeleteProductImage deletes an image from a product.
-// [delete] /api/_/products/:product_id/image/:image_id
-func DeleteProductImage(c *fiber.Ctx) error {
+//
+// @Summary      Delete product image
+// @Description  Delete a product image by product and image ID
+// @Tags         Products
+// @Security     BearerAuth
+// @Produce      json
+// @Param        product_id path string true "Product ID"
+// @Param        image_id   path string true "Image ID"
+// @Success      200 {object} webutil.HTTPResponse "Image deleted"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products/{product_id}/image/{image_id} [delete]
+func DeleteProductImage(c fiber.Ctx) error {
 	productID := c.Params("product_id")
 	imageID := c.Params("image_id")
 	db := queries.DB()
@@ -240,15 +331,25 @@ func DeleteProductImage(c *fiber.Ctx) error {
 }
 
 // ProductDigital returns digital content for a product.
-// [get] /api/_/products/:product_id/digital
-func ProductDigital(c *fiber.Ctx) error {
+//
+// @Summary      Get product digital content
+// @Description  Get digital files or license keys for a product
+// @Tags         Products
+// @Security     BearerAuth
+// @Produce      json
+// @Param        product_id path string true "Product ID"
+// @Success      200 {object} webutil.HTTPResponse{result=models.Digital} "Digital content"
+// @Failure      404 {object} webutil.HTTPResponse "Product not found"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products/{product_id}/digital [get]
+func ProductDigital(c fiber.Ctx) error {
 	productID := c.Params("product_id")
 	db := queries.DB()
 	log := logging.New()
 
 	digital, err := db.ProductDigital(c.Context(), productID)
 	if err != nil {
-		if err == errors.ErrProductNotFound {
+		if errors.Is(err, errors.ErrProductNotFound) {
 			return webutil.StatusNotFound(c)
 		}
 		log.ErrorStack(err)
@@ -259,8 +360,19 @@ func ProductDigital(c *fiber.Ctx) error {
 }
 
 // AddProductDigital adds digital content (file or data) to a product.
-// [post] /api/_/products/:product_id/digital
-func AddProductDigital(c *fiber.Ctx) error {
+//
+// @Summary      Add product digital content
+// @Description  Upload a digital file or create a license key entry
+// @Tags         Products
+// @Security     BearerAuth
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        product_id path string true "Product ID"
+// @Param        document   formData file false "Digital file"
+// @Success      200 {object} webutil.HTTPResponse "Digital content added"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products/{product_id}/digital [post]
+func AddProductDigital(c fiber.Ctx) error {
 	productID := c.Params("product_id")
 	db := queries.DB()
 	log := logging.New()
@@ -295,15 +407,28 @@ func AddProductDigital(c *fiber.Ctx) error {
 }
 
 // UpdateProductDigital updates digital content for a product.
-// [patch] /api/_/products/:product_id/digital/:digital_id
-func UpdateProductDigital(c *fiber.Ctx) error {
+//
+// @Summary      Update product digital content
+// @Description  Update the content of a digital data entry (license key)
+// @Tags         Products
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        product_id path string true "Product ID"
+// @Param        digital_id path string true "Digital ID"
+// @Param        request    body models.Data true "Digital data"
+// @Success      200 {object} webutil.HTTPResponse "Digital content updated"
+// @Failure      400 {object} webutil.HTTPResponse "Validation error"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products/{product_id}/digital/{digital_id} [patch]
+func UpdateProductDigital(c fiber.Ctx) error {
 	request := new(models.Data)
 	request.ID = c.Params("digital_id")
 	// request.Content = c.Params("digital_id")
 	db := queries.DB()
 	log := logging.New()
 
-	if err := c.BodyParser(request); err != nil {
+	if err := c.Bind().Body(request); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusBadRequest(c, err.Error())
 	}
@@ -317,8 +442,18 @@ func UpdateProductDigital(c *fiber.Ctx) error {
 }
 
 // DeleteProductDigital deletes digital content from a product.
-// [delete] /api/_/products/:product_id/digital/:digital_id
-func DeleteProductDigital(c *fiber.Ctx) error {
+//
+// @Summary      Delete product digital content
+// @Description  Delete a digital content entry by product and digital ID
+// @Tags         Products
+// @Security     BearerAuth
+// @Produce      json
+// @Param        product_id path string true "Product ID"
+// @Param        digital_id path string true "Digital ID"
+// @Success      200 {object} webutil.HTTPResponse "Digital content deleted"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/products/{product_id}/digital/{digital_id} [delete]
+func DeleteProductDigital(c fiber.Ctx) error {
 	productID := c.Params("product_id")
 	digitalID := c.Params("digital_id")
 	db := queries.DB()

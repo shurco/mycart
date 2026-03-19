@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/litecart/internal/models"
 	"github.com/shurco/litecart/internal/queries"
@@ -10,14 +10,27 @@ import (
 )
 
 // Ping returns a pong response for health checks.
-// [get] /ping
-func Ping(c *fiber.Ctx) error {
+//
+// @Summary      Health check
+// @Description  Returns pong for liveness probes
+// @Tags         Public
+// @Produce      json
+// @Success      200 {object} webutil.HTTPResponse "Pong"
+// @Router       /ping [get]
+func Ping(c fiber.Ctx) error {
 	return webutil.Response(c, fiber.StatusOK, "Pong", nil)
 }
 
 // Settings returns public settings including main, social, payment, and pages.
-// [get] /api/settings
-func Settings(c *fiber.Ctx) error {
+//
+// @Summary      Get public settings
+// @Description  Get site name, domain, currency, social links, and published pages
+// @Tags         Public
+// @Produce      json
+// @Success      200 {object} webutil.HTTPResponse "Public settings"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/settings [get]
+func Settings(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 

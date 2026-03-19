@@ -1,6 +1,7 @@
 package litepay
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -48,7 +49,7 @@ func (c *paypal) Pay(cart Cart) (*Payment, error) {
 	var totalAmount float64
 
 	currency := strings.ToUpper(cart.Currency)
-	if !findInSlice(c.currency, strings.ToUpper(currency)) {
+	if !supportsCurrency(c.currency, currency) {
 		return nil, errors.New("this currency is not supported")
 	}
 
@@ -82,11 +83,11 @@ func (c *paypal) Pay(cart Cart) (*Payment, error) {
 		},
 	}
 
-	orderJson, err := json.Marshal(order)
+	orderJSON, err := json.Marshal(order)
 	if err != nil {
 		return nil, err
 	}
-	body := strings.NewReader(string(orderJson))
+	body := bytes.NewReader(orderJSON)
 
 	req, err := http.NewRequest(
 		http.MethodPost,
@@ -211,6 +212,10 @@ func (c *paypal) paypalAccessToken() (string, error) {
 		return "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.New("the server returned an error")
+	}
 
 	var tokenResp struct {
 		AccessToken string `json:"access_token"`

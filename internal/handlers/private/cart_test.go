@@ -1,56 +1,99 @@
 package handlers
 
 import (
-	"context"
+	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"testing"
-	"time"
 
-	"github.com/gofiber/fiber/v2"
-
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/internal/queries"
 	"github.com/shurco/litecart/internal/testutil"
-	"github.com/shurco/litecart/migrations"
 )
 
-func setupCartApp(t *testing.T) (*fiber.App, func()) {
-	cleanup := testutil.WithCmdTestDir(t)
-	if err := queries.New(migrations.Embed()); err != nil {
-		t.Fatal(err)
-	}
-	app := fiber.New()
-	return app, func() { cleanup() }
-}
-
-func Test_carts_list(t *testing.T) {
-	app, cleanup := setupCartApp(t)
+func TestCarts(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
 	defer cleanup()
+
 	app.Get("/api/_/carts", Carts)
-	// call empty list
-	req := httptest.NewRequest(http.MethodGet, "/api/_/carts", nil)
-	resp, _ := app.Test(req)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status %d", resp.StatusCode)
+
+	tests := []struct {
+		name      string
+		query     string
+		wantPage  int
+		wantLimit int
+	}{
+		{"default pagination", "", 1, 20},
+		{"custom pagination", "?page=2&limit=5", 2, 5},
+		{"page=0 resets to 1", "?page=0&limit=10", 1, 10},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, http.MethodGet, "/api/_/carts"+tt.query, "", "")
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("status = %d, want 200", resp.StatusCode)
+			}
+
+			var res struct {
+				Result struct {
+					Page  int `json:"page"`
+					Limit int `json:"limit"`
+				} `json:"result"`
+			}
+			_ = json.NewDecoder(resp.Body).Decode(&res)
+
+			if res.Result.Page != tt.wantPage {
+				t.Errorf("page = %d, want %d", res.Result.Page, tt.wantPage)
+			}
+			if res.Result.Limit != tt.wantLimit {
+				t.Errorf("limit = %d, want %d", res.Result.Limit, tt.wantLimit)
+			}
+		})
 	}
 }
 
-func Test_cart_send_mail_status(t *testing.T) {
-	app, cleanup := setupCartApp(t)
+func TestCart(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
 	defer cleanup()
 
-	db := queries.DB()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	// add a cart so that handler won't fail on mailer selection
-	_ = db.AddCart(ctx, &models.Cart{Core: models.Core{ID: "cart123456789012"}, AmountTotal: 100, Currency: "USD"})
+	app.Get("/api/_/carts/:cart_id", Cart)
+
+	tests := []struct {
+		name       string
+		cartID     string
+		wantStatus []int
+	}{
+		{"existing cart from fixtures", "iodz4ibf5h5zmov", []int{http.StatusOK}},
+		{"non-existent cart", "nonexistent12345", []int{http.StatusNotFound, http.StatusInternalServerError}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, http.MethodGet, "/api/_/carts/"+tt.cartID, "", "")
+			testutil.AssertStatus(t, resp, tt.wantStatus...)
+		})
+	}
+}
+
+func TestCartSendMail(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
 
 	app.Post("/api/_/carts/:cart_id/mail", CartSendMail)
-	req := httptest.NewRequest(http.MethodPost, "/api/_/carts/cart123456789012/mail", nil)
-	resp, _ := app.Test(req)
-	// could be 200 or 500 depending on SMTP configuration; we assert code is within allowed set
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusInternalServerError {
-		t.Fatalf("unexpected status %d", resp.StatusCode)
+
+	tests := []struct {
+		name       string
+		cartID     string
+		wantStatus []int
+	}{
+		{"existing cart", "iodz4ibf5h5zmov", []int{http.StatusOK, http.StatusInternalServerError}},
+		{"non-existent cart", "nonexistent12345", []int{http.StatusInternalServerError}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, http.MethodPost, "/api/_/carts/"+tt.cartID+"/mail", "", "")
+			testutil.AssertStatus(t, resp, tt.wantStatus...)
+		})
 	}
 }

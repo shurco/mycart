@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"image"
 	"image/color"
 	"image/png"
@@ -13,51 +12,240 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
-	"github.com/gofiber/fiber/v2"
-
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/internal/queries"
 	"github.com/shurco/litecart/internal/testutil"
-	"github.com/shurco/litecart/migrations"
 )
 
-func setupProductEnv(t *testing.T) (*fiber.App, func()) {
-	cleanup := testutil.WithCmdTestDir(t)
-	if err := queries.New(migrations.Embed()); err != nil {
-		t.Fatal(err)
-	}
-	app := fiber.New()
-	return app, func() { cleanup() }
-}
-
-func Test_add_product_image_upload_and_resize(t *testing.T) {
-	app, cleanup := setupProductEnv(t)
+func TestProducts(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
 	defer cleanup()
 
-	db := queries.DB()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	app.Get("/api/_/products", Products)
 
-	// prepare product
-	p, err := db.AddProduct(ctx, &models.Product{
-		Name:    "p1",
-		Amount:  100,
-		Slug:    "p1",
-		Digital: models.Digital{Type: "file"},
-	})
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name       string
+		query      string
+		wantStatus int
+	}{
+		{"default list", "", http.StatusOK},
+		{"custom pagination", "?page=1&limit=5", http.StatusOK},
+		{"high page (empty result)", "?page=999", http.StatusOK},
 	}
 
-	// build PNG 400x400 in memory
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, http.MethodGet, "/api/_/products"+tt.query, "", "")
+			testutil.AssertStatus(t, resp, tt.wantStatus)
+		})
+	}
+}
+
+func TestAddProduct(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Post("/api/_/products", AddProduct)
+
+	tests := []struct {
+		name       string
+		body       string
+		wantStatus int
+	}{
+		{
+			"valid file product",
+			`{"name":"NewProd","slug":"newprod","amount":500,"digital":{"type":"file"}}`,
+			http.StatusOK,
+		},
+		{
+			"valid data product",
+			`{"name":"DataProd","slug":"dataprod","amount":300,"digital":{"type":"data"}}`,
+			http.StatusOK,
+		},
+		{
+			"missing digital type",
+			`{"name":"NoDig","slug":"nodig","amount":100}`,
+			http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, http.MethodPost, "/api/_/products", tt.body, "")
+			testutil.AssertStatus(t, resp, tt.wantStatus)
+		})
+	}
+}
+
+func TestProduct(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Get("/api/_/products/:product_id", Product)
+
+	tests := []struct {
+		name       string
+		productID  string
+		wantStatus []int
+	}{
+		{"existing product from fixtures", "fv6c9s9cqzf36sc", []int{http.StatusOK}},
+		{"non-existent product", "nonexistent12345", []int{http.StatusNotFound, http.StatusInternalServerError}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, http.MethodGet, "/api/_/products/"+tt.productID, "", "")
+			testutil.AssertStatus(t, resp, tt.wantStatus...)
+		})
+	}
+}
+
+func TestUpdateProduct(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Patch("/api/_/products/:product_id", UpdateProduct)
+
+	resp := testutil.DoRequest(t, app, http.MethodPatch, "/api/_/products/fv6c9s9cqzf36sc",
+		`{"name":"Updated Name"}`, "")
+	testutil.AssertStatus(t, resp, http.StatusOK)
+}
+
+func TestDeleteProduct(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Delete("/api/_/products/:product_id", DeleteProduct)
+
+	resp := testutil.DoRequest(t, app, http.MethodDelete, "/api/_/products/fv6c9s9cqzf36sc", "", "")
+	testutil.AssertStatus(t, resp, http.StatusOK)
+}
+
+func TestUpdateProductActive(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Patch("/api/_/products/:product_id/active", UpdateProductActive)
+
+	resp := testutil.DoRequest(t, app, http.MethodPatch, "/api/_/products/fv6c9s9cqzf36sc/active", "", "")
+	testutil.AssertStatus(t, resp, http.StatusOK)
+}
+
+func TestProductImages(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Get("/api/_/products/:product_id/image", ProductImages)
+
+	tests := []struct {
+		name       string
+		productID  string
+		wantStatus int
+	}{
+		{"product with images", "fv6c9s9cqzf36sc", http.StatusOK},
+		{"product without images", "7mweb67t8xv9pzx", http.StatusOK},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, http.MethodGet, "/api/_/products/"+tt.productID+"/image", "", "")
+			testutil.AssertStatus(t, resp, tt.wantStatus)
+		})
+	}
+}
+
+func TestAddProductImage(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Post("/api/_/products/:product_id/image", AddProductImage)
+
+	productID := "fv6c9s9cqzf36sc"
+
+	t.Run("valid png upload", func(t *testing.T) {
+		body, contentType := createTestImage(t, "image/png", "test.png")
+		req := httptest.NewRequest(http.MethodPost, "/api/_/products/"+productID+"/image", body)
+		req.Header.Set("Content-Type", contentType)
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.AssertStatus(t, resp, http.StatusOK)
+
+		entries, err := os.ReadDir("./lc_uploads")
+		if err != nil {
+			t.Fatalf("read lc_uploads: %v", err)
+		}
+		var haveOrig, haveSm, haveMd bool
+		for _, e := range entries {
+			name := e.Name()
+			ext := filepath.Ext(name)
+			if ext == ".png" {
+				switch {
+				case len(name) > 7 && name[len(name)-7:] == "_sm.png":
+					haveSm = true
+				case len(name) > 7 && name[len(name)-7:] == "_md.png":
+					haveMd = true
+				default:
+					haveOrig = true
+				}
+			}
+		}
+		if !haveOrig || !haveSm || !haveMd {
+			t.Fatal("expected orig + sm + md images")
+		}
+	})
+
+	t.Run("bad mime type", func(t *testing.T) {
+		body, contentType := createTestImageBadMIME(t)
+		req := httptest.NewRequest(http.MethodPost, "/api/_/products/"+productID+"/image", body)
+		req.Header.Set("Content-Type", contentType)
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		testutil.AssertStatus(t, resp, http.StatusBadRequest)
+	})
+}
+
+func TestProductDigital(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Get("/api/_/products/:product_id/digital", ProductDigital)
+	app.Post("/api/_/products/:product_id/digital", AddProductDigital)
+
+	tests := []struct {
+		name       string
+		method     string
+		productID  string
+		wantStatus []int
+	}{
+		{"get digital for data product", http.MethodGet, "xrtb1b919t2nuj9", []int{http.StatusOK}},
+		{"get digital for file product", http.MethodGet, "fv6c9s9cqzf36sc", []int{http.StatusOK}},
+		{"get digital non-existent", http.MethodGet, "nonexistent12345", []int{http.StatusOK, http.StatusNotFound, http.StatusInternalServerError}},
+		{"add digital data to data product", http.MethodPost, "xrtb1b919t2nuj9", []int{http.StatusOK}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, tt.method, "/api/_/products/"+tt.productID+"/digital", "", "")
+			testutil.AssertStatus(t, resp, tt.wantStatus...)
+		})
+	}
+}
+
+// --- test helpers (DRY) ---
+
+func createTestImage(t *testing.T, mime, filename string) (*bytes.Buffer, string) {
+	t.Helper()
+
 	img := image.NewRGBA(image.Rect(0, 0, 400, 400))
-	for y := 0; y < 400; y++ {
-		for x := 0; x < 400; x++ {
-			img.Set(x, y, color.RGBA{255, 0, 0, 255})
+	for y := range 400 {
+		for x := range 400 {
+			img.Set(x, y, color.RGBA{R: 255, A: 255})
 		}
 	}
+
 	var imgBuf bytes.Buffer
 	if err := png.Encode(&imgBuf, img); err != nil {
 		t.Fatal(err)
@@ -66,8 +254,8 @@ func Test_add_product_image_upload_and_resize(t *testing.T) {
 	var body bytes.Buffer
 	w := multipart.NewWriter(&body)
 	hdr := make(textproto.MIMEHeader)
-	hdr.Set("Content-Disposition", `form-data; name="document"; filename="test.png"`)
-	hdr.Set("Content-Type", "image/png")
+	hdr.Set("Content-Disposition", `form-data; name="document"; filename="`+filename+`"`)
+	hdr.Set("Content-Type", mime)
 	fw, err := w.CreatePart(hdr)
 	if err != nil {
 		t.Fatal(err)
@@ -77,37 +265,20 @@ func Test_add_product_image_upload_and_resize(t *testing.T) {
 	}
 	_ = w.Close()
 
-	req := httptest.NewRequest(http.MethodPost, "/api/_/products/"+p.ID+"/image", &body)
-	req.Header.Set("Content-Type", w.FormDataContentType())
+	return &body, w.FormDataContentType()
+}
 
-	// register route directly to handler
-	app.Post("/api/_/products/:product_id/image", AddProductImage)
+func createTestImageBadMIME(t *testing.T) (*bytes.Buffer, string) {
+	t.Helper()
 
-	resp, err := app.Test(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status %d", resp.StatusCode)
-	}
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	hdr := make(textproto.MIMEHeader)
+	hdr.Set("Content-Disposition", `form-data; name="document"; filename="test.gif"`)
+	hdr.Set("Content-Type", "image/gif")
+	fw, _ := w.CreatePart(hdr)
+	_, _ = fw.Write([]byte("GIF89a fake"))
+	_ = w.Close()
 
-	// assert that original and sm/md resized files exist
-	entries, err := os.ReadDir("./lc_uploads")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var haveOrig, haveSm, haveMd bool
-	for _, e := range entries {
-		name := e.Name()
-		if filepath.Ext(name) == ".png" {
-			if len(name) > 4 && name[len(name)-4:] == ".png" {
-				haveOrig = haveOrig || (len(name) > 4 && (name[len(name)-7:] != "_sm.png" && name[len(name)-7:] != "_md.png"))
-			}
-			haveSm = haveSm || (len(name) > 7 && name[len(name)-7:] == "_sm.png")
-			haveMd = haveMd || (len(name) > 7 && name[len(name)-7:] == "_md.png")
-		}
-	}
-	if !haveSm || !haveMd || !haveOrig {
-		t.Fatalf("expected original+sm+md images")
-	}
+	return &body, w.FormDataContentType()
 }

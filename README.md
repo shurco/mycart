@@ -326,6 +326,20 @@ To obtain a "Merchant ID", "Project (API) ID" and "Private key" in <a href="http
 > Please note that the "Private key" is confidential information that should be kept secure.
 
 
+#### Coinbase
+Coinbase Commerce is a cryptocurrency payment platform that allows businesses to accept payments in various cryptocurrencies including Bitcoin, Ethereum, Litecoin, and many others. It provides a simple and secure way to integrate crypto payments into your store.
+
+To obtain an API Key for using the Coinbase Commerce API, follow these steps:
+
+1. Create or log in to your <a href="https://commerce.coinbase.com" target="_blank">Coinbase Commerce</a> account.
+2. Navigate to the **Settings** section.
+3. Under the **API Keys** tab, click **Create an API Key**.
+4. Copy the generated API Key and save it securely.
+
+> [!WARNING]
+> Please note that the "API Key" is confidential information that should be kept secure.
+
+
 #### Dummy Payment
 Dummy Payment is a built-in payment provider that comes pre-configured with litecart. It is designed for processing free products (products with a price of $0) and does not require any external payment system integration or API keys.
 
@@ -429,7 +443,8 @@ For detailed information on how to customize the site design and deploy it on a 
 - [ ] Payment Adyen
 - [ ] Payment Checkout
 - [ ] Payment via Webhook
-- [x] <a href="#spectrocoin">Support for payment using crypto</a>
+- [x] <a href="#spectrocoin">Support for payment using crypto (SpectroCoin)</a>
+- [x] <a href="#coinbase">Coinbase Commerce crypto payments</a>
 - [x] Support WebHook (<a href="https://github.com/msalbrain" target="_blank">@nicksnyder</a> in <a href="https://github.com/shurco/litecart/pull/61" target="_blank">#61</a>)
 - [x] <a href="#dummy-payment">Dummy Payment</a> (<a href="https://github.com/majiayu000" target="_blank">@majiayu000</a> in <a href="https://github.com/shurco/litecart/pull/261" target="_blank">#261</a>)
 

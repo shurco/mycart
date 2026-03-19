@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 
 	"github.com/shurco/litecart/internal/mailer"
 	"github.com/shurco/litecart/internal/models"
@@ -18,8 +18,16 @@ import (
 )
 
 // Version returns the current application version and update information.
-// [get] /api/_/version
-func Version(c *fiber.Ctx) error {
+//
+// @Summary      Get version
+// @Description  Get current app version and available updates (cached 24h)
+// @Tags         Settings
+// @Security     BearerAuth
+// @Produce      json
+// @Success      200 {object} webutil.HTTPResponse "Version info"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/version [get]
+func Version(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 
@@ -33,12 +41,9 @@ func Version(c *fiber.Ctx) error {
 	if err == sql.ErrNoRows {
 		version = update.VersionInfo()
 
-		// Try to fetch latest release, but don't fail if GitHub API is unavailable
-		release, err := update.FetchLatestRelease(context.Background(), "shurco", "litecart")
-		if err != nil {
-			// Log the error but continue without update information
-			// This prevents blocking access when GitHub API is unavailable
-			log.ErrorStack(err)
+		release, fetchErr := update.FetchLatestRelease(context.Background(), "shurco", "litecart")
+		if fetchErr != nil {
+			log.ErrorStack(fetchErr)
 		} else if version.CurrentVersion != release.Name {
 			version.NewVersion = release.Name
 			version.ReleaseURL = release.GetUrl()
@@ -49,13 +54,13 @@ func Version(c *fiber.Ctx) error {
 			return webutil.StatusInternalServerError(c)
 		}
 
-		json, err := json.Marshal(version)
+		data, err := json.Marshal(version)
 		if err != nil {
 			log.ErrorStack(err)
 			return webutil.StatusInternalServerError(c)
 		}
 		expires := time.Now().Add(24 * time.Hour).Unix()
-		if err := db.AddSession(c.Context(), "update", string(json), expires); err != nil {
+		if err := db.AddSession(c.Context(), "update", string(data), expires); err != nil {
 			log.ErrorStack(err)
 			return webutil.StatusInternalServerError(c)
 		}
@@ -73,8 +78,18 @@ func Version(c *fiber.Ctx) error {
 }
 
 // GetSetting returns a setting value by key.
-// [get] /api/_/settings/:setting_key
-func GetSetting(c *fiber.Ctx) error {
+//
+// @Summary      Get setting
+// @Description  Get a setting group or individual setting by key
+// @Tags         Settings
+// @Security     BearerAuth
+// @Produce      json
+// @Param        setting_key path string true "Setting key (main, social, auth, jwt, webhook, payment, stripe, paypal, spectrocoin, coinbase, dummy, mail, or custom key)"
+// @Success      200 {object} webutil.HTTPResponse "Setting value"
+// @Failure      404 {object} webutil.HTTPResponse "Setting not found"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/settings/{setting_key} [get]
+func GetSetting(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 	settingKey := c.Params("setting_key")
@@ -103,6 +118,8 @@ func GetSetting(c *fiber.Ctx) error {
 		section, err = db.GetSettingByGroup(c.Context(), &models.Paypal{})
 	case "spectrocoin":
 		section, err = db.GetSettingByGroup(c.Context(), &models.Spectrocoin{})
+	case "coinbase":
+		section, err = db.GetSettingByGroup(c.Context(), &models.Coinbase{})
 	case "dummy":
 		section, err = db.GetSettingByGroup(c.Context(), &models.Dummy{})
 	case "mail":
@@ -112,7 +129,7 @@ func GetSetting(c *fiber.Ctx) error {
 	}
 
 	if err != nil {
-		if err == errors.ErrSettingNotFound {
+		if errors.Is(err, errors.ErrSettingNotFound) {
 			return webutil.StatusNotFound(c)
 		}
 		log.ErrorStack(err)
@@ -122,8 +139,20 @@ func GetSetting(c *fiber.Ctx) error {
 }
 
 // UpdateSetting updates a setting value by key.
-// [patch] /api/_/settings/:setting_key
-func UpdateSetting(c *fiber.Ctx) error {
+//
+// @Summary      Update setting
+// @Description  Update a setting group or individual setting by key
+// @Tags         Settings
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        setting_key path string true "Setting key"
+// @Param        request     body object true "Setting value (structure depends on key)"
+// @Success      200 {object} webutil.HTTPResponse "Setting updated"
+// @Failure      400 {object} webutil.HTTPResponse "Validation error"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/settings/{setting_key} [patch]
+func UpdateSetting(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 	settingKey := c.Params("setting_key")
@@ -148,6 +177,8 @@ func UpdateSetting(c *fiber.Ctx) error {
 		request = &models.Paypal{}
 	case "spectrocoin":
 		request = &models.Spectrocoin{}
+	case "coinbase":
+		request = &models.Coinbase{}
 	case "dummy":
 		request = &models.Dummy{}
 	case "webhook":
@@ -159,7 +190,7 @@ func UpdateSetting(c *fiber.Ctx) error {
 	}
 
 	// Parse the request body into the appropriate struct
-	if err := c.BodyParser(request); err != nil {
+	if err := c.Bind().Body(request); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusBadRequest(c, err.Error())
 	}
@@ -174,11 +205,9 @@ func UpdateSetting(c *fiber.Ctx) error {
 		return webutil.Response(c, fiber.StatusOK, "Password updated", nil)
 	}
 
-	// For default case where setting key doesn't match any predefined keys
-	if _, ok := request.(*models.SettingName); ok {
-		_request := request.(*models.SettingName)
-		_request.Key = settingKey
-		if err := db.UpdateSettingByKey(c.Context(), _request); err != nil {
+	if settingName, ok := request.(*models.SettingName); ok {
+		settingName.Key = settingKey
+		if err := db.UpdateSettingByKey(c.Context(), settingName); err != nil {
 			log.ErrorStack(err)
 			return webutil.StatusInternalServerError(c)
 		}
@@ -195,8 +224,18 @@ func UpdateSetting(c *fiber.Ctx) error {
 }
 
 // TestLetter sends a test email letter.
-// [get] /api/_/test/letter/:letter_name
-func TestLetter(c *fiber.Ctx) error {
+//
+// @Summary      Send test letter
+// @Description  Send a test email using configured SMTP settings
+// @Tags         Settings
+// @Security     BearerAuth
+// @Produce      json
+// @Param        letter_name path string true "Letter template name"
+// @Success      200 {object} webutil.HTTPResponse{result=string} "Message sent"
+// @Failure      400 {object} webutil.HTTPResponse "Sending failed"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/_/test/letter/{letter_name} [get]
+func TestLetter(c fiber.Ctx) error {
 	letter := c.Params("letter_name")
 	log := logging.New()
 

@@ -38,6 +38,8 @@
     "paypalDescription": "用于卡片和 PayPal 账户资金的支付系统",
     "spectrocoin": "Spectrocoin",
     "spectrocoinDescription": "允许使用加密货币支付的支付系统",
+    "coinbase": "Coinbase Commerce",
+    "coinbaseDescription": "用于加密货币支付的支付系统（比特币、以太坊等）",
     "getForFree": "免费获取",
     "checkout": "结账",
     "noPaymentSystems": "支付系统不可用。请联系管理员。",

@@ -1,24 +1,23 @@
 package middleware
 
 import (
-	"github.com/gofiber/contrib/fiberzerolog"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/compress"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/helmet"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/rs/zerolog"
+	"github.com/gofiber/contrib/v3/zerolog"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/compress"
+	"github.com/gofiber/fiber/v3/middleware/cors"
+	"github.com/gofiber/fiber/v3/middleware/helmet"
+	recoverer "github.com/gofiber/fiber/v3/middleware/recover"
+	gzerolog "github.com/rs/zerolog"
 )
 
-// Fiber configures global middleware for the Fiber application.
-func Fiber(a *fiber.App, log *zerolog.Logger) {
+func Fiber(a *fiber.App, log *gzerolog.Logger) {
 	a.Use(cors.New())
 	a.Use(helmet.New())
 	a.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
 	}))
-	a.Use(fiberzerolog.New(fiberzerolog.Config{
+	a.Use(zerolog.New(zerolog.Config{
 		Logger: log,
 	}))
-	a.Use(recover.New())
+	a.Use(recoverer.New())
 }

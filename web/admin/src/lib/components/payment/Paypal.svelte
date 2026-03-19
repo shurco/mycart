@@ -53,7 +53,7 @@
       return
     }
 
-    await savePaymentSettings('paypal', settings, 'paypal')
+    await savePaymentSettings('paypal', settings)
   }
 
   async function handleToggleActive() {

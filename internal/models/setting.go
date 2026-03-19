@@ -105,6 +105,19 @@ func (v Spectrocoin) Validate() error {
 	)
 }
 
+// Coinbase is ...
+type Coinbase struct {
+	ApiKey string `json:"api_key"`
+	Active bool   `json:"active"`
+}
+
+// Validate is ...
+func (v Coinbase) Validate() error {
+	return validation.ValidateStruct(&v,
+		validation.Field(&v.ApiKey, validation.Length(20, 200)),
+	)
+}
+
 // Dummy is ...
 type Dummy struct {
 	Active bool `json:"active"`
@@ -116,6 +129,7 @@ type PaymentSystem struct {
 	Stripe      Stripe      `json:"stripe"`
 	Paypal      Paypal      `json:"paypal"`
 	Spectrocoin Spectrocoin `json:"spectrocoin"`
+	Coinbase    Coinbase    `json:"coinbase"`
 	Dummy       Dummy       `json:"dummy"`
 }
 
@@ -125,6 +139,7 @@ func (v PaymentSystem) Validate() error {
 		validation.Field(&v.Stripe),
 		validation.Field(&v.Paypal),
 		validation.Field(&v.Spectrocoin),
+		validation.Field(&v.Coinbase),
 	)
 }
 

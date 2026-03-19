@@ -5,6 +5,7 @@
   import Stripe from '$lib/components/payment/Stripe.svelte'
   import Paypal from '$lib/components/payment/Paypal.svelte'
   import Spectrocoin from '$lib/components/payment/Spectrocoin.svelte'
+  import Coinbase from '$lib/components/payment/Coinbase.svelte'
   import FormButton from '$lib/components/form/Button.svelte'
   import FormSelect from '$lib/components/form/Select.svelte'
   import { systemStore } from '$lib/stores/system'
@@ -18,7 +19,7 @@
   let t = $derived($translate)
 
   let drawerOpen = $state(false)
-  let drawerMode = $state<'stripe' | 'paypal' | 'spectrocoin' | null>(null)
+  let drawerMode = $state<'stripe' | 'paypal' | 'spectrocoin' | 'coinbase' | null>(null)
   let payments = $state<Record<string, boolean>>({})
   let payment = $state<PaymentSettings>({
     currency: ''
@@ -77,7 +78,7 @@
     await saveSettings('payment', payment, 'Currency saved')
   }
 
-  function openDrawer(mode: 'stripe' | 'paypal' | 'spectrocoin') {
+  function openDrawer(mode: 'stripe' | 'paypal' | 'spectrocoin' | 'coinbase') {
     drawerMode = mode
     drawerOpen = true
   }
@@ -156,6 +157,20 @@
         >
           Spectrocoin
         </div>
+        <div
+          class="ml-5 cursor-pointer rounded p-2 {payments.coinbase ? 'bg-green-200' : 'bg-gray-200'}"
+          onclick={() => openDrawer('coinbase')}
+          role="button"
+          tabindex="0"
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              openDrawer('coinbase')
+            }
+          }}
+        >
+          Coinbase
+        </div>
       </div>
     </div>
   </div>
@@ -169,6 +184,8 @@
       <Paypal onclose={closeDrawer} />
     {:else if drawerMode === 'spectrocoin'}
       <Spectrocoin onclose={closeDrawer} />
+    {:else if drawerMode === 'coinbase'}
+      <Coinbase onclose={closeDrawer} />
     {/if}
   </Drawer>
 {/if}

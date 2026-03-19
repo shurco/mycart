@@ -38,6 +38,8 @@
     "paypalDescription": "Payment system for cards and PayPal account funds",
     "spectrocoin": "Spectrocoin",
     "spectrocoinDescription": "Payment system allowing payments with cryptocurrency",
+    "coinbase": "Coinbase Commerce",
+    "coinbaseDescription": "Payment system for cryptocurrency payments (Bitcoin, Ethereum, etc.)",
     "getForFree": "GET FOR FREE",
     "checkout": "CHECKOUT",
     "noPaymentSystems": "NO PAYMENT SYSTEMS AVAILABLE. CONTACT ADMINISTRATOR.",

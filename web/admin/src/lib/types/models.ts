@@ -95,6 +95,11 @@ export interface SpectrocoinSettings {
   private_key: string
 }
 
+export interface CoinbaseSettings {
+  active: boolean
+  api_key: string
+}
+
 export interface SmtpSettings {
   host: string
   port: string

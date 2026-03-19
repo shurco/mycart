@@ -2,6 +2,8 @@ package errors
 
 import "errors"
 
+var Is = errors.Is
+
 const (
 	MsgNotFound      = "not found"
 	MsgWrongPassword = "wrong password"

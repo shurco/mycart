@@ -1,124 +1,128 @@
 package handlers
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
-	"os"
 	"testing"
-	"time"
 
-	"github.com/gofiber/fiber/v2"
-
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/internal/queries"
 	"github.com/shurco/litecart/internal/testutil"
-	"github.com/shurco/litecart/migrations"
-	"github.com/shurco/litecart/pkg/jwtutil"
 )
 
-func setupAuthApp(t *testing.T) (*fiber.App, string, func()) {
-	cleanup := testutil.WithCmdTestDir(t)
-	if err := queries.New(migrations.Embed()); err != nil {
-		t.Fatal(err)
-	}
-	app := fiber.New()
-
-	// install and jwt
-	db := queries.DB()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := db.Install(ctx, &models.Install{Email: "admin@example.com", Password: "secret", Domain: "example.com"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := db.UpdateSettingByGroup(ctx, &models.JWT{Secret: "testsecret", ExpireHours: 1}); err != nil {
-		t.Fatal(err)
-	}
-
-	// generate token
-	exp := time.Now().Add(time.Hour).Unix()
-	tok, err := jwtutil.GenerateNewToken("testsecret", "id", exp, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	cookie := "token=" + tok
-	return app, cookie, func() { cleanup(); _ = os.Unsetenv("_") }
-}
-
-func Test_pages_crud(t *testing.T) {
-	app, cookie, cleanup := setupAuthApp(t)
+func TestPages(t *testing.T) {
+	app, cookie, cleanup := testutil.SetupTestApp(t)
 	defer cleanup()
 
-	// routes
 	app.Get("/api/_/pages", Pages)
+
+	tests := []struct {
+		name      string
+		query     string
+		wantPage  int
+		wantLimit int
+	}{
+		{"default pagination", "", 1, 20},
+		{"custom pagination", "?page=1&limit=5", 1, 5},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, http.MethodGet, "/api/_/pages"+tt.query, "", cookie)
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode != http.StatusOK {
+				t.Fatalf("status = %d, want 200", resp.StatusCode)
+			}
+
+			var res struct {
+				Result struct {
+					Page  int `json:"page"`
+					Limit int `json:"limit"`
+				} `json:"result"`
+			}
+			_ = json.NewDecoder(resp.Body).Decode(&res)
+
+			if res.Result.Page != tt.wantPage {
+				t.Errorf("page = %d, want %d", res.Result.Page, tt.wantPage)
+			}
+			if res.Result.Limit != tt.wantLimit {
+				t.Errorf("limit = %d, want %d", res.Result.Limit, tt.wantLimit)
+			}
+		})
+	}
+}
+
+func TestGetPage(t *testing.T) {
+	app, cookie, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Get("/api/_/pages/:page_id", GetPage)
+
+	tests := []struct {
+		name       string
+		pageID     string
+		wantStatus []int
+	}{
+		{"existing page from fixtures", "ig9jpCixAgAu31f", []int{http.StatusOK}},
+		{"non-existent page", "nonexistent12345", []int{http.StatusNotFound, http.StatusInternalServerError}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, http.MethodGet, "/api/_/pages/"+tt.pageID, "", cookie)
+			testutil.AssertStatus(t, resp, tt.wantStatus...)
+		})
+	}
+}
+
+func TestPagesCRUD(t *testing.T) {
+	app, cookie, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
 	app.Post("/api/_/pages", AddPage)
+	app.Get("/api/_/pages/:page_id", GetPage)
 	app.Patch("/api/_/pages/:page_id", UpdatePage)
 	app.Patch("/api/_/pages/:page_id/content", UpdatePageContent)
+	app.Patch("/api/_/pages/:page_id/active", UpdatePageActive)
 	app.Delete("/api/_/pages/:page_id", DeletePage)
 
-	// create
-	body := map[string]any{"name": "P", "slug": "p", "position": "footer"}
-	bb, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/_/pages", bytes.NewReader(bb))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Cookie", cookie)
-	resp, _ := app.Test(req)
+	// Create
+	resp := testutil.DoRequest(t, app, http.MethodPost, "/api/_/pages",
+		`{"name":"TestPage","slug":"testcrud","position":"footer"}`, cookie)
+
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("create %d", resp.StatusCode)
+		t.Fatalf("create: status = %d", resp.StatusCode)
 	}
-	var res struct {
+	var created struct {
 		Result struct {
 			ID string `json:"id"`
 		} `json:"result"`
 	}
-	_ = json.NewDecoder(resp.Body).Decode(&res)
-	_ = resp.Body.Close()
-	if res.Result.ID == "" {
-		t.Fatal("no id")
-	}
-
-	// list
-	req = httptest.NewRequest(http.MethodGet, "/api/_/pages", nil)
-	req.Header.Set("Cookie", cookie)
-	resp, _ = app.Test(req)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("list %d", resp.StatusCode)
-	}
+	_ = json.NewDecoder(resp.Body).Decode(&created)
 	_ = resp.Body.Close()
 
-	// update
-	upd := map[string]any{"name": "P2", "slug": "p2", "position": "footer"}
-	bb, _ = json.Marshal(upd)
-	req = httptest.NewRequest(http.MethodPatch, "/api/_/pages/"+res.Result.ID, bytes.NewReader(bb))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Cookie", cookie)
-	resp, _ = app.Test(req)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("update %d", resp.StatusCode)
+	pageID := created.Result.ID
+	if pageID == "" {
+		t.Fatal("create returned empty id")
 	}
-	_ = resp.Body.Close()
 
-	// content
-	cnt := map[string]any{"content": "hello"}
-	bb, _ = json.Marshal(cnt)
-	req = httptest.NewRequest(http.MethodPatch, "/api/_/pages/"+res.Result.ID+"/content", bytes.NewReader(bb))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Cookie", cookie)
-	resp, _ = app.Test(req)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("content %d", resp.StatusCode)
+	steps := []struct {
+		name       string
+		method     string
+		path       string
+		body       string
+		wantStatus int
+	}{
+		{"get", http.MethodGet, "/api/_/pages/" + pageID, "", http.StatusOK},
+		{"update", http.MethodPatch, "/api/_/pages/" + pageID, `{"name":"Updated","slug":"upd","position":"footer"}`, http.StatusOK},
+		{"update content", http.MethodPatch, "/api/_/pages/" + pageID + "/content", `{"content":"<h1>Hello</h1>"}`, http.StatusOK},
+		{"toggle active", http.MethodPatch, "/api/_/pages/" + pageID + "/active", "", http.StatusOK},
+		{"delete", http.MethodDelete, "/api/_/pages/" + pageID, "", http.StatusOK},
 	}
-	_ = resp.Body.Close()
 
-	// delete
-	req = httptest.NewRequest(http.MethodDelete, "/api/_/pages/"+res.Result.ID, nil)
-	req.Header.Set("Cookie", cookie)
-	resp, _ = app.Test(req)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("delete %d", resp.StatusCode)
+	for _, s := range steps {
+		t.Run(s.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, s.method, s.path, s.body, cookie)
+			testutil.AssertStatus(t, resp, s.wantStatus)
+		})
 	}
-	_ = resp.Body.Close()
 }

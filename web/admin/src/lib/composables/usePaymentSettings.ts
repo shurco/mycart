@@ -1,9 +1,9 @@
 import { apiGet, apiUpdate, showMessage } from '$lib/utils'
 import { systemStore } from '$lib/stores/system'
 import { t } from '$lib/i18n'
-import type { StripeSettings, PaypalSettings, SpectrocoinSettings } from '$lib/types/models'
+import type { StripeSettings, PaypalSettings, SpectrocoinSettings, CoinbaseSettings } from '$lib/types/models'
 
-export async function loadPaymentSettings<T extends StripeSettings | PaypalSettings | SpectrocoinSettings>(
+export async function loadPaymentSettings<T extends StripeSettings | PaypalSettings | SpectrocoinSettings | CoinbaseSettings>(
   endpoint: string,
   defaultSettings: T
 ): Promise<T> {
@@ -20,14 +20,12 @@ export async function loadPaymentSettings<T extends StripeSettings | PaypalSetti
   }
 }
 
-export async function savePaymentSettings<T extends StripeSettings | PaypalSettings | SpectrocoinSettings>(
+export async function savePaymentSettings<T extends StripeSettings | PaypalSettings | SpectrocoinSettings | CoinbaseSettings>(
   endpoint: string,
-  settings: T,
-  providerName: 'stripe' | 'paypal' | 'spectrocoin'
+  settings: T
 ): Promise<boolean> {
   try {
-    const update = { [providerName]: settings }
-    const res = await apiUpdate(`/api/_/settings/${endpoint}`, update)
+    const res = await apiUpdate(`/api/_/settings/${endpoint}`, settings)
     if (res.success) {
       showMessage(res.message || t('settings.settingsSaved'), 'connextSuccess')
       return true
@@ -41,7 +39,7 @@ export async function savePaymentSettings<T extends StripeSettings | PaypalSetti
 }
 
 export async function togglePaymentActive(
-  providerName: 'stripe' | 'paypal' | 'spectrocoin',
+  providerName: 'stripe' | 'paypal' | 'spectrocoin' | 'coinbase',
   active: boolean
 ): Promise<boolean> {
   try {
