@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "!contains(github.event.commits[0].message, '[skip ci]') && !contains(github.event.commits[0].message, '[ci skip]')"
     steps:
-      - uses: styfle/cancel-workflow-action@0.13.0
+      - uses: styfle/cancel-workflow-action@0.13.1
         with:
           access_token: ${{ github.token }}
 
