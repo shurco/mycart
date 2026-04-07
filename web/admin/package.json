@@ -13,13 +13,13 @@
   },
   "dependencies": {
     "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.55.0",
+    "@sveltejs/kit": "^2.56.1",
     "@tiptap/core": "^2.27.2",
     "@tiptap/pm": "^2.27.2",
     "@tiptap/starter-kit": "^2.27.2",
     "@tiptap/extension-placeholder": "^2.27.2",
     "nprogress": "^0.2.0",
-    "svelte": "^5.54.0",
+    "svelte": "^5.55.1",
     "svelte-french-toast": "^1.2.0"
   },
   "devDependencies": {
@@ -33,7 +33,7 @@
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "4.1.18",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1",
+    "vite": "^7.3.2",
     "vite-plugin-svelte-svg": "^2.3.0"
   }
 }
