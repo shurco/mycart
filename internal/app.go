@@ -17,12 +17,12 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
 
-	"github.com/shurco/litecart/internal/middleware"
-	"github.com/shurco/litecart/internal/queries"
-	"github.com/shurco/litecart/internal/routes"
-	"github.com/shurco/litecart/migrations"
-	"github.com/shurco/litecart/pkg/logging"
-	"github.com/shurco/litecart/pkg/webutil"
+	"github.com/shurco/mycart/internal/middleware"
+	"github.com/shurco/mycart/internal/queries"
+	"github.com/shurco/mycart/internal/routes"
+	"github.com/shurco/mycart/migrations"
+	"github.com/shurco/mycart/pkg/logging"
+	"github.com/shurco/mycart/pkg/webutil"
 )
 
 const (
@@ -116,7 +116,7 @@ func setupRoutes(app *fiber.App, noSite bool) {
 
 // printStartupInfo prints application startup information.
 func printStartupInfo(schema, mainAddr string, noSite bool) {
-	fmt.Print("🛒 litecart - open source shopping-cart in 1 file\n")
+	fmt.Print("🛒 myCart - open source shopping-cart in 1 file\n")
 	if !noSite {
 		fmt.Printf("├─ Cart UI: %s://%s/\n", schema, mainAddr)
 	}

@@ -8,9 +8,9 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/pressly/goose/v3"
 
-	"github.com/shurco/litecart/internal/queries"
-	"github.com/shurco/litecart/internal/testutil"
-	"github.com/shurco/litecart/migrations"
+	"github.com/shurco/mycart/internal/queries"
+	"github.com/shurco/mycart/internal/testutil"
+	"github.com/shurco/mycart/migrations"
 	_ "modernc.org/sqlite"
 )
 

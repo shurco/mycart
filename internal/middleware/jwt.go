@@ -12,9 +12,9 @@ import (
 	"github.com/gofiber/fiber/v3/extractors"
 	"github.com/golang-jwt/jwt/v5"
 
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/internal/queries"
-	"github.com/shurco/litecart/pkg/webutil"
+	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/internal/queries"
+	"github.com/shurco/mycart/pkg/webutil"
 )
 
 func JWTProtected() fiber.Handler {

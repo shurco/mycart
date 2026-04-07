@@ -94,7 +94,7 @@
 <Blank>
   <div class="mx-auto max-w-screen-xl px-4 py-16 sm:px-6 lg:px-8">
     <div class="mx-auto max-w-lg text-center">
-      <h1 class="text-2xl font-bold sm:text-3xl">🛒 {t('install.title')} Litecart</h1>
+      <h1 class="text-2xl font-bold sm:text-3xl">🛒 {t('install.title')} myCart</h1>
       <p class="mt-4 text-gray-600">{t('install.configureCart')}</p>
     </div>
     <form onsubmit={(e) => handleSubmit(e)} class="mx-auto mt-8 mb-0 max-w-md space-y-4">

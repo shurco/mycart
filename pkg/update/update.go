@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shurco/litecart/pkg/archive"
+	"github.com/shurco/mycart/pkg/archive"
 )
 
 // Config is ...
@@ -36,7 +36,7 @@ func Init(cfg *Config) error {
 	}
 	if asset == nil {
 		// no update required
-		fmt.Printf("You already have the latest litecart %s\n", cfg.CurrentVersion)
+		fmt.Printf("You already have the latest mycart %s\n", cfg.CurrentVersion)
 		return nil
 	}
 
@@ -105,7 +105,7 @@ func ReleaseInfo(ctx context.Context, cfg *Config) (*ReleaseAsset, error) {
 	}
 
 	if compareVersions(strings.TrimPrefix(cfg.CurrentVersion, "v"), strings.TrimPrefix(latest.Tag, "v")) <= 0 {
-		fmt.Printf("You already have the latest litecart %s\n", cfg.CurrentVersion)
+		fmt.Printf("You already have the latest mycart %s\n", cfg.CurrentVersion)
 		return nil, nil
 	}
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/shurco/litecart/pkg/errors"
+	"github.com/shurco/mycart/pkg/errors"
 )
 
 // AuthQueries is a struct that embeds *sql.DB to provide database functionality.

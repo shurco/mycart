@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/shurco/litecart/pkg/fsutil"
+	"github.com/shurco/mycart/pkg/fsutil"
 )
 
 const (

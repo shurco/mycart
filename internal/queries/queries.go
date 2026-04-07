@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"embed"
 
-	"github.com/shurco/litecart/internal/base"
+	"github.com/shurco/mycart/internal/base"
 	_ "modernc.org/sqlite"
 )
 

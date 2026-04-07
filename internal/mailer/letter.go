@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/internal/queries"
+	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/internal/queries"
 )
 
 // ensureSenderEmail ensures that sender email is set, using user email from Settings as fallback.
@@ -68,7 +68,7 @@ func SendTestLetter(letterName string) error {
 	letter := &models.MessageMail{
 		To: settingEmail["email"].Value.(string),
 		Letter: models.Letter{
-			Subject: "litecart test smtp settings",
+			Subject: "myCart test smtp settings",
 			Text:    "test message",
 		},
 		Data: map[string]string{

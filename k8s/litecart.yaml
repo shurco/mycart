@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: litecart-pvc
+  name: mycart-pvc
   namespace: shop
 spec:
   accessModes:
@@ -15,48 +15,48 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: litecart
+  name: mycart
   namespace: shop
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: litecart
+      app: mycart
   template:
     metadata:
       labels:
-        app: litecart
+        app: mycart
     spec:
       nodeSelector:
         type: sg
       containers:
-      - name: litecart
-        image: shurco/litecart:latest
+      - name: mycart
+        image: shurco/mycart:latest
         ports:
         - containerPort: 8080
         volumeMounts:
-        - name: litecart-storage
+        - name: mycart-storage
           mountPath: /lc_base
           subPath: lc_base 
-        - name: litecart-storage
+        - name: mycart-storage
           mountPath: /lc_digitals
           subPath: lc_digitals
-        - name: litecart-storage
+        - name: mycart-storage
           mountPath: /lc_uploads
           subPath: lc_uploads
-        - name: litecart-storage
+        - name: mycart-storage
           mountPath: /site
           subPath: site
       volumes:
-      - name: litecart-storage
+      - name: mycart-storage
         persistentVolumeClaim:
-          claimName: litecart-pvc
+          claimName: mycart-pvc
 
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: litecart-ingress
+  name: mycart-ingress
   namespace: shop
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
@@ -66,7 +66,7 @@ spec:
   tls:
   - hosts:
     - domain
-    secretName: litecart-tls
+    secretName: mycart-tls
   rules:
   - host: domain
     http:
@@ -75,7 +75,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: litecart-service
+            name: mycart-service
             port:
               number: 8080
 
@@ -83,11 +83,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: litecart-service
+  name: mycart-service
   namespace: shop
 spec:
   selector:
-    app: litecart
+    app: mycart
   ports:
     - protocol: TCP
       port: 8080

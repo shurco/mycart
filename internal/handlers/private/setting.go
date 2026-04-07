@@ -8,13 +8,13 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/shurco/litecart/internal/mailer"
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/internal/queries"
-	"github.com/shurco/litecart/pkg/errors"
-	"github.com/shurco/litecart/pkg/logging"
-	"github.com/shurco/litecart/pkg/update"
-	"github.com/shurco/litecart/pkg/webutil"
+	"github.com/shurco/mycart/internal/mailer"
+	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/internal/queries"
+	"github.com/shurco/mycart/pkg/errors"
+	"github.com/shurco/mycart/pkg/logging"
+	"github.com/shurco/mycart/pkg/update"
+	"github.com/shurco/mycart/pkg/webutil"
 )
 
 // Version returns the current application version and update information.
@@ -41,7 +41,7 @@ func Version(c fiber.Ctx) error {
 	if err == sql.ErrNoRows {
 		version = update.VersionInfo()
 
-		release, fetchErr := update.FetchLatestRelease(context.Background(), "shurco", "litecart")
+		release, fetchErr := update.FetchLatestRelease(context.Background(), "shurco", "mycart")
 		if fetchErr != nil {
 			log.ErrorStack(fetchErr)
 		} else if version.CurrentVersion != release.Name {

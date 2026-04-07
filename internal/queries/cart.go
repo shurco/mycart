@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/pkg/errors"
-	"github.com/shurco/litecart/pkg/litepay"
+	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/pkg/errors"
+	"github.com/shurco/mycart/pkg/litepay"
 )
 
 // CartQueries is a struct that embeds a pointer to an sql.DB.

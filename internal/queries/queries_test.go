@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/migrations"
+	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/migrations"
 )
 
 func withTempBase(t *testing.T) func() {

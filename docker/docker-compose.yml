@@ -1,7 +1,7 @@
 services:
-  litecart:
-    image: shurco/litecart:latest
-    container_name: litecart
+  mycart:
+    image: shurco/mycart:latest
+    container_name: mycart
     restart: always
     volumes:
       - ./lc_base:/lc_base

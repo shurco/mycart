@@ -9,7 +9,7 @@ body:
     attributes:
       value: |
         ### Notice
-        - If you have a suggestion for a litecart feature you would like to see, open the issue with the **✏️ Feature Request** template.
+        - If you have a suggestion for a myCart feature you would like to see, open the issue with the **✏️ Feature Request** template.
         - Write your issue with clear and understandable English.
   - type: textarea
     id: description
@@ -38,15 +38,15 @@ body:
     attributes:
       label: Expected Behavior
       description: "A clear and detailed description of what you think should happen."
-      placeholder: "Tell us what litecart should normally do."
+      placeholder: "Tell us what myCart should normally do."
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: "litecart Version"
-      description: "Some bugs may be fixed in future litecart releases, so we have to know your litecart version."
-      placeholder: "Write your litecart version. (v0.0.1, v0.1.1...)"
+      label: "myCart Version"
+      description: "Some bugs may be fixed in future myCart releases, so we have to know your myCart version."
+      placeholder: "Write your myCart version. (v0.0.1, v0.1.1...)"
     validations:
       required: true
   - type: textarea
@@ -70,7 +70,7 @@ body:
       label: "Checklist:"
       description: "By submitting this issue, you confirm that:"
       options:
-        - label: "I agree to follow litecart's [Code of Conduct](https://github.com/shurco/litecart/blob/master/.github/CODE_OF_CONDUCT.md)."
+        - label: "I agree to follow myCart's [Code of Conduct](https://github.com/shurco/mycart/blob/master/.github/CODE_OF_CONDUCT.md)."
           required: true
         - label: "I have checked for existing issues that describe my problem prior to opening this one."
           required: true

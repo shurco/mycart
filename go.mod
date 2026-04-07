@@ -1,4 +1,4 @@
-module github.com/shurco/litecart
+module github.com/shurco/mycart
 
 go 1.26.1
 

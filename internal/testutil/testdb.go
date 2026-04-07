@@ -14,9 +14,9 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/pressly/goose/v3"
 
-	"github.com/shurco/litecart/internal/queries"
-	"github.com/shurco/litecart/migrations"
-	"github.com/shurco/litecart/pkg/jwtutil"
+	"github.com/shurco/mycart/internal/queries"
+	"github.com/shurco/mycart/migrations"
+	"github.com/shurco/mycart/pkg/jwtutil"
 	_ "modernc.org/sqlite"
 )
 

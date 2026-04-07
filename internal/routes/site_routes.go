@@ -6,8 +6,8 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	handlers "github.com/shurco/litecart/internal/handlers/public"
-	"github.com/shurco/litecart/web"
+	handlers "github.com/shurco/mycart/internal/handlers/public"
+	"github.com/shurco/mycart/web"
 )
 
 func SiteRoutes(c *fiber.App) {

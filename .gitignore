@@ -46,7 +46,7 @@ fixtures/migration/*_private.sql
 
 # Database files
 *.db
-litecart.db
+mycart.db
 
 .cursor/
 .playwright-mcp/

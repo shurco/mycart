@@ -5,7 +5,7 @@ Quick reference guide for working with the litepay package.
 ## Quick Start
 
 ```go
-import "github.com/shurco/litecart/pkg/litepay"
+import "github.com/shurco/mycart/pkg/litepay"
 
 // 1. Create configuration
 pay := litepay.New(callbackURL, successURL, cancelURL)

@@ -9,8 +9,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/google/uuid"
 
-	"github.com/shurco/litecart/internal/testutil"
-	"github.com/shurco/litecart/pkg/jwtutil"
+	"github.com/shurco/mycart/internal/testutil"
+	"github.com/shurco/mycart/pkg/jwtutil"
 )
 
 func TestJWTProtected(t *testing.T) {

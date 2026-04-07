@@ -26,7 +26,7 @@ builds:
       - -X "main.gitCommit={{.ShortCommit}}"
       - -X "main.buildDate={{.Now.Format "2006-01-02"}}"
     main: ./cmd/main.go
-    binary: litecart
+    binary: mycart
 
 archives:
   - name_template: '{{.ProjectName}}_{{.Version}}_{{.Os}}-{{.Arch}}'
@@ -88,7 +88,7 @@ changelog:
 dockers_v2:
   - id: dockerhub
     images:
-      - 'shurco/litecart'
+      - 'shurco/mycart'
     tags:
       - 'v{{ .Version }}'
       - 'latest'
@@ -99,10 +99,10 @@ dockers_v2:
     flags:
       - '--pull'
     labels:
-      'io.artifacthub.package.readme-url': 'https://raw.githubusercontent.com/shurco/litecart/main/README.md'
+      'io.artifacthub.package.readme-url': 'https://raw.githubusercontent.com/shurco/mycart/main/README.md'
       'io.artifacthub.package.maintainers': '[{"name":"Dmitry Shurco"}]'
       'io.artifacthub.package.license': 'MIT'
-      'org.opencontainers.image.description': '🛒 litecart - shopping-cart in 1 file'
+      'org.opencontainers.image.description': '🛒 myCart - shopping-cart in 1 file'
       'org.opencontainers.image.created': '{{.Date}}'
       'org.opencontainers.image.name': '{{.ProjectName}}'
       'org.opencontainers.image.revision': '{{.FullCommit}}'
@@ -111,7 +111,7 @@ dockers_v2:
 
   - id: ghcr
     images:
-      - 'ghcr.io/shurco/litecart'
+      - 'ghcr.io/shurco/mycart'
     tags:
       - 'v{{ .Version }}'
       - 'latest'
@@ -122,10 +122,10 @@ dockers_v2:
     flags:
       - '--pull'
     labels:
-      'io.artifacthub.package.readme-url': 'https://raw.githubusercontent.com/shurco/litecart/main/README.md'
+      'io.artifacthub.package.readme-url': 'https://raw.githubusercontent.com/shurco/mycart/main/README.md'
       'io.artifacthub.package.maintainers': '[{"name":"Dmitry Shurco"}]'
       'io.artifacthub.package.license': 'MIT'
-      'org.opencontainers.image.description': '🛒 litecart - shopping-cart in 1 file'
+      'org.opencontainers.image.description': '🛒 myCart - shopping-cart in 1 file'
       'org.opencontainers.image.created': '{{.Date}}'
       'org.opencontainers.image.name': '{{.ProjectName}}'
       'org.opencontainers.image.revision': '{{.FullCommit}}'
@@ -135,10 +135,10 @@ dockers_v2:
 release:
   name_template: "v{{ .Version }}"
   header: |
-    > *To update the prebuilt executable you can run `./litecart update`*
+    > *To update the prebuilt executable you can run `./mycart update`*
 
   footer: |
-    **Full Changelog**: https://github.com/shurco/litecart/compare/{{ .PreviousTag }}...{{ .Tag }}
+    **Full Changelog**: https://github.com/shurco/mycart/compare/{{ .PreviousTag }}...{{ .Tag }}
     
     > [!WARNING]
     > If you are updating, it is essential to do the following - back up the **./site** folder if you have made changes to it (you can rename it). A new folder with updated files will be created.
@@ -146,5 +146,5 @@ release:
 announce:
   mastodon:
     enabled: true
-    message_template: "#litecart {{ .Tag }} is out! Check it out: https://github.com/shurco/litecart/releases/tag/{{ .Tag }}"
+    message_template: "#mycart {{ .Tag }} is out! Check it out: https://github.com/shurco/mycart/releases/tag/{{ .Tag }}"
     server: https://mastodon.social

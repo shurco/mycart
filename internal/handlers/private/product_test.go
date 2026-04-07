@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/shurco/litecart/internal/testutil"
+	"github.com/shurco/mycart/internal/testutil"
 )
 
 func TestProducts(t *testing.T) {

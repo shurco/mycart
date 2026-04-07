@@ -8,7 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/shurco/litecart/internal/testutil"
+	"github.com/shurco/mycart/internal/testutil"
 )
 
 func TestGetSetting(t *testing.T) {

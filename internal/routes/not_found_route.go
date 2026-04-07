@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/shurco/litecart/pkg/webutil"
+	"github.com/shurco/mycart/pkg/webutil"
 )
 
 // NotFoundRoute handles 404 errors and routes to appropriate pages.

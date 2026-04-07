@@ -1,10 +1,10 @@
 # Payment Interface Customization
 
-This document describes how to customize the appearance and behavior of the payment interface for customers in LiteCart.
+This document describes how to customize the appearance and behavior of the payment interface for customers in myCart.
 
 ## Overview
 
-This document describes how to customize the appearance and behavior of the payment interface for customers in LiteCart.
+This document describes how to customize the appearance and behavior of the payment interface for customers in myCart.
 
 ## Main Files
 
@@ -302,4 +302,4 @@ The project uses Tailwind CSS. You can:
 
 ## Additional Help
 
-Or open an issue on GitHub: https://github.com/shurco/litecart/issues
+Or open an issue on GitHub: https://github.com/shurco/mycart/issues

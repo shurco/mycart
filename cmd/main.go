@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	app "github.com/shurco/litecart/internal"
-	"github.com/shurco/litecart/pkg/update"
+	app "github.com/shurco/mycart/internal"
+	"github.com/shurco/mycart/pkg/update"
 )
 
 var (
@@ -17,10 +17,10 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:                "litecart",
-	Short:              "LiteCart CLI",
-	Long:               "🛒 litecart - shopping-cart in 1 file",
-	Version:            fmt.Sprintf("LiteCart %s (%s) from %s", version, gitCommit, buildDate),
+	Use:                "mycart",
+	Short:              "myCart CLI",
+	Long:               "🛒 myCart - shopping-cart in 1 file",
+	Version:            fmt.Sprintf("myCart %s (%s) from %s", version, gitCommit, buildDate),
 	FParseErrWhitelist: cobra.FParseErrWhitelist{UnknownFlags: true},
 	CompletionOptions:  cobra.CompletionOptions{DisableDefaultCmd: true},
 }
@@ -99,9 +99,9 @@ func cmdUpdate() *cobra.Command {
 		Run: func(_ *cobra.Command, _ []string) {
 			cfg := &update.Config{
 				Owner:             "shurco",
-				Repo:              "litecart",
+				Repo:              "mycart",
 				CurrentVersion:    version,
-				ArchiveExecutable: "litecart",
+				ArchiveExecutable: "mycart",
 			}
 
 			if err := update.Init(cfg); err != nil {

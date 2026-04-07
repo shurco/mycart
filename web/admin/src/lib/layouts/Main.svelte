@@ -40,7 +40,7 @@
   })
 
   const goToRelease = async () => {
-    const releaseUrl = version.release_url || 'https://github.com/shurco/litecart'
+    const releaseUrl = version.release_url || 'https://github.com/shurco/mycart'
     window.open(releaseUrl, '_blank')
   }
 

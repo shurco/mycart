@@ -6,15 +6,15 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/shurco/litecart/internal/mailer"
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/internal/queries"
-	"github.com/shurco/litecart/internal/webhook"
-	"github.com/shurco/litecart/pkg/errors"
-	"github.com/shurco/litecart/pkg/litepay"
-	"github.com/shurco/litecart/pkg/logging"
-	"github.com/shurco/litecart/pkg/security"
-	"github.com/shurco/litecart/pkg/webutil"
+	"github.com/shurco/mycart/internal/mailer"
+	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/internal/queries"
+	"github.com/shurco/mycart/internal/webhook"
+	"github.com/shurco/mycart/pkg/errors"
+	"github.com/shurco/mycart/pkg/litepay"
+	"github.com/shurco/mycart/pkg/logging"
+	"github.com/shurco/mycart/pkg/security"
+	"github.com/shurco/mycart/pkg/webutil"
 )
 
 // sendPaymentWebhook sends a payment webhook notification.

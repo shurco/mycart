@@ -3,7 +3,7 @@ package routes
 import (
 	"github.com/gofiber/fiber/v3"
 
-	handlers "github.com/shurco/litecart/internal/handlers/public"
+	handlers "github.com/shurco/mycart/internal/handlers/public"
 )
 
 // ApiPublicRoutes sets up public API routes accessible without authentication.

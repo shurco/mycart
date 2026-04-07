@@ -3,10 +3,10 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v3"
 
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/internal/queries"
-	"github.com/shurco/litecart/pkg/logging"
-	"github.com/shurco/litecart/pkg/webutil"
+	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/internal/queries"
+	"github.com/shurco/mycart/pkg/logging"
+	"github.com/shurco/mycart/pkg/webutil"
 )
 
 // Install performs the initial installation of the application.

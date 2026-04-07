@@ -1,6 +1,6 @@
-# LiteCart API Reference
+# myCart API Reference
 
-LiteCart provides a RESTful JSON API split into two groups:
+myCart provides a RESTful JSON API split into two groups:
 
 - **Public API** — accessible without authentication (product catalog, pages, payments).
 - **Private API** — requires a JWT token obtained via `/api/sign/in` (admin panel operations).
@@ -411,7 +411,7 @@ Returns the current application version and update information. Results are cach
   "result": {
     "current_version": "v0.10.0",
     "new_version": "v0.11.0",
-    "release_url": "https://github.com/shurco/litecart/releases/..."
+    "release_url": "https://github.com/shurco/mycart/releases/..."
   }
 }
 ```
@@ -1033,7 +1033,7 @@ Re-sends the purchase confirmation email for a cart.
 
 ## Webhook Events
 
-When a webhook URL is configured, LiteCart sends POST notifications for:
+When a webhook URL is configured, myCart sends POST notifications for:
 
 | Event               | Description              |
 |---------------------|--------------------------|

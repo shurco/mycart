@@ -1,7 +1,7 @@
 {
   "common": {
     "loading": "LOADING...",
-    "poweredBy": "Powered by Litecart"
+    "poweredBy": "Powered by myCart"
   },
   "languages": {
     "en": "English",
@@ -13,7 +13,7 @@
   "footer": {
     "follow": "Follow:",
     "allRightsReserved": "All Rights Reserved",
-    "poweredBy": "Powered by Litecart"
+    "poweredBy": "Powered by myCart"
   },
   "home": {
     "products": "PRODUCTS",

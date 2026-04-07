@@ -29,12 +29,12 @@ install() {
   echo "Fetching the latest version..."
   local _ver
   if [ "$_cmd" = curl ]; then
-    _ver=$(curl --silent "https://api.github.com/repos/shurco/litecart/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/') || {
-      err "Error: could not fetch the latest litecart version number"
+    _ver=$(curl --silent "https://api.github.com/repos/shurco/mycart/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/') || {
+      err "Error: could not fetch the latest mycart version number"
     }
   elif [ "$_cmd" = wget ]; then
-    _ver=$(wget -qO- "https://api.github.com/repos/shurco/litecart/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/') || {
-      err "Error: could not fetch the latest litecart version number"
+    _ver=$(wget -qO- "https://api.github.com/repos/shurco/mycart/releases/latest" | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/') || {
+      err "Error: could not fetch the latest mycart version number"
     }
   fi
 
@@ -67,38 +67,38 @@ install() {
   esac
 
   local _url
-  _url="https://github.com/shurco/litecart/releases/download/v${_ver}/litecart_${_ver}_${_arc}.${_ext}"
+  _url="https://github.com/shurco/mycart/releases/download/v${_ver}/mycart_${_ver}_${_arc}.${_ext}"
 
-  echo "Installing litecart_${_ver} for ${_arc}..."
+  echo "Installing mycart_${_ver} for ${_arc}..."
   if [ "$_cmd" = curl ]; then
-    curl --silent --fail --location "$_url" --output "litecart_${_ver}.${_arc}.${_ext}" || {
-      err "Error: could not fetch the latest litecart file"
+    curl --silent --fail --location "$_url" --output "mycart_${_ver}.${_arc}.${_ext}" || {
+      err "Error: could not fetch the latest mycart file"
     }
   elif [ "$_cmd" = wget ]; then
-    wget --quiet "$_url" -O "litecart_${_ver}.${_arc}.${_ext}" || {
-      err "Error: could not fetch the latest litecart file"
+    wget --quiet "$_url" -O "mycart_${_ver}.${_arc}.${_ext}" || {
+      err "Error: could not fetch the latest mycart file"
     }
   fi
 
   if [ "$_ext" = "zip" ]; then
-    unzip -o "litecart_${_ver}.${_arc}.${_ext}" || {
+    unzip -o "mycart_${_ver}.${_arc}.${_ext}" || {
       err "Error: unable to extract the downloaded archive file"
     }
   else
-    tar -zxf "litecart_${_ver}.${_arc}.${_ext}" || {
+    tar -zxf "mycart_${_ver}.${_arc}.${_ext}" || {
       err "Error: unable to extract the downloaded archive file"
     }
   fi
 
-  rm -rf "litecart_${_ver}.${_arc}.${_ext}"
+  rm -rf "mycart_${_ver}.${_arc}.${_ext}"
 
   echo ""
-  echo "litecart successfully installed"
+  echo "mycart successfully installed"
   echo ""
   echo "To see the command-line options run:"
-  echo "  ./litecart --help"
+  echo "  ./mycart --help"
   echo "To start server run:"
-  echo "  ./litecart serve"
+  echo "  ./mycart serve"
   echo ""
   exit 0
 }

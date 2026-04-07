@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/shurco/litecart/internal/mailer"
-	"github.com/shurco/litecart/internal/queries"
-	"github.com/shurco/litecart/pkg/errors"
-	"github.com/shurco/litecart/pkg/logging"
-	"github.com/shurco/litecart/pkg/webutil"
+	"github.com/shurco/mycart/internal/mailer"
+	"github.com/shurco/mycart/internal/queries"
+	"github.com/shurco/mycart/pkg/errors"
+	"github.com/shurco/mycart/pkg/logging"
+	"github.com/shurco/mycart/pkg/webutil"
 )
 
 // Carts returns a list of all carts.

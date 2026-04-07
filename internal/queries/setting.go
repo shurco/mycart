@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/shurco/litecart/internal/models"
-	"github.com/shurco/litecart/pkg/errors"
-	"github.com/shurco/litecart/pkg/security"
-	"github.com/shurco/litecart/pkg/strutil"
+	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/pkg/errors"
+	"github.com/shurco/mycart/pkg/security"
+	"github.com/shurco/mycart/pkg/strutil"
 )
 
 // SettingQueries wraps a sql.DB connection allowing for easy querying and interaction

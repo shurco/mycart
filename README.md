@@ -1,33 +1,47 @@
 <p align="center">
     <a href="#" target="_blank" rel="noopener">
-        <img src="https://github.com/shurco/litecart/blob/main/.github/media/banner.png" alt="litecart - shopping-cart in 1 file" />
+        <img src="https://github.com/shurco/mycart/blob/main/.github/media/banner.png" alt="myCart - shopping-cart in 1 file" />
     </a>
 </p>
 
 
-<a href="https://github.com/shurco/litecart/releases"><img src="https://img.shields.io/github/v/release/shurco/litecart?sort=semver&label=Release&color=651FFF"></a>
-<a href="https://goreportcard.com/report/github.com/shurco/litecart"><img src="https://goreportcard.com/badge/github.com/shurco/litecart"></a>
-<a href="https://www.codefactor.io/repository/github/shurco/litecart"><img src="https://www.codefactor.io/repository/github/shurco/litecart/badge" alt="CodeFactor" /></a>
-<a href="https://github.com/shurco/litecart/actions/workflows/release.yml"><img src="https://github.com/shurco/litecart/actions/workflows/release.yml/badge.svg"></a>
-<a href="https://github.com/shurco/litecart/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
+<a href="https://github.com/shurco/mycart/releases"><img src="https://img.shields.io/github/v/release/shurco/mycart?sort=semver&label=Release&color=651FFF"></a>
+<a href="https://goreportcard.com/report/github.com/shurco/mycart"><img src="https://goreportcard.com/badge/github.com/shurco/mycart"></a>
+<a href="https://www.codefactor.io/repository/github/shurco/mycart"><img src="https://www.codefactor.io/repository/github/shurco/mycart/badge" alt="CodeFactor" /></a>
+<a href="https://github.com/shurco/mycart/actions/workflows/release.yml"><img src="https://github.com/shurco/mycart/actions/workflows/release.yml/badge.svg"></a>
+<a href="https://github.com/shurco/mycart/blob/master/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
 
-## 🛒&nbsp;&nbsp;What is litecart?
+> [!Important]
+> This repository is being renamed.  
+>The project was originally published under the name litecart. I recently received a trademark-related claim regarding the use of this name. To avoid confusion and potential legal issues, the project will continue under a new name.  
+>The codebase itself is not changing. Only the project name, repository name, package identifiers, and related references will be updated.  
+>This repository will remain available for some time with redirects and notes pointing to the new location so existing users have time to migrate.  
+>If your setup depends on the current repository name, please update your references once the rename is complete.  
+>Thank you to everyone who has used the project and contributed feedback.  
 
-Litecart is an open source shopping-cart in 1 file of embedded database (SQLite), convenient dashboard UI and simple site.
+> [!NOTE]
+> **Disclaimer:** Not affiliated with any similarly named projects or brands.
+> This is an independent open source project licensed under the MIT License.
+
+
+## 🛒&nbsp;&nbsp;What is myCart?
+
+myCart is an open source shopping-cart in 1 file of embedded database (SQLite), convenient dashboard UI and simple site.
+Formerly known as **litecart** (legacy project name kept here for discoverability in search).
 
 > [!WARNING]
-> Current major version is zero (`v0.x.x`) to accommodate rapid development and fast iteration while getting early feedback from users. Please keep in mind that litecart is still under active development and therefore full backward compatibility is not guaranteed before reaching v1.0.0.
+> Current major version is zero (`v0.x.x`) to accommodate rapid development and fast iteration while getting early feedback from users. Please keep in mind that myCart is still under active development and therefore full backward compatibility is not guaranteed before reaching v1.0.0.
 
 ### Video Example
-![Example](https://github.com/shurco/litecart/blob/main/.github/media/demo.gif)
+![Example](https://github.com/shurco/mycart/blob/main/.github/media/demo.gif)
 
 ### Admin Panel Screenshots
 <p align="center">
-  <img src="https://github.com/shurco/litecart/blob/main/.github/media/screenshots/products.png" width="270">
-  <img src="https://github.com/shurco/litecart/blob/main/.github/media/screenshots/product-edit.png" width="270">
-  <img src="https://github.com/shurco/litecart/blob/main/.github/media/screenshots/carts.png" width="270">
-  <img src="https://github.com/shurco/litecart/blob/main/.github/media/screenshots/pages.png" width="270">
-  <img src="https://github.com/shurco/litecart/blob/main/.github/media/screenshots/settings.png" width="270">
+  <img src="https://github.com/shurco/mycart/blob/main/.github/media/screenshots/products.png" width="270">
+  <img src="https://github.com/shurco/mycart/blob/main/.github/media/screenshots/product-edit.png" width="270">
+  <img src="https://github.com/shurco/mycart/blob/main/.github/media/screenshots/carts.png" width="270">
+  <img src="https://github.com/shurco/mycart/blob/main/.github/media/screenshots/pages.png" width="270">
+  <img src="https://github.com/shurco/mycart/blob/main/.github/media/screenshots/settings.png" width="270">
 </p>
 
 
@@ -37,78 +51,78 @@ Litecart is an open source shopping-cart in 1 file of embedded database (SQLite)
 
 💰 **Support for Popular Payment Systems**: Accept payments seamlessly with support for popular payment systems, ensuring a smooth checkout experience for your customers.  
 
-🔑 **Sell Files and License Keys**: Whether you're selling digital files or license keys, litecart has you covered, providing flexibility in the types of products you can offer.  
+🔑 **Sell Files and License Keys**: Whether you're selling digital files or license keys, myCart has you covered, providing flexibility in the types of products you can offer.  
 
-⚙️ **Lightweight and Efficient**: litecart utilizes SQLite as its embedded database, eliminating the need for heavy databases like MySQL, PostgreSQL, or MongoDB. This results in a lightweight website that performs exceptionally well.  
+⚙️ **Lightweight and Efficient**: myCart utilizes SQLite as its embedded database, eliminating the need for heavy databases like MySQL, PostgreSQL, or MongoDB. This results in a lightweight website that performs exceptionally well.  
 
-☁️ **Easily Customizable**: Modify and customize your litecart website effortlessly to match your branding and unique requirements, making it truly your own.  
+☁️ **Easily Customizable**: Modify and customize your myCart website effortlessly to match your branding and unique requirements, making it truly your own.  
 
-🧞‍♂️ **Convenient Administration Panel**: With a user-friendly dashboard UI, litecart offers a hassle-free administration panel, allowing you to manage your store, inventory, and orders with ease.  
+🧞‍♂️ **Convenient Administration Panel**: With a user-friendly dashboard UI, myCart offers a hassle-free administration panel, allowing you to manage your store, inventory, and orders with ease.  
 
-⚡️ **Hardware Compatibility**: Whether you're running litecart on a powerful server or a modest hardware setup, rest assured that it will work seamlessly, providing a consistent shopping experience for your customers.  
+⚡️ **Hardware Compatibility**: Whether you're running myCart on a powerful server or a modest hardware setup, rest assured that it will work seamlessly, providing a consistent shopping experience for your customers.  
 
-🔒 **Built-in HTTPS Support**: Prioritizing security, litecart comes with built-in support for HTTPS, ensuring the safety of your customers' data.
+🔒 **Built-in HTTPS Support**: Prioritizing security, myCart comes with built-in support for HTTPS, ensuring the safety of your customers' data.
 
 🆓 **Free Products Support**: Offer free products to your customers by setting the product price to 0. Free products are automatically processed without requiring payment system integration, making it perfect for free downloads, samples, or promotional content.
 
-🌐 **Multi-language Support**: Built-in internationalization (i18n) support allows you to create multilingual stores. By default, litecart includes support for English and Chinese languages. The language switcher is available in both the admin panel and the public site, making it easy to manage content in multiple languages and provide a localized shopping experience for your customers.
+🌐 **Multi-language Support**: Built-in internationalization (i18n) support allows you to create multilingual stores. By default, myCart includes support for English and Chinese languages. The language switcher is available in both the admin panel and the public site, making it easy to manage content in multiple languages and provide a localized shopping experience for your customers.
 
 
 ## ⬇️&nbsp;&nbsp;Installation
 
-`litecart` is engineered for easy installation and operation, requiring just a single command from your terminal. Besides the conventional installation method, `litecart` can also be set up and operated via HomeBrew, Docker, or any other container orchestration tools like Docker Compose, Docker Swarm, Rancher, or Kubernetes.
+`mycart` is engineered for easy installation and operation, requiring just a single command from your terminal. Besides the conventional installation method, `mycart` can also be set up and operated via HomeBrew, Docker, or any other container orchestration tools like Docker Compose, Docker Swarm, Rancher, or Kubernetes.
 
 #### <img width="20" src="/.github/media/platforms/apple.svg">&nbsp;Install on macOS
-The fastest method to install `litecart` on macOS involves using Homebrew. This will install the command-line tools and the `litecart` server as a combined executable. If you don't utilize Homebrew, adhere to the Linux instructions below for `litecart` installation.
+The fastest method to install `mycart` on macOS involves using Homebrew. This will install the command-line tools and the `mycart` server as a combined executable. If you don't utilize Homebrew, adhere to the Linux instructions below for `mycart` installation.
 ```shell
-brew install shurco/tap/litecart
+brew install shurco/tap/mycart
 ```
 
 Alternately, you can configure the tap and install the package separately:
 ``` shell
 $ brew tap shurco/tap
-$ brew install litecart
+$ brew install mycart
 ```
 
 
 #### <img width="20" src="/.github/media/platforms/linux.svg">&nbsp;Install on Linux 
-The most straightforward and recommended method to start using `litecart` on Unix operating systems involves installing and utilizing the `litecart` command-line tool. Execute the given command in your terminal and adhere to the instructions displayed on the screen.
+The most straightforward and recommended method to start using `mycart` on Unix operating systems involves installing and utilizing the `mycart` command-line tool. Execute the given command in your terminal and adhere to the instructions displayed on the screen.
 
 ```bash
-curl -L https://raw.githubusercontent.com/shurco/litecart/main/scripts/install | sh
+curl -L https://raw.githubusercontent.com/shurco/mycart/main/scripts/install | sh
 ```
 
 #### <img width="20" src="/.github/media/platforms/windows.svg">&nbsp;Install on Windows
-The simplest and most recommended method to start using `litecart` on Windows is by installing and utilizing the `litecart` command-line tool. Execute the given command in your terminal and adhere to the instructions displayed on the screen.
+The simplest and most recommended method to start using `mycart` on Windows is by installing and utilizing the `mycart` command-line tool. Execute the given command in your terminal and adhere to the instructions displayed on the screen.
 ```bash
-curl -L https://raw.githubusercontent.com/shurco/litecart/main/scripts/install | sh
+curl -L https://raw.githubusercontent.com/shurco/mycart/main/scripts/install | sh
 ```
-or download and unzip the [latest version](https://github.com/shurco/litecart/releases/latest) for Windows.
+or download and unzip the [latest version](https://github.com/shurco/mycart/releases/latest) for Windows.
 
 
 #### <img width="20" src="/.github/media/platforms/docker.svg">&nbsp;Run using Docker
-Docker enables the management and operation of a `litecart` instance without requiring the installation of any command-line tools. The `litecart` Docker container includes all necessary command-line tools  or even for server execution.
+Docker enables the management and operation of a `mycart` instance without requiring the installation of any command-line tools. The `mycart` Docker container includes all necessary command-line tools  or even for server execution.
 
-For [Docker Hub](https://hub.docker.com/r/shurco/litecart):
+For [Docker Hub](https://hub.docker.com/r/shurco/mycart):
 ```bash
 docker run \
   -v ./lc_base:/lc_base \
   -v ./lc_digitals:/lc_digitals \
   -v ./lc_uploads:/lc_uploads \
   -v ./site:/site \
-  --rm shurco/litecart:latest init
+  --rm shurco/mycart:latest init
 
 docker run \
-  --name litecart \
+  --name mycart \
   --restart unless-stopped \
   -p '8080:8080' \
   -v ./lc_base:/lc_base \
   -v ./lc_digitals:/lc_digitals \
   -v ./lc_uploads:/lc_uploads \
   -v ./site:/site \
-  shurco/litecart:latest
+  shurco/mycart:latest
 ```
-or if use [Github Packages Hub](https://github.com/shurco/litecart/pkgs/container/litecart):
+or if use [Github Packages Hub](https://github.com/shurco/mycart/pkgs/container/mycart):
 
 ```bash
 docker run \
@@ -116,24 +130,24 @@ docker run \
   -v ./lc_digitals:/lc_digitals \
   -v ./lc_uploads:/lc_uploads \
   -v ./site:/site \
-  --rm ghcr.io/shurco/litecart:latest init
+  --rm ghcr.io/shurco/mycart:latest init
 
 docker run \
-  --name litecart \
+  --name mycart \
   --restart unless-stopped \
   -p '8080:8080' \
   -v ./lc_base:/lc_base \
   -v ./lc_digitals:/lc_digitals \
   -v ./lc_uploads:/lc_uploads \
   -v ./site:/site \
-  ghcr.io/shurco/litecart:latest
+  ghcr.io/shurco/mycart:latest
 ```
 
 #### <img width="20" src="/.github/media/platforms/docker.svg">&nbsp;Run using Docker Compose
 Docker Compose provides a convenient way to manage multiple containers and services. The project includes several Docker Compose configurations for different use cases.
 
 **Production Setup** (`docker/docker-compose.yml`):
-This configuration includes the litecart application and an Nginx reverse proxy:
+This configuration includes the myCart application and an Nginx reverse proxy:
 
 ```bash
 cd docker
@@ -141,8 +155,8 @@ docker-compose up -d
 ```
 
 This setup includes:
-- **litecart**: The main application container with all required volumes
-- **nginx**: Reverse proxy server that listens on port 80 and forwards requests to litecart
+- **mycart**: The main application container with all required volumes
+- **nginx**: Reverse proxy server that listens on port 80 and forwards requests to myCart
 
 The Nginx configuration is located in `docker/nginx/nginx.conf` and can be customized as needed.
 
@@ -169,7 +183,7 @@ docker-compose -f docker-compose.yml -f docker-compose_dev.yml up -d
 Before starting the services, initialize the application:
 
 ```bash
-docker-compose run --rm litecart init
+docker-compose run --rm mycart init
 ```
 
 **Stopping Services**:
@@ -181,63 +195,67 @@ docker-compose down
 An example manifest for running on Kubernetes can be found in the `/k8s/` folder (thanks <a href="https://github.com/vuisme" target="_blank">@vuisme</a>)
 
 
+## 🔄&nbsp;&nbsp;Migrating from litecart
+
+If you are upgrading from a version that was published under the old name **litecart**, see the **[Migration Guide](./docs/migration-from-litecart.md)** for step-by-step instructions covering binary, Docker, Docker Compose, Kubernetes, Homebrew, and Go module updates. Your data and database are fully compatible — no schema migration is required.
+
 ## ⬇️&nbsp;&nbsp;Updating
 > [!WARNING]
 > Before any update, be sure to make a backup of the *./lc_base* folder and the *./site* folder.
 
 #### Update on macOS / Linux / Windows
-The easiest way to update `litecart` to the latest version is to execute the command:
+The easiest way to update `mycart` to the latest version is to execute the command:
 
 ```bash
-./litecart update
+./mycart update
 ```
 
-If there were changes in the database structure during the update, it is necessary to perform migration. To do this, you need to run the command from the `litecart` folder:
+If there were changes in the database structure during the update, it is necessary to perform migration. To do this, you need to run the command from the `mycart` folder:
 ```bash
-./litecart migrate
+./mycart migrate
 ```
 
 
 #### <img width="20" src="/.github/media/platforms/docker.svg">&nbsp; Update using Docker
-Our mantra is to make updating a seamless experience. Simply download the new image and launch the container as you normally would. For example, if use [Docker Hub](https://hub.docker.com/r/shurco/litecart):
+Our mantra is to make updating a seamless experience. Simply download the new image and launch the container as you normally would. For example, if use [Docker Hub](https://hub.docker.com/r/shurco/mycart):
 
 ```bash
-docker stop litecart
-docker pull shurco/litecart:latest # download new image
-docker rename litecart litecart-backup # do image backup
+docker stop mycart
+docker pull shurco/mycart:latest # download new image
+docker rename mycart mycart-backup # do image backup
 docker run \
-  --name litecart \
+  --name mycart \
   --restart unless-stopped \
   -p '8080:8080' \
   -v ./lc_base:/lc_base \
   -v ./lc_digitals:/lc_digitals \
   -v ./lc_uploads:/lc_uploads \
   -v ./site:/site \
-  shurco/litecart:latest
+  shurco/mycart:latest
 ```
 
-If there were changes in the database structure during the update, it is necessary to perform migration. To do this, you need to run the command from the `litecart` folder:
+If there were changes in the database structure during the update, it is necessary to perform migration. To do this, you need to run the command from the `mycart` folder:
 ```bash
 docker run \
 -v ./lc_base:/lc_base \
 -v ./site:/site \
---rm shurco/litecart migrate
+--rm shurco/mycart migrate
 ```
 
 #### <img width="20" src="/.github/media/platforms/k8s.svg">&nbsp;Run using Kubernetes
 An example manifest for running on Kubernetes can be found in the `/k8s/` folder (thanks <a href="https://github.com/vuisme" target="_blank">@vuisme</a>)
 
 ## 🚀&nbsp;&nbsp;Getting started
-Getting started with `litecart` is as easy as starting up the `litecart` server
+Getting started with `mycart` is as easy as starting up the `mycart` server
 
 Default run for Linux/macOS:
 ```bash
-./litecart serve
+./mycart serve
 ```
 
 For Windows:
 ```
-litecart.exe serve
+mycart.exe serve
 ```
 
 When launched for the first time, necessary folders will be created in the directory with the executable file. The default links for access are:  
@@ -246,17 +264,17 @@ When launched for the first time, necessary folders will be created in the direc
 
 If you need to run on a different port, use the flag `--http`:
 ```
-./litecart serve --http 0.0.0.0:8088
+./mycart serve --http 0.0.0.0:8088
 ```
 
 > [!NOTE]
 > Ports <= 1024 are privileged ports. You can't use them unless you're root or have the explicit permission to use them. See this answer for an explanation or wikipedia or something you trust more. Use:
-> **sudo setcap 'cap_net_bind_service=+ep' /path_to/litecart**
+> **sudo setcap 'cap_net_bind_service=+ep' /path_to/mycart**
 
 ## 📚&nbsp;&nbsp;Commands
 Usage:
 ```
-./litecart [command] [flags]
+./mycart [command] [flags]
 ```
 
 Available commands:
@@ -267,13 +285,13 @@ serve       Starts the web server (default to 0.0.0.0:8080)
 update      Updating the application to the latest version
 ```
 
-Global flags `./litecart [flags]`:
+Global flags `./mycart [flags]`:
 ```
--h, --help      help for litecart
--v, --version   version for litecart
+-h, --help      help for mycart
+-v, --version   version for mycart
 ```
 
-Serve flags `./litecart serve [flags]`:
+Serve flags `./mycart serve [flags]`:
 ```
 --http string    server address (default "0.0.0.0:8080")
 --https string   https server address (auto TLS)
@@ -341,7 +359,7 @@ To obtain an API Key for using the Coinbase Commerce API, follow these steps:
 
 
 #### Dummy Payment
-Dummy Payment is a built-in payment provider that comes pre-configured with litecart. It is designed for processing free products (products with a price of $0) and does not require any external payment system integration or API keys.
+Dummy Payment is a built-in payment provider that comes pre-configured with myCart. It is designed for processing free products (products with a price of $0) and does not require any external payment system integration or API keys.
 
 **How it works:**
 - Automatically activated when a customer's cart contains only free products (total amount = $0)
@@ -367,7 +385,7 @@ Dummy Payment is a built-in payment provider that comes pre-configured with lite
 
 ## 🆓&nbsp;&nbsp;Free Products
 
-Litecart supports free products, allowing you to offer digital content, samples, or promotional materials at no cost to your customers.
+myCart supports free products, allowing you to offer digital content, samples, or promotional materials at no cost to your customers.
 
 ### Creating Free Products
 
@@ -419,11 +437,11 @@ There are a number of scripts (in the ./scripts folder) that simplify developmen
 > password - Pass123
 
 #### Admin panel (frontend)
-To develop the web interface of the admin panel, you need to start the litecart server (for example, execute the command from the project root `go run ./cmd/main.go serve`).
+To develop the web interface of the admin panel, you need to start the myCart server (for example, execute the command from the project root `go run ./cmd/main.go serve`).
 All the code is located in the folder ./web/admin. The command `cd ./web/admin && bun run dev` will start the development server for the admin panel web interface. By default, it will be available at http://localhost:5173/_/.
 
 #### Base site (frontend)
-To develop the web interface of the base site, you need to start the litecart server (for example, execute the command from the project root `go run ./cmd/main.go serve`).  
+To develop the web interface of the base site, you need to start the myCart server (for example, execute the command from the project root `go run ./cmd/main.go serve`).  
 Run `./scripts/webscripts` to download and install the necessary JavaScript libraries into the folder ./web/site/public/assets/js/.
 To update the styles, it is necessary to execute the command `cd ./web/site && bun run build`.  
 If you actively change styles, you can run the command `cd ./web/site && bun run dev`. It will monitor changes in files and automatically update the style file.
@@ -432,7 +450,7 @@ If you actively change styles, you can run the command `cd ./web/site && bun run
 For detailed information on how to customize the site design and deploy it on a separate server with Nginx, see [Customization and Deployment Guide](./docs/customization.md).
 
 ## 🗺️&nbsp;&nbsp;ToDo
-`litecart` has a [roadmap](https://github.com/users/shurco/projects/2) and I try to work on issues in specific order and such PRs often come in out of nowhere and skew all initial planning with tedious back-and-forth communication.
+`mycart` has a [roadmap](https://github.com/users/shurco/projects/2) and I try to work on issues in specific order and such PRs often come in out of nowhere and skew all initial planning with tedious back-and-forth communication.
 
 - [x] Product in the form of files
 - [x] Product in the form of license keys
@@ -445,17 +463,17 @@ For detailed information on how to customize the site design and deploy it on a 
 - [ ] Payment via Webhook
 - [x] <a href="#spectrocoin">Support for payment using crypto (SpectroCoin)</a>
 - [x] <a href="#coinbase">Coinbase Commerce crypto payments</a>
-- [x] Support WebHook (<a href="https://github.com/msalbrain" target="_blank">@nicksnyder</a> in <a href="https://github.com/shurco/litecart/pull/61" target="_blank">#61</a>)
-- [x] <a href="#dummy-payment">Dummy Payment</a> (<a href="https://github.com/majiayu000" target="_blank">@majiayu000</a> in <a href="https://github.com/shurco/litecart/pull/261" target="_blank">#261</a>)
+- [x] Support WebHook (<a href="https://github.com/msalbrain" target="_blank">@nicksnyder</a> in <a href="https://github.com/shurco/mycart/pull/61" target="_blank">#61</a>)
+- [x] <a href="#dummy-payment">Dummy Payment</a> (<a href="https://github.com/majiayu000" target="_blank">@majiayu000</a> in <a href="https://github.com/shurco/mycart/pull/261" target="_blank">#261</a>)
 
 
 ## 👍&nbsp;&nbsp;Contribute
 
-If you want to say **thank you** and/or support the active development of `litecart`:
+If you want to say **thank you** and/or support the active development of `mycart`:
 
-1. Add a [GitHub Star](https://github.com/shurco/litecart/stargazers) to the project.
-2. Tweet about the project [on your Twitter](https://twitter.com/intent/tweet?text=%F0%9F%9B%92%20litecart%20-%20shopping-cart%20in%201%20file%20on%20%23Go%20https%3A%2F%2Fgithub.com%2Fshurco%2Flitecart).
+1. Add a [GitHub Star](https://github.com/shurco/mycart/stargazers) to the project.
+2. Tweet about the project [on your Twitter](https://twitter.com/intent/tweet?text=%F0%9F%9B%92%20myCart%20-%20shopping-cart%20in%201%20file%20on%20%23Go%20https%3A%2F%2Fgithub.com%2Fshurco%2Fmycart).
 3. Write a review or tutorial on [Medium](https://medium.com/), [Dev.to](https://dev.to/) or personal blog.
 4. Support the project by donating a [cup of coffee](https://github.com/sponsors/shurco).
 
-You can learn more about how you can contribute to this project in the [contribution guide](https://github.com/shurco/litecart/blob/master/.github/CONTRIBUTING.md).
+You can learn more about how you can contribute to this project in the [contribution guide](https://github.com/shurco/mycart/blob/master/.github/CONTRIBUTING.md).

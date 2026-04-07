@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/pressly/goose/v3"
-	"github.com/shurco/litecart/pkg/fsutil"
+	"github.com/shurco/mycart/pkg/fsutil"
 )
 
 // buildDSN builds a SQLite connection string with optimized parameters

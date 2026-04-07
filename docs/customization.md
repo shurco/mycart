@@ -72,8 +72,8 @@ Pages are located in `web/site/src/routes/`:
    Start the development server to view changes in real-time:
 
    ```bash
-   # Start litecart server (in one terminal)
-   ./litecart serve
+   # Start mycart server (in one terminal)
+   ./mycart serve
 
    # Start frontend dev server (in another terminal)
    cd web/site
@@ -97,14 +97,14 @@ Pages are located in `web/site/src/routes/`:
    bun run build
    ```
 
-   The built files will be in `web/site/build/` and will be automatically embedded into the binary on the next litecart build.
+   The built files will be in `web/site/build/` and will be automatically embedded into the binary on the next mycart build.
 
-4. **Rebuilding litecart**
+4. **Rebuilding mycart**
 
    If you're using a compiled binary, rebuild it:
 
    ```bash
-   go build -o litecart ./cmd/main.go
+   go build -o mycart ./cmd/main.go
    ```
 
 ### Customization via TailwindCSS
@@ -150,7 +150,7 @@ bun run build
 
 ### Step 2: Configure Nginx
 
-Create Nginx configuration `/etc/nginx/sites-available/litecart`:
+Create Nginx configuration `/etc/nginx/sites-available/mycart`:
 
 ```nginx
 server {
@@ -167,7 +167,7 @@ server {
     gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json;
 
     # Frontend static files
-    root /path/to/litecart/web/site/build;
+    root /path/to/mycart/web/site/build;
     index index.html;
 
     # SPA routing - all other requests to index.html
@@ -186,7 +186,7 @@ server {
 ### Step 3: Activate Configuration
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/litecart /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/mycart /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -208,7 +208,7 @@ Certbot will automatically update the Nginx configuration to use HTTPS.
 
 ```
 /var/www/
-└── litecart-frontend/    # Built frontend
+└── mycart-frontend/    # Built frontend
     └── build/           # Static files
 ```
 
@@ -216,23 +216,23 @@ Certbot will automatically update the Nginx configuration to use HTTPS.
 
 ```bash
 # 1. Create directory
-sudo mkdir -p /var/www/litecart-frontend
+sudo mkdir -p /var/www/mycart-frontend
 
 # 2. Build frontend
 cd web/site
 bun install
 bun run build
-sudo cp -r build/* /var/www/litecart-frontend/
+sudo cp -r build/* /var/www/mycart-frontend/
 
 # 3. Set permissions
-sudo chown -R www-data:www-data /var/www/litecart-frontend
+sudo chown -R www-data:www-data /var/www/mycart-frontend
 
 # 4. Configure Nginx
-sudo nano /etc/nginx/sites-available/litecart
+sudo nano /etc/nginx/sites-available/mycart
 # (paste configuration from section above)
 
 # 5. Activate Nginx configuration
-sudo ln -s /etc/nginx/sites-available/litecart /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/mycart /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
