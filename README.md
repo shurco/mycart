@@ -428,7 +428,7 @@ There are a number of scripts (in the ./scripts folder) that simplify developmen
 `./scripts/migration` - Helps to work with migrations. For instance, the `./scripts/migration dev up` command will apply new migrations from folder ./migrations, then implement the migrations from folder ./fixtures.  
 `./scripts/sqlite` - Optimizes the existing database.  
 `./scripts/tools` - Sets up the necessary environment for development (if needed).  
-`./scripts/webscripts` - For the basic site, updates vue3 to the latest version.  
+`./scripts/webscripts` - Updates frontend (admin + site) dependencies (SvelteKit, Tailwind) to the latest versions.  
 `./scripts/clear` - Removing hung golang or vite processes.  
 
 > [!NOTE]
@@ -442,9 +442,7 @@ All the code is located in the folder ./web/admin. The command `cd ./web/admin &
 
 #### Base site (frontend)
 To develop the web interface of the base site, you need to start the myCart server (for example, execute the command from the project root `go run ./cmd/main.go serve`).  
-Run `./scripts/webscripts` to download and install the necessary JavaScript libraries into the folder ./web/site/public/assets/js/.
-To update the styles, it is necessary to execute the command `cd ./web/site && bun run build`.  
-If you actively change styles, you can run the command `cd ./web/site && bun run dev`. It will monitor changes in files and automatically update the style file.
+All the code is located in the folder `./web/site`. The command `cd ./web/site && bun run dev` will start the Vite dev server. Run `cd ./web/site && bun run build` to produce the production bundle that the Go binary embeds via `//go:embed`.
 
 #### Customization and Deployment
 For detailed information on how to customize the site design and deploy it on a separate server with Nginx, see [Customization and Deployment Guide](./docs/customization.md).

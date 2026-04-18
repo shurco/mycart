@@ -93,7 +93,7 @@ func (q *PageQueries) ListPages(ctx context.Context, private bool, limit, offset
 	}
 	var total int
 	err = q.DB.QueryRowContext(ctx, countQuery).Scan(&total)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, 0, err
 	}
 
@@ -110,7 +110,7 @@ func (q *PageQueries) Page(ctx context.Context, slug string) (*models.Page, erro
 	query := `SELECT id, name, content, active, seo FROM page WHERE slug = ?`
 	err := q.DB.QueryRowContext(ctx, query, slug).Scan(&page.ID, &page.Name, &content, &page.Active, &seo)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.ErrPageNotFound
 		}
 		return nil, err
@@ -135,7 +135,7 @@ func (q *PageQueries) PageByID(ctx context.Context, id string) (*models.Page, er
 	query := `SELECT id, name, slug, position, content, active, seo, strftime('%s', created), strftime('%s', updated) FROM page WHERE id = ?`
 	err := q.DB.QueryRowContext(ctx, query, id).Scan(&page.ID, &page.Name, &page.Slug, &page.Position, &content, &page.Active, &seo, &page.Created, &updated)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.ErrPageNotFound
 		}
 		return nil, err
@@ -203,13 +203,12 @@ func (q *PageQueries) UpdatePage(ctx context.Context, page *models.Page) error {
 		position = currentPage.Position
 	}
 
-	var contentValue interface{}
-	if page.Content != nil {
+	var contentValue any
+	switch {
+	case page.Content != nil:
 		contentValue = *page.Content
-	} else if currentPage.Content != nil {
+	case currentPage.Content != nil:
 		contentValue = *currentPage.Content
-	} else {
-		contentValue = nil
 	}
 
 	// Use provided SEO data or current ones from database
@@ -245,8 +244,9 @@ func (q *PageQueries) UpdatePageContent(ctx context.Context, page *models.Page) 
 }
 
 // UpdatePageActive toggles the active status of a page with the given ID.
-// It updates the 'active' field to its logical negation (i.e., if it was true, it becomes false and vice versa)
-func (q *ProductQueries) UpdatePageActive(ctx context.Context, id string) error {
+// It updates the 'active' field to its logical negation (i.e., if it was true,
+// it becomes false and vice versa).
+func (q *PageQueries) UpdatePageActive(ctx context.Context, id string) error {
 	query := `UPDATE page SET active = NOT active, updated = datetime('now') WHERE id = ?`
 	_, err := q.DB.ExecContext(ctx, query, id)
 	return err

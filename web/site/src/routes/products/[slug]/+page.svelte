@@ -11,6 +11,7 @@
   import { isBrowser } from '$lib/utils/browser'
   import NotFoundPage from '$lib/components/NotFoundPage.svelte'
   import { translate } from '$lib/i18n'
+  import { sanitizeHTML } from '$lib/utils/sanitize'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -191,7 +192,7 @@
         <div class="mt-12">
           <h2 class="mb-6 text-3xl font-black tracking-tighter text-black uppercase">{t('product.description')}</h2>
           <div class="prod_desc text-lg leading-relaxed text-black">
-            {@html product.description}
+            {@html sanitizeHTML(product.description)}
           </div>
         </div>
       {/if}

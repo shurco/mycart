@@ -93,6 +93,12 @@ func SetupTestApp(t *testing.T) (app *fiber.App, cookie string, cleanup func()) 
 }
 
 // DoRequest is a DRY helper for table-driven HTTP handler tests.
+//
+// The internal Fiber `app.Test` default timeout is 1 second. That is not
+// enough when a handler runs bcrypt at DefaultCost (≈70 ms on modern
+// hardware, ×2 for install → token generation) and the test binary is built
+// with -race (another ~5× slowdown). We use a 10 s ceiling so the timeout
+// continues to surface genuine hangs while tolerating realistic hashing work.
 func DoRequest(t *testing.T, app *fiber.App, method, path, body, cookie string) *http.Response {
 	t.Helper()
 
@@ -111,7 +117,7 @@ func DoRequest(t *testing.T, app *fiber.App, method, path, body, cookie string) 
 		req.Header.Set("Cookie", cookie)
 	}
 
-	resp, err := app.Test(req)
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 10 * time.Second})
 	if err != nil {
 		t.Fatalf("%s %s: %v", method, path, err)
 	}

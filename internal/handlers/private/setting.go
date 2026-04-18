@@ -17,6 +17,9 @@ import (
 	"github.com/shurco/mycart/pkg/webutil"
 )
 
+// versionCacheTTL is how long the fetched release info is cached in the session store.
+const versionCacheTTL = 24 * time.Hour
+
 // Version returns the current application version and update information.
 //
 // @Summary      Get version
@@ -31,50 +34,65 @@ func Version(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 
-	session, err := db.GetSession(c.Context(), "update")
-	if err != nil && err != sql.ErrNoRows {
+	if cached, err := loadCachedVersion(c.Context(), db); err != nil {
+		log.ErrorStack(err)
+		return webutil.StatusInternalServerError(c)
+	} else if cached != nil {
+		return webutil.Response(c, fiber.StatusOK, "Version", cached)
+	}
+
+	version := currentVersion()
+	if release, fetchErr := update.FetchLatestRelease(c.Context(), "shurco", "mycart"); fetchErr != nil {
+		log.ErrorStack(fetchErr)
+	} else if release != nil && version.CurrentVersion != release.Name {
+		version.NewVersion = release.Name
+		version.ReleaseURL = release.GetUrl()
+	}
+
+	if err := cacheVersion(c.Context(), db, version); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusInternalServerError(c)
 	}
 
-	version := (*update.Version)(nil)
-	if err == sql.ErrNoRows {
-		version = update.VersionInfo()
-
-		release, fetchErr := update.FetchLatestRelease(context.Background(), "shurco", "mycart")
-		if fetchErr != nil {
-			log.ErrorStack(fetchErr)
-		} else if version.CurrentVersion != release.Name {
-			version.NewVersion = release.Name
-			version.ReleaseURL = release.GetUrl()
-		}
-
-		if err := db.DeleteSession(c.Context(), "update"); err != nil {
-			log.ErrorStack(err)
-			return webutil.StatusInternalServerError(c)
-		}
-
-		data, err := json.Marshal(version)
-		if err != nil {
-			log.ErrorStack(err)
-			return webutil.StatusInternalServerError(c)
-		}
-		expires := time.Now().Add(24 * time.Hour).Unix()
-		if err := db.AddSession(c.Context(), "update", string(data), expires); err != nil {
-			log.ErrorStack(err)
-			return webutil.StatusInternalServerError(c)
-		}
-	}
-
-	if session != "" {
-		version = new(update.Version)
-		if err := json.Unmarshal([]byte(session), version); err != nil {
-			log.ErrorStack(err)
-			return webutil.StatusInternalServerError(c)
-		}
-	}
-
 	return webutil.Response(c, fiber.StatusOK, "Version", version)
+}
+
+// currentVersion returns a safe copy of the compiled-in version info.
+// Returns an empty Version if SetVersion was not called (e.g. in tests).
+func currentVersion() *update.Version {
+	if info := update.VersionInfo(); info != nil {
+		v := *info
+		return &v
+	}
+	return &update.Version{}
+}
+
+// loadCachedVersion returns non-nil Version if the value is present in the session cache.
+func loadCachedVersion(ctx context.Context, db *queries.Base) (*update.Version, error) {
+	session, err := db.GetSession(ctx, "update")
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	if session == "" {
+		return nil, nil
+	}
+	v := &update.Version{}
+	if err := json.Unmarshal([]byte(session), v); err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+// cacheVersion stores the version info in the session cache with a TTL.
+func cacheVersion(ctx context.Context, db *queries.Base, v *update.Version) error {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	// AddSession is idempotent for the same key (INSERT OR REPLACE semantics),
+	// so we don't need an explicit DeleteSession here.
+	expires := time.Now().Add(versionCacheTTL).Unix()
+	return db.AddSession(ctx, "update", string(data), expires)
 }
 
 // GetSetting returns a setting value by key.
@@ -94,37 +112,16 @@ func GetSetting(c fiber.Ctx) error {
 	log := logging.New()
 	settingKey := c.Params("setting_key")
 
+	if settingKey == "password" {
+		// Passwords are write-only — never return the stored hash over the API.
+		return webutil.StatusNotFound(c)
+	}
+
 	var section any
 	var err error
-
-	switch settingKey {
-	case "password":
-		return webutil.StatusNotFound(c)
-	case "main":
-		section, err = db.GetSettingByGroup(c.Context(), &models.Main{})
-	case "social":
-		section, err = db.GetSettingByGroup(c.Context(), &models.Social{})
-	case "auth":
-		section, err = db.GetSettingByGroup(c.Context(), &models.Auth{})
-	case "jwt":
-		section, err = db.GetSettingByGroup(c.Context(), &models.JWT{})
-	case "webhook":
-		section, err = db.GetSettingByGroup(c.Context(), &models.Webhook{})
-	case "payment":
-		section, err = db.GetSettingByGroup(c.Context(), &models.Payment{})
-	case "stripe":
-		section, err = db.GetSettingByGroup(c.Context(), &models.Stripe{})
-	case "paypal":
-		section, err = db.GetSettingByGroup(c.Context(), &models.Paypal{})
-	case "spectrocoin":
-		section, err = db.GetSettingByGroup(c.Context(), &models.Spectrocoin{})
-	case "coinbase":
-		section, err = db.GetSettingByGroup(c.Context(), &models.Coinbase{})
-	case "dummy":
-		section, err = db.GetSettingByGroup(c.Context(), &models.Dummy{})
-	case "mail":
-		section, err = db.GetSettingByGroup(c.Context(), &models.Mail{})
-	default:
+	if model := settingModelFor(settingKey); model != nil {
+		section, err = db.GetSettingByGroup(c.Context(), model)
+	} else {
 		section, err = db.GetSettingByKey(c.Context(), settingKey)
 	}
 
@@ -156,37 +153,17 @@ func UpdateSetting(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 	settingKey := c.Params("setting_key")
-	var request any
 
-	switch settingKey {
-	case "password":
+	var request any
+	switch {
+	case settingKey == "password":
 		request = &models.Password{}
-	case "main":
-		request = &models.Main{}
-	case "auth":
-		request = &models.Auth{}
-	case "jwt":
-		request = &models.JWT{}
-	case "social":
-		request = &models.Social{}
-	case "payment":
-		request = &models.Payment{}
-	case "stripe":
-		request = &models.Stripe{}
-	case "paypal":
-		request = &models.Paypal{}
-	case "spectrocoin":
-		request = &models.Spectrocoin{}
-	case "coinbase":
-		request = &models.Coinbase{}
-	case "dummy":
-		request = &models.Dummy{}
-	case "webhook":
-		request = &models.Webhook{}
-	case "mail":
-		request = &models.Mail{}
 	default:
-		request = &models.SettingName{}
+		if model := settingModelFor(settingKey); model != nil {
+			request = model
+		} else {
+			request = &models.SettingName{}
+		}
 	}
 
 	// Parse the request body into the appropriate struct

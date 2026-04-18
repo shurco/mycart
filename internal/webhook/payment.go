@@ -66,7 +66,8 @@ func SendPaymentHook(resData *Payment) error {
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != 200 {
+	// Any 2xx status is considered a successful delivery; treat anything else as failure.
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		bodyBytes, _ := io.ReadAll(res.Body)
 		logWebhookError(nil, webhookSetting.Url, resData.Event, res.StatusCode, bodyBytes)
 		return nil

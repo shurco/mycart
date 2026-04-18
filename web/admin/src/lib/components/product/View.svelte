@@ -7,6 +7,7 @@
   import { loadData } from '$lib/utils/apiHelpers'
   import type { Product } from '$lib/types/models'
   import { translate } from '$lib/i18n'
+  import { sanitizeHTML } from '$lib/utils/sanitize'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -133,7 +134,7 @@
         {/if}
         <DetailList name={t('products.briefShortDescription')}>{product.brief}</DetailList>
 
-        <div class="tiptap pt-3">{@html product.description || ''}</div>
+        <div class="tiptap pt-3">{@html sanitizeHTML(product.description)}</div>
       </dl>
     </div>
   {:else}

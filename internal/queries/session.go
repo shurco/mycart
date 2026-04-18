@@ -17,10 +17,11 @@ func (q *SettingQueries) GetSession(ctx context.Context, key string) (string, er
 	return value, nil
 }
 
-// AddSession is a method on the SettingQueries struct that adds a new session to the database.
-// It takes a context, a key-value pair representing the session data, and an expiration timestamp.
+// AddSession upserts a session record by key. Using INSERT OR REPLACE makes callers
+// idempotent: they can write to the same key repeatedly (e.g. to refresh a TTL-cached
+// value) without first deleting the previous row.
 func (q *SettingQueries) AddSession(ctx context.Context, key, value string, expires int64) error {
-	_, err := q.DB.ExecContext(ctx, `INSERT INTO session (key, value, expires) VALUES (?, ?, ?)`, key, value, expires)
+	_, err := q.DB.ExecContext(ctx, `INSERT OR REPLACE INTO session (key, value, expires) VALUES (?, ?, ?)`, key, value, expires)
 	return err
 }
 

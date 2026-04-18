@@ -3,11 +3,15 @@ package queries
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"errors"
+	"strconv"
 
 	"github.com/shurco/mycart/internal/models"
 	"github.com/shurco/mycart/pkg/security"
 )
+
+// ErrAlreadyInstalled is returned by Install if the cart has already been initialized.
+var ErrAlreadyInstalled = errors.New("cart already installed")
 
 // InstallQueries is a struct that embeds a pointer to an sql.DB.
 // This allows for the struct to have all the methods of sql.DB,
@@ -18,14 +22,15 @@ type InstallQueries struct {
 
 // Install performs the installation process for the cart system.
 func (q *InstallQueries) Install(ctx context.Context, i *models.Install) error {
-	var installed bool
-
-	query := `SELECT value FROM setting WHERE key = 'installed'`
-	if err := q.DB.QueryRowContext(ctx, query).Scan(&installed); err != nil {
+	// The `setting.value` column is TEXT; it can hold "0", "1", "true" or "false"
+	// depending on whether a row was inserted by a migration (int literal) or
+	// updated by the app (strconv.FormatBool). Read as string and parse.
+	var rawInstalled string
+	if err := q.DB.QueryRowContext(ctx, `SELECT value FROM setting WHERE key = 'installed'`).Scan(&rawInstalled); err != nil {
 		return err
 	}
-	if installed {
-		return fmt.Errorf("%s", "Rejected because you have already installed and configured the cart")
+	if installed, _ := strconv.ParseBool(rawInstalled); installed {
+		return ErrAlreadyInstalled
 	}
 
 	tx, err := q.DB.BeginTx(ctx, nil)
@@ -48,8 +53,7 @@ func (q *InstallQueries) Install(ctx context.Context, i *models.Install) error {
 		"jwt_secret": jwt_secret,
 	}
 
-	query = `UPDATE setting SET value = ? WHERE key = ?`
-	stmt, err := tx.PrepareContext(ctx, query)
+	stmt, err := tx.PrepareContext(ctx, `UPDATE setting SET value = ? WHERE key = ?`)
 	if err != nil {
 		return err
 	}

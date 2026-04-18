@@ -29,20 +29,9 @@ func Products(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 
-	page := fiber.Query[int](c, "page", 1)
-	limit := fiber.Query[int](c, "limit", 20)
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	offset := (page - 1) * limit
+	p := webutil.ParsePagination(c)
 
-	products, err := db.ListProducts(c.Context(), true, limit, offset, "")
+	products, err := db.ListProducts(c.Context(), true, p.Limit, p.Offset, "")
 	if err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusInternalServerError(c)

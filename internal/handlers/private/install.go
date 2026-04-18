@@ -5,6 +5,7 @@ import (
 
 	"github.com/shurco/mycart/internal/models"
 	"github.com/shurco/mycart/internal/queries"
+	"github.com/shurco/mycart/pkg/errors"
 	"github.com/shurco/mycart/pkg/logging"
 	"github.com/shurco/mycart/pkg/webutil"
 )
@@ -37,6 +38,9 @@ func Install(c fiber.Ctx) error {
 	}
 
 	if err := db.Install(c.Context(), request); err != nil {
+		if errors.Is(err, queries.ErrAlreadyInstalled) {
+			return webutil.StatusBadRequest(c, err.Error())
+		}
 		log.ErrorStack(err)
 		return webutil.StatusInternalServerError(c)
 	}

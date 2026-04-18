@@ -6,6 +6,7 @@
   import { isBrowser } from '$lib/utils/browser'
   import NotFoundPage from '$lib/components/NotFoundPage.svelte'
   import { translate } from '$lib/i18n'
+  import { sanitizeHTML } from '$lib/utils/sanitize'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -60,7 +61,7 @@
           {content.name}
         </h1>
         <div class="tiptap space-y-6 text-lg leading-relaxed text-black">
-          {@html content.content}
+          {@html sanitizeHTML(content.content)}
         </div>
       </div>
     </div>

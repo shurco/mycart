@@ -343,21 +343,11 @@ func (q *CartQueries) CartLetterPurchase(ctx context.Context, cartID string) (*m
 
 		switch digitalType {
 		case "file":
-			rows, err := tx.QueryContext(ctx, `SELECT id, name, ext, orig_name FROM digital_file WHERE product_id = ?`, cart.ProductID)
+			productFiles, err := scanDigitalFiles(ctx, tx, cart.ProductID)
 			if err != nil {
 				return nil, err
 			}
-			defer func() { _ = rows.Close() }()
-			for rows.Next() {
-				file := models.File{}
-				if err := rows.Scan(&file.ID, &file.Name, &file.Ext, &file.OrigName); err != nil {
-					return nil, err
-				}
-				files = append(files, file)
-			}
-			if err := rows.Err(); err != nil {
-				return nil, err
-			}
+			files = append(files, productFiles...)
 		case "data":
 			key := models.Data{}
 			err := tx.QueryRowContext(ctx, `SELECT id, content FROM digital_data WHERE cart_id = ?`, cartID).Scan(&key.ID, &key.Content)
@@ -419,4 +409,26 @@ func (q *CartQueries) CartLetterPurchase(ctx context.Context, cartID string) (*m
 	mail.Files = files
 
 	return mail, nil
+}
+
+// scanDigitalFiles loads every digital_file row for a product within the given transaction.
+// Extracted from CartLetterPurchase to avoid a defer-in-loop leak when a cart contains
+// many "file" products (each iteration used to accumulate an open sql.Rows until the
+// enclosing function returned).
+func scanDigitalFiles(ctx context.Context, tx *sql.Tx, productID string) ([]models.File, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT id, name, ext, orig_name FROM digital_file WHERE product_id = ?`, productID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var files []models.File
+	for rows.Next() {
+		f := models.File{}
+		if err := rows.Scan(&f.ID, &f.Name, &f.Ext, &f.OrigName); err != nil {
+			return nil, err
+		}
+		files = append(files, f)
+	}
+	return files, rows.Err()
 }

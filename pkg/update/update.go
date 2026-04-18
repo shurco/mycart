@@ -15,6 +15,16 @@ import (
 	"time"
 
 	"github.com/shurco/mycart/pkg/archive"
+	"github.com/shurco/mycart/pkg/httpclient"
+)
+
+// httpClient is shared across update.* functions so the connection pool is
+// reused and every outbound request is bounded by a timeout.
+// Downloads may legitimately take longer than the default, so we give them
+// a generous 2-minute ceiling.
+var (
+	releaseClient  = httpclient.New()
+	downloadClient = httpclient.NewWithTimeout(2 * time.Minute)
 )
 
 // Config is ...
@@ -130,7 +140,7 @@ func FetchLatestRelease(ctx context.Context, owner string, repo string) (*releas
 		return nil, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := releaseClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +177,7 @@ func downloadFile(ctx context.Context, url string, destPath string) error {
 		return err
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := downloadClient.Do(req)
 	if err != nil {
 		return err
 	}

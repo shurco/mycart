@@ -14,6 +14,7 @@
   "dependencies": {
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.56.1",
+    "isomorphic-dompurify": "^3.9.0",
     "svelte": "^5.55.1"
   },
   "devDependencies": {

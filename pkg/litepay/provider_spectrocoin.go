@@ -105,7 +105,12 @@ func (c *spectrocoin) Pay(cart Cart) (*Payment, error) {
 	}
 	body += "&sign=" + url.QueryEscape(signature)
 
-	resp, err := http.Post(fmt.Sprintf("%s/api/merchant/1/createOrder", c.api), "application/x-www-form-urlencoded", bytes.NewBufferString(body))
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/api/merchant/1/createOrder", c.api), bytes.NewBufferString(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

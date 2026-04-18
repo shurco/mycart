@@ -26,20 +26,9 @@ func Pages(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 
-	page := fiber.Query[int](c, "page", 1)
-	limit := fiber.Query[int](c, "limit", 20)
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	offset := (page - 1) * limit
+	p := webutil.ParsePagination(c)
 
-	pages, total, err := db.ListPages(c.Context(), true, limit, offset)
+	pages, total, err := db.ListPages(c.Context(), true, p.Limit, p.Offset)
 	if err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusInternalServerError(c)
@@ -48,8 +37,8 @@ func Pages(c fiber.Ctx) error {
 	return webutil.Response(c, fiber.StatusOK, "Pages", map[string]any{
 		"pages": pages,
 		"total": total,
-		"page":  page,
-		"limit": limit,
+		"page":  p.Page,
+		"limit": p.Limit,
 	})
 }
 

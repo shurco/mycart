@@ -27,25 +27,17 @@ func setupSPAHandler(embedFS fs.FS, skipPaths func(string) bool, stripPrefix str
 
 		normalizedPath := normalizePath(path)
 
-		file, err := embedFS.Open(normalizedPath)
-		if err == nil {
-			defer file.Close()
-
-			stat, err := file.Stat()
-			if err == nil && stat.IsDir() {
-				file.Close()
-				file, err = embedFS.Open(indexHTML)
-				if err != nil {
-					return c.Next()
-				}
-				defer file.Close()
-				normalizedPath = indexHTML
+		if file, err := embedFS.Open(normalizedPath); err == nil {
+			stat, statErr := file.Stat()
+			switch {
+			case statErr == nil && !stat.IsDir():
+				defer func() { _ = file.Close() }()
+				c.Set("Content-Type", getContentType(filepath.Ext(normalizedPath)))
+				return c.SendStream(file)
+			default:
+				// Directory or stat failure — close handle and fall through to index.html.
+				_ = file.Close()
 			}
-
-			ext := filepath.Ext(normalizedPath)
-			contentType := getContentType(ext)
-			c.Set("Content-Type", contentType)
-			return c.SendStream(file)
 		}
 
 		if isStaticAsset(normalizedPath) {
@@ -56,7 +48,7 @@ func setupSPAHandler(embedFS fs.FS, skipPaths func(string) bool, stripPrefix str
 		if err != nil {
 			return c.Next()
 		}
-		defer indexFile.Close()
+		defer func() { _ = indexFile.Close() }()
 		c.Set("Content-Type", contentTypeHTML)
 		return c.SendStream(indexFile)
 	}

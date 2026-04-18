@@ -161,7 +161,7 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 		countQuery += queryPublic
 	}
 	err = q.DB.QueryRowContext(ctx, countQuery+queryAddon, countParams...).Scan(&products.Total)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 
@@ -235,7 +235,7 @@ func (q *ProductQueries) Product(ctx context.Context, private bool, id string) (
 
 	err := q.DB.QueryRowContext(ctx, query, id).Scan(scanArgs...)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.ErrProductNotFound
 		}
 		return nil, err
@@ -431,7 +431,7 @@ func (q *ProductQueries) fetchProductImages(ctx context.Context, id string) ([]p
 	query := `SELECT id, name, ext FROM product_image WHERE product_id = ?`
 	rows, err := q.DB.QueryContext(ctx, query, id)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.ErrProductNotFound
 		}
 		return nil, err

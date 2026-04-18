@@ -100,7 +100,7 @@ func (c *paypal) Pay(cart Cart) (*Payment, error) {
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	req.Header.Add("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func (c *paypal) Checkout(payment *Payment, token string) (*Payment, error) {
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	req.Header.Add("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func (c *paypal) paypalAccessToken() (string, error) {
 	req.SetBasicAuth(c.clientID, c.secretKey)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return "", err
 	}

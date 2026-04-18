@@ -75,7 +75,7 @@ func (c *coinbase) Pay(cart Cart) (*Payment, error) {
 	req.Header.Set("X-CC-Api-Key", c.apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (c *coinbase) Checkout(payment *Payment, chargeID string) (*Payment, error)
 	}
 	req.Header.Set("X-CC-Api-Key", c.apiKey)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -15,9 +15,10 @@
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.56.1",
     "@tiptap/core": "^2.27.2",
+    "@tiptap/extension-placeholder": "^2.27.2",
     "@tiptap/pm": "^2.27.2",
     "@tiptap/starter-kit": "^2.27.2",
-    "@tiptap/extension-placeholder": "^2.27.2",
+    "isomorphic-dompurify": "^3.9.0",
     "nprogress": "^0.2.0",
     "svelte": "^5.55.1",
     "svelte-french-toast": "^1.2.0"

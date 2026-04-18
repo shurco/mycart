@@ -25,20 +25,9 @@ func Carts(c fiber.Ctx) error {
 	db := queries.DB()
 	log := logging.New()
 
-	page := fiber.Query[int](c, "page", 1)
-	limit := fiber.Query[int](c, "limit", 20)
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = 20
-	}
-	if limit > 100 {
-		limit = 100
-	}
-	offset := (page - 1) * limit
+	p := webutil.ParsePagination(c)
 
-	carts, total, err := db.Carts(c.Context(), limit, offset)
+	carts, total, err := db.Carts(c.Context(), p.Limit, p.Offset)
 	if err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusInternalServerError(c)
@@ -47,8 +36,8 @@ func Carts(c fiber.Ctx) error {
 	return webutil.Response(c, fiber.StatusOK, "Carts", map[string]any{
 		"carts": carts,
 		"total": total,
-		"page":  page,
-		"limit": limit,
+		"page":  p.Page,
+		"limit": p.Limit,
 	})
 }
 

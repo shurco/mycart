@@ -14,11 +14,19 @@ UPDATE setting SET value = '' WHERE key = 'smtp_port' AND value = '0';
 
 -- +goose Down
 -- +goose StatementBegin
-DELETE FROM setting WHERE id = 'CoDDXfxF4GZxq6b';
-DELETE FROM setting WHERE id = 'AC3of7o9pS9HdB1';
-DELETE FROM setting WHERE id = '8sz9yVDNvNBa97b';
-DELETE FROM setting WHERE id = 'VjdMVG7LcUL274G';
-DELETE FROM setting WHERE id = 'NVv27ea47Yo7gPm';
-DELETE FROM setting WHERE id = 'rKVq63So91kMuN7';
-DELETE FROM setting WHERE id = 'yLR1176FQj1BQks';
+-- NOTE: the previous Down removed rows by id, but two of those ids
+-- (`CoDDXfxF4GZxq6b`, `AC3of7o9pS9HdB1`) are actually owned by the init
+-- migration (mail_letter_purchase / smtp_host). The old Down was
+-- destructive on any DB that reached the init migration. We now filter
+-- by `key` so only the social rows this Up section is responsible for
+-- are removed.
+DELETE FROM setting WHERE key IN (
+    'social_facebook',
+    'social_instagram',
+    'social_twitter',
+    'social_dribbble',
+    'social_github',
+    'social_youtube',
+    'social_other'
+);
 -- +goose StatementEnd

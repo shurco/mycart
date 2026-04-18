@@ -17,46 +17,54 @@
     children
   }: Props = $props()
 
+  const ANIMATION_MS = 200
+
   let isVisible = $state(false)
   let isTransitioning = $state(false)
   let drawerContent: HTMLElement | undefined = $state()
 
+  // Track all outstanding timers so we can clear them on destroy or when
+  // isOpen flips while an animation is still in flight. Without this the
+  // component leaks timeouts that keep firing (and writing to state) after
+  // the drawer is gone, which in turn can trip Svelte's effect scheduler.
+  let hideTimer: ReturnType<typeof setTimeout> | null = null
+  let closeTimer: ReturnType<typeof setTimeout> | null = null
+
+  function clearTimer(ref: ReturnType<typeof setTimeout> | null) {
+    if (ref !== null) clearTimeout(ref)
+  }
+
   $effect(() => {
     if (isOpen) {
-      if (drawerContent) {
-        drawerContent.scrollTop = 0
-      }
+      clearTimer(hideTimer)
+      hideTimer = null
+      if (drawerContent) drawerContent.scrollTop = 0
       toggleBackgroundScrolling(true)
       isVisible = true
-      // Force reflow for animation
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          // Animation will trigger via class binding
-        })
-      })
     } else {
       toggleBackgroundScrolling(false)
-      setTimeout(() => {
+      clearTimer(hideTimer)
+      hideTimer = setTimeout(() => {
         isVisible = false
-      }, 200)
+        hideTimer = null
+      }, ANIMATION_MS)
     }
   })
 
   function toggleBackgroundScrolling(enable: boolean) {
-    const body = document.querySelector('body')
-    if (body) {
-      body.style.overflow = enable ? 'hidden' : ''
-    }
+    if (typeof document === 'undefined') return
+    document.body.style.overflow = enable ? 'hidden' : ''
   }
 
   function closeDrawer(event: MouseEvent) {
-    if (!isTransitioning && event.target === event.currentTarget) {
-      isTransitioning = true
-      setTimeout(() => {
-        onclose?.()
-        isTransitioning = false
-      }, 200)
-    }
+    if (isTransitioning || event.target !== event.currentTarget) return
+    isTransitioning = true
+    clearTimer(closeTimer)
+    closeTimer = setTimeout(() => {
+      onclose?.()
+      isTransitioning = false
+      closeTimer = null
+    }, ANIMATION_MS)
   }
 
   function handleKeydown(event: KeyboardEvent) {
@@ -67,7 +75,8 @@
   }
 
   onDestroy(() => {
-    // document.removeEventListener('click', handleClickOutside);
+    clearTimer(hideTimer)
+    clearTimer(closeTimer)
     toggleBackgroundScrolling(false)
   })
 </script>

@@ -76,7 +76,7 @@ func (c *stripe) Pay(cart Cart) (*Payment, error) {
 	req.SetBasicAuth(c.apiToken, "")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (c *stripe) Checkout(payment *Payment, session string) (*Payment, error) {
 	}
 	req.SetBasicAuth(c.apiToken, "")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

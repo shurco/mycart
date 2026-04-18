@@ -43,6 +43,12 @@ func jwtError(c fiber.Ctx, err error) error {
 
 func customKeyFunc() jwt.Keyfunc {
 	return func(t *jwt.Token) (any, error) {
+		// Reject unexpected signing methods to prevent "alg confusion" attacks
+		// (e.g. alg=none or asymmetric algorithms impersonating HMAC).
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 

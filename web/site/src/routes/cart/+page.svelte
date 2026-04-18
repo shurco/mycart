@@ -48,8 +48,7 @@
       }
       // Load payment methods if not already loaded and not currently loading
       if (!hasPaymentProviders(payments) && !isLoadingPaymentMethods) {
-        loadPaymentMethods().catch((err) => {
-          console.error('Failed to load payment methods:', err)
+        loadPaymentMethods().catch(() => {
           error = 'Failed to load payment methods. Please refresh the page.'
           showOverlay = true
         })
@@ -84,8 +83,7 @@
     // If cart is not free, load payment methods
     // $effect will also handle this, but we load here on initial mount to avoid delay
     if (!isFree && !hasPaymentProviders(payments)) {
-      await loadPaymentMethods().catch((err) => {
-        console.error('Failed to load payment methods on mount:', err)
+      await loadPaymentMethods().catch(() => {
         error = 'Failed to load payment methods. Please refresh the page.'
         showOverlay = true
       })
