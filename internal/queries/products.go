@@ -48,39 +48,13 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 			FROM product
 		`
 
-	// For public queries, filter by available digital products
-	// If cartID is provided, also include products purchased in that cart
 	var queryPublic string
 	var params []any
 	var countParams []any
 
 	if !private {
-		if cartID != "" {
-			// Include products with available digital data OR products purchased in this cart
-			queryPublic = ` 
-				LEFT JOIN digital_data ON digital_data.product_id = product.id
-				LEFT JOIN digital_file ON digital_file.product_id = product.id
-				WHERE (
-					(digital_data.content IS NOT NULL AND digital_data.cart_id IS NULL) OR 
-					(digital_data.content IS NOT NULL AND digital_data.cart_id = ?) OR
-					digital_file.orig_name IS NOT NULL
-				) 
-				AND product.deleted = 0 AND product.active = 1
-			`
-			params = append(params, cartID)
-			countParams = append(countParams, cartID)
-		} else {
-			// Only include products with available digital data
-			queryPublic = ` 
-				LEFT JOIN digital_data ON digital_data.product_id = product.id
-				LEFT JOIN digital_file ON digital_file.product_id = product.id
-				WHERE (
-					(digital_data.content IS NOT NULL AND digital_data.cart_id IS NULL) OR
-					digital_file.orig_name IS NOT NULL
-				) 
-				AND product.deleted = 0 AND product.active = 1
-			`
-		}
+		queryPublic, params = publicProductFilter(cartID)
+		countParams = append(countParams, params...)
 	}
 
 	var queryAddon string
@@ -201,10 +175,7 @@ func (q *ProductQueries) Product(ctx context.Context, private bool, id string) (
 		query += `
 			FROM product 
 			LEFT JOIN product_image pi ON product.id = pi.product_id
-			LEFT JOIN digital_data ON digital_data.product_id = product.id   
-			LEFT JOIN digital_file ON digital_file.product_id = product.id 
-			WHERE (digital_data.content IS NOT NULL AND digital_data.cart_id IS NULL OR digital_file.orig_name IS NOT NULL) AND
-			product.slug = ? AND product.active = 1`
+			WHERE product.slug = ? AND product.deleted = 0 AND product.active = 1`
 	}
 
 	var images, metadata, attributes, digitalType, seo sql.NullString
@@ -375,25 +346,31 @@ func (q *ProductQueries) DeleteProduct(ctx context.Context, id string) error {
 	return err
 }
 
-// IsProduct checks if a product with the given slug exists and is active,
-// and also has associated digital data or file that meets certain conditions.
+// publicProductFilter builds the WHERE clause for storefront product queries.
+// When cartID is set, purchased items remain visible even if the product was deactivated.
+func publicProductFilter(cartID string) (string, []any) {
+	if cartID != "" {
+		return `
+			WHERE product.deleted = 0 AND (
+				product.active = 1
+				OR EXISTS (
+					SELECT 1 FROM digital_data
+					WHERE digital_data.product_id = product.id
+					AND digital_data.cart_id = ?
+				)
+			)
+		`, []any{cartID}
+	}
+	return ` WHERE product.deleted = 0 AND product.active = 1 `, nil
+}
+
+// IsProduct checks if a product with the given slug exists and is active.
 func (q *ProductQueries) IsProduct(ctx context.Context, slug string) bool {
 	var exists bool
 	query := `
 			SELECT EXISTS (
-				SELECT 1 FROM product 
-				WHERE product.slug = ? AND product.active = 1 AND (
-					EXISTS (
-						SELECT 1 FROM digital_data 
-						WHERE digital_data.product_id = product.id 
-						AND digital_data.content IS NOT NULL 
-						AND digital_data.cart_id IS NULL
-					) OR EXISTS (
-						SELECT 1 FROM digital_file 
-						WHERE digital_file.product_id = product.id 
-						AND digital_file.orig_name IS NOT NULL
-					)
-				)
+				SELECT 1 FROM product
+				WHERE product.slug = ? AND product.deleted = 0 AND product.active = 1
 			)
 	`
 	err := q.DB.QueryRowContext(ctx, query, slug).Scan(&exists)

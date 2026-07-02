@@ -38,10 +38,15 @@ func TestProduct_FullLifecycle(t *testing.T) {
 		t.Error("expected at least one product")
 	}
 
-	// Activate + add digital data so public queries can see it.
+	// Activate so public queries can see it.
 	if err := db.UpdateActive(ctx, p.ID); err != nil {
 		t.Fatalf("UpdateActive: %v", err)
 	}
+
+	if !db.IsProduct(ctx, "t-shirt") {
+		t.Error("IsProduct must return true for active product")
+	}
+
 	if _, err := db.AddDigitalData(ctx, p.ID, "initial-key"); err != nil {
 		t.Fatalf("AddDigitalData: %v", err)
 	}
@@ -54,7 +59,7 @@ func TestProduct_FullLifecycle(t *testing.T) {
 	}
 
 	if !db.IsProduct(ctx, "t-shirt-v2") {
-		t.Error("IsProduct must return true for active product with digital data")
+		t.Error("IsProduct must return true for active product")
 	}
 	if db.IsProduct(ctx, "missing") {
 		t.Error("IsProduct must return false for unknown slug")
@@ -209,6 +214,71 @@ func TestListProducts_WithIDFilter(t *testing.T) {
 	if len(filtered.Products) != 1 || filtered.Products[0].ID != p1.ID {
 		t.Errorf("idList filter failed: %+v", filtered.Products)
 	}
+}
+
+func TestListProducts_PublicShowsActiveWithoutDigitalContent(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	p, err := db.AddProduct(ctx, validProductInput())
+	if err != nil {
+		t.Fatalf("AddProduct: %v", err)
+	}
+	if err := db.UpdateActive(ctx, p.ID); err != nil {
+		t.Fatalf("UpdateActive: %v", err)
+	}
+
+	pub, err := db.ListProducts(ctx, false, 10, 0, "")
+	if err != nil {
+		t.Fatalf("ListProducts public: %v", err)
+	}
+
+	found := false
+	for _, product := range pub.Products {
+		if product.ID == p.ID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected active product without digital content in public list: %+v", pub.Products)
+	}
+
+	got, err := db.Product(ctx, false, p.Slug)
+	if err != nil {
+		t.Fatalf("Product public by slug: %v", err)
+	}
+	if got.ID != p.ID {
+		t.Fatalf("unexpected product: %+v", got)
+	}
+}
+
+func TestListProducts_PublicShowsAPIProduct(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	in := validProductInput()
+	in.Slug = "api-product"
+	in.Name = "API Product"
+	in.Digital = models.Digital{Type: "api"}
+
+	p, err := db.AddProduct(ctx, in)
+	if err != nil {
+		t.Fatalf("AddProduct: %v", err)
+	}
+	if err := db.UpdateActive(ctx, p.ID); err != nil {
+		t.Fatalf("UpdateActive: %v", err)
+	}
+
+	pub, err := db.ListProducts(ctx, false, 10, 0, "")
+	if err != nil {
+		t.Fatalf("ListProducts public: %v", err)
+	}
+
+	for _, product := range pub.Products {
+		if product.ID == p.ID {
+			return
+		}
+	}
+	t.Fatalf("expected active api product in public list: %+v", pub.Products)
 }
 
 func TestListProducts_PublicWithCartID(t *testing.T) {
