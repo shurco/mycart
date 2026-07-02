@@ -13,6 +13,16 @@ import (
 // ErrAlreadyInstalled is returned by Install if the cart has already been initialized.
 var ErrAlreadyInstalled = errors.New("cart already installed")
 
+// IsInstalled reports whether the cart has completed first-time setup.
+func (q *InstallQueries) IsInstalled(ctx context.Context) (bool, error) {
+	var rawInstalled string
+	if err := q.DB.QueryRowContext(ctx, `SELECT value FROM setting WHERE key = 'installed'`).Scan(&rawInstalled); err != nil {
+		return false, err
+	}
+	installed, _ := strconv.ParseBool(rawInstalled)
+	return installed, nil
+}
+
 // InstallQueries is a struct that embeds a pointer to an sql.DB.
 // This allows for the struct to have all the methods of sql.DB,
 // enabling it to perform database operations directly.
@@ -22,14 +32,11 @@ type InstallQueries struct {
 
 // Install performs the installation process for the cart system.
 func (q *InstallQueries) Install(ctx context.Context, i *models.Install) error {
-	// The `setting.value` column is TEXT; it can hold "0", "1", "true" or "false"
-	// depending on whether a row was inserted by a migration (int literal) or
-	// updated by the app (strconv.FormatBool). Read as string and parse.
-	var rawInstalled string
-	if err := q.DB.QueryRowContext(ctx, `SELECT value FROM setting WHERE key = 'installed'`).Scan(&rawInstalled); err != nil {
+	installed, err := q.IsInstalled(ctx)
+	if err != nil {
 		return err
 	}
-	if installed, _ := strconv.ParseBool(rawInstalled); installed {
+	if installed {
 		return ErrAlreadyInstalled
 	}
 

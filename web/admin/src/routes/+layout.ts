@@ -19,6 +19,25 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
     return {}
   }
 
+  try {
+    const statusResponse = await fetch('/api/install/status', {
+      method: 'GET',
+      credentials: 'include'
+    })
+
+    if (statusResponse.ok) {
+      const statusData = await statusResponse.json()
+      if (!statusData?.result?.installed) {
+        throw redirect(302, `${base}/install`)
+      }
+    }
+  } catch (error) {
+    // If it's already a redirect, rethrow it
+    if (error && typeof error === 'object' && 'status' in error && error.status === 302) {
+      throw error
+    }
+  }
+
   // Check if application is installed and user is authenticated
   // Backend middleware InstallCheck redirects to /_/install if not installed
   // We check here for client-side navigation to ensure proper redirects

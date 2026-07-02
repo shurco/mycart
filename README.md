@@ -186,6 +186,20 @@ Before starting the services, initialize the application:
 docker-compose run --rm mycart init
 ```
 
+**First-time admin account** (choose one):
+
+1. Open `http://localhost/_/install` in your browser and complete the setup wizard.
+2. Or create the admin account non-interactively (works in scratch-based images without a shell):
+
+```bash
+docker-compose run --rm mycart install \
+  --email admin@example.com \
+  --password 'YourSecurePass' \
+  --domain localhost
+```
+
+For Kubernetes, run a one-shot Job with the same `install` command and the same volume mounts as the main Deployment.
+
 **Stopping Services**:
 ```bash
 docker-compose down

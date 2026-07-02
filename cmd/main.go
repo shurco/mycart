@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 
 	app "github.com/shurco/mycart/internal"
+	"github.com/shurco/mycart/internal/models"
 	"github.com/shurco/mycart/pkg/update"
 )
 
@@ -38,6 +40,7 @@ func main() {
 	})
 
 	rootCmd.AddCommand(cmdInit())
+	rootCmd.AddCommand(cmdInstall())
 	rootCmd.AddCommand(cmdServe())
 	rootCmd.AddCommand(cmdUpdate())
 	rootCmd.AddCommand(cmdMigrate())
@@ -76,6 +79,32 @@ func cmdServe() *cobra.Command {
 	if err := cmd.PersistentFlags().MarkHidden("dev"); err != nil {
 		fmt.Println("warning: failed to hide dev flag:", err)
 	}
+
+	return cmd
+}
+
+// cmdInstall creates and returns the install command.
+func cmdInstall() *cobra.Command {
+	var email, password, domain string
+
+	cmd := &cobra.Command{
+		Use:   "install",
+		Short: "Create the admin account (first-time setup)",
+		Run: func(_ *cobra.Command, _ []string) {
+			handleCommandError(app.InstallAdmin(context.Background(), &models.Install{
+				Email:    email,
+				Password: password,
+				Domain:   domain,
+			}))
+			fmt.Println("Cart installed successfully")
+		},
+	}
+
+	cmd.Flags().StringVar(&email, "email", "", "admin email address")
+	cmd.Flags().StringVar(&password, "password", "", "admin password (6-72 chars)")
+	cmd.Flags().StringVar(&domain, "domain", "localhost", "public store domain")
+	_ = cmd.MarkFlagRequired("email")
+	_ = cmd.MarkFlagRequired("password")
 
 	return cmd
 }

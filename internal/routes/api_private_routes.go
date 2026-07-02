@@ -9,6 +9,7 @@ import (
 
 // ApiPrivateRoutes sets up private API routes that require authentication.
 func ApiPrivateRoutes(c *fiber.App) {
+	c.Get("/api/install/status", handlers.InstallStatus)
 	c.Post("/api/install", handlers.Install)
 
 	c.Get("/api/_/version", middleware.JWTProtected(), handlers.Version)

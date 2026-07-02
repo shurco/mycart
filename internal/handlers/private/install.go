@@ -10,6 +10,32 @@ import (
 	"github.com/shurco/mycart/pkg/webutil"
 )
 
+type installStatus struct {
+	Installed bool `json:"installed"`
+}
+
+// InstallStatus reports whether first-time setup has been completed.
+//
+// @Summary      Installation status
+// @Description  Returns whether the cart has been installed
+// @Tags         Install
+// @Produce      json
+// @Success      200 {object} webutil.HTTPResponse{result=installStatus}
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/install/status [get]
+func InstallStatus(c fiber.Ctx) error {
+	db := queries.DB()
+	log := logging.New()
+
+	installed, err := db.IsInstalled(c.Context())
+	if err != nil {
+		log.ErrorStack(err)
+		return webutil.StatusInternalServerError(c)
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "Installation status", installStatus{Installed: installed})
+}
+
 // Install performs the initial installation of the application.
 //
 // @Summary      Install application

@@ -93,3 +93,43 @@ spec:
       port: 8080
       targetPort: 8080
   type: NodePort
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mycart-install
+  namespace: shop
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: mycart-install
+        image: shurco/mycart:latest
+        command:
+          - /mycart
+          - install
+          - --email
+          - admin@example.com
+          - --password
+          - ChangeMeNow123
+          - --domain
+          - domain
+        volumeMounts:
+        - name: mycart-storage
+          mountPath: /lc_base
+          subPath: lc_base
+        - name: mycart-storage
+          mountPath: /lc_digitals
+          subPath: lc_digitals
+        - name: mycart-storage
+          mountPath: /lc_uploads
+          subPath: lc_uploads
+        - name: mycart-storage
+          mountPath: /site
+          subPath: site
+      volumes:
+      - name: mycart-storage
+        persistentVolumeClaim:
+          claimName: mycart-pvc

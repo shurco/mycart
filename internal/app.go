@@ -96,20 +96,21 @@ func setupRoutes(app *fiber.App, noSite bool) {
 	app.Use("/uploads", static.New("./lc_uploads"))
 	app.Use("/secrets", static.New("./lc_digitals"))
 
-	// Register API routes before SPA routes to ensure they are processed first
+	// Register API routes before InstallCheck so /api/install is reachable on first boot.
 	routes.ApiPrivateRoutes(app)
 	if !noSite {
 		routes.ApiPublicRoutes(app)
 	}
 
-	// Setup SPA routes before InstallCheck to allow static assets to be served
+	// InstallCheck must run before SPA handlers: the SPA middleware serves
+	// index.html without calling c.Next(), so a guard registered after it
+	// never executes for /_/ paths.
+	app.Use(InstallCheck)
+
 	if !noSite {
 		routes.SiteRoutes(app)
 	}
 	routes.AdminRoutes(app)
-
-	// InstallCheck runs after SPA routes to allow static assets (_app, etc.)
-	app.Use(InstallCheck)
 
 	routes.NotFoundRoute(app, noSite)
 }
@@ -221,6 +222,9 @@ func InstallCheck(c fiber.Ctx) error {
 
 	if !install {
 		if !isInstallPath(path) {
+			if strings.HasPrefix(path, "/api/") {
+				return webutil.StatusBadRequest(c, "application not installed")
+			}
 			return c.Redirect().To("/_/install")
 		}
 	} else if strings.HasPrefix(path, "/_/install") {
@@ -230,14 +234,25 @@ func InstallCheck(c fiber.Ctx) error {
 	return c.Next()
 }
 
-// isInstallPath checks if the path is related to installation or static assets.
+// isInstallPath reports paths that are reachable before the cart is installed.
 func isInstallPath(path string) bool {
-	return strings.HasPrefix(path, "/_/install") ||
+	if strings.HasPrefix(path, "/_/install") ||
 		strings.HasPrefix(path, "/_/assets") ||
 		strings.HasPrefix(path, "/_/_app") ||
 		strings.HasPrefix(path, "/_app") ||
-		strings.HasPrefix(path, "/api") ||
-		strings.HasPrefix(path, "/uploads")
+		strings.HasPrefix(path, "/uploads") {
+		return true
+	}
+	if strings.HasPrefix(path, "/api/install") {
+		return true
+	}
+	// Storefront public APIs stay available during first-time setup.
+	return path == "/ping" ||
+		strings.HasPrefix(path, "/api/settings") ||
+		strings.HasPrefix(path, "/api/pages/") ||
+		strings.HasPrefix(path, "/api/products") ||
+		strings.HasPrefix(path, "/api/cart") ||
+		strings.HasPrefix(path, "/cart/")
 }
 
 // StartServer starts the server and handles graceful shutdown.
