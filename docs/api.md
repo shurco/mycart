@@ -308,7 +308,7 @@ Creates a payment session and returns a redirect URL.
 | Field    | Type               | Required | Description                        |
 |----------|--------------------|----------|------------------------------------|
 | email    | string             | yes      | Customer email                     |
-| provider | string             | yes      | Payment system: `stripe`, `paypal`, `spectrocoin`, `coinbase`, `dummy` |
+| provider | string             | yes      | Payment system: `stripe`, `paypal`, `portone`, `spectrocoin`, `coinbase`, `dummy` |
 | products | array of CartProduct | yes    | Products in cart                   |
 
 CartProduct:
@@ -385,6 +385,100 @@ Handles canceled payment redirects. Updates cart status to `canceled`.
 |----------------|--------|----------------|
 | cart_id        | string | Cart ID        |
 | payment_system | string | Payment system |
+
+---
+
+### PortOne Payment Gateway
+
+PortOne uses a browser SDK-driven payment flow that differs from other payment providers.
+
+#### Get PortOne Config
+
+```
+GET /api/cart/portone-config
+```
+
+Returns public PortOne configuration for browser SDK initialization.
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "PortOne config",
+  "result": {
+    "store_id": "store-xxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "channel_key": "channel-xxxxx"
+  }
+}
+```
+
+> **Note:** API secret is intentionally NOT exposed to the frontend for security.
+
+#### Complete PortOne Payment
+
+```
+POST /api/payment/portone/complete
+```
+
+Verifies payment after browser completes PortOne payment flow. Called by the frontend after `PortOne.requestPayment()` succeeds.
+
+**Request Body:**
+
+| Field       | Type   | Required | Description           |
+|-------------|--------|----------|-----------------------|
+| payment_id  | string | yes      | PortOne payment ID    |
+| cart_id     | string | yes      | Cart ID (user email)  |
+
+**Response (200):**
+
+```json
+{
+  "success": true,
+  "message": "Payment verified",
+  "result": {
+    "status": "PAID"
+  }
+}
+```
+
+**Errors:**
+
+- `400` — Payment not found, amount mismatch, currency mismatch, cart_id mismatch
+- `500` — PortOne API unavailable or internal error
+
+**Validation:**
+
+This endpoint performs critical security checks:
+- Verifies payment status with PortOne API
+- Validates amount matches cart total
+- Validates currency matches cart currency
+- Validates cart_id in payment customData matches request cart_id
+
+#### PortOne Webhook
+
+```
+POST /api/payment/portone/webhook
+```
+
+Handles PortOne webhook notifications for async payment updates (virtual account deposits, etc.).
+
+**Headers:**
+
+| Header            | Type   | Required | Description        |
+|-------------------|--------|----------|--------------------|
+| PortOne-Signature | string | yes      | HMAC-SHA256 signature |
+
+**Request Body:**
+
+PortOne webhook payload (varies by event type).
+
+**Response:**
+
+- `200` — Webhook processed successfully
+- `401` — Invalid or missing signature
+
+> **Security:** Webhook signature is verified using HMAC-SHA256 before processing.
 
 **Response:** `302` redirect to SPA cancel page.
 

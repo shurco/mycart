@@ -469,6 +469,7 @@ For detailed information on how to customize the site design and deploy it on a 
 - [ ] Product returned via API to another site (example license keys)
 - [x] <a href="#stripe">Payment Stripe</a>
 - [x] <a href="#paypal">Payment PayPal</a>
+- [x] Payment PortOne
 - [ ] Payment Square
 - [ ] Payment Adyen
 - [ ] Payment Checkout
