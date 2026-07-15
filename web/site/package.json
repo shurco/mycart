@@ -12,6 +12,7 @@
     "update": "bun update"
   },
   "dependencies": {
+    "@portone/browser-sdk": "^0.0.9",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.69.0",
     "isomorphic-dompurify": "^3.18.0",
