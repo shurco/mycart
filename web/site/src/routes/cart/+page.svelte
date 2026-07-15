@@ -13,6 +13,7 @@
   import Overlay from '$lib/components/Overlay.svelte'
   import { handleNavigation } from '$lib/utils/navigation'
   import { translate } from '$lib/i18n'
+  import * as PortOne from '@portone/browser-sdk/v2'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -23,6 +24,8 @@
   let showOverlay = $state(false)
   let error = $state<string | undefined>(undefined)
   let isLoadingPaymentMethods = $state(false)
+  let portoneStoreId = $state('')
+  let portoneChannelKey = $state('')
 
   let cart = $derived($cartStore)
   let currency = $derived($settingsStore?.main.currency || '')
@@ -70,6 +73,15 @@
         payments = res.result
         provider = ''
         removeLocalStorage('provider')
+
+        // Load PortOne config if portone is available
+        if (payments.portone) {
+          const portoneRes = await apiGet<{ store_id: string; channel_key: string }>('/api/cart/portone-config')
+          if (portoneRes.success && portoneRes.result) {
+            portoneStoreId = portoneRes.result.store_id
+            portoneChannelKey = portoneRes.result.channel_key
+          }
+        }
       } else {
         throw new Error(res.message || 'Failed to load payment methods')
       }
@@ -113,6 +125,56 @@
 
     setLocalStorage('provider', finalProvider)
 
+    // Handle PortOne payment with browser SDK
+    if (provider === 'portone') {
+      showOverlay = true
+
+      try {
+        // Generate unique payment ID
+        const paymentId = `payment-${crypto.randomUUID()}`
+
+        // Call PortOne SDK
+        const response = await PortOne.requestPayment({
+          storeId: portoneStoreId,
+          channelKey: portoneChannelKey,
+          paymentId: paymentId,
+          orderName: `Order ${cart.length} items`,
+          totalAmount: cartTotal * 100, // PortOne uses smallest currency unit (cents)
+          currency: currency.toUpperCase(),
+          customData: JSON.stringify({ cart_id: email })
+        })
+
+        // Check for payment errors
+        if (response.code != null) {
+          error = response.message
+          showOverlay = true
+          return
+        }
+
+        // Verify payment with backend
+        const verifyRes = await apiPost('/api/payment/portone/complete', {
+          payment_id: response.paymentId,
+          cart_id: email
+        })
+
+        if (verifyRes.success) {
+          // Clear cart and redirect to success
+          cartStore.set([])
+          removeLocalStorage('email')
+          removeLocalStorage('provider')
+          goto('/cart/payment/success')
+        } else {
+          error = 'Payment verification failed'
+          showOverlay = true
+        }
+      } catch (err) {
+        error = 'Payment failed. Please try again.'
+        showOverlay = true
+      }
+      return
+    }
+
+    // Standard payment flow for other providers
     const cartData = {
       email,
       provider: finalProvider,
@@ -271,6 +333,19 @@
                       >
                         <p class="mb-2 text-xl font-black tracking-tight text-black uppercase">{t('cart.paypal')}</p>
                         <p class="text-lg text-black">{t('cart.paypalDescription')}</p>
+                      </label>
+                    </div>
+                  {/if}
+
+                  {#if payments.portone}
+                    <div>
+                      <input type="radio" bind:group={provider} value="portone" id="portone" class="peer hidden" />
+                      <label
+                        for="portone"
+                        class="block cursor-pointer border-4 border-black bg-white p-6 peer-checked:border-yellow-300 peer-checked:bg-yellow-300"
+                      >
+                        <p class="mb-2 text-xl font-black tracking-tight text-black uppercase">{t('cart.portone')}</p>
+                        <p class="text-lg text-black">{t('cart.portoneDescription')}</p>
                       </label>
                     </div>
                   {/if}
