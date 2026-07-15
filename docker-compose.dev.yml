@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  mycart-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: mycart-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      # Persistent data volumes
+      - ./docker/lc_base:/lc_base
+      - ./docker/lc_digitals:/lc_digitals
+      - ./docker/lc_uploads:/lc_uploads
+      - ./docker/site:/site
+    environment:
+      # Development environment variables
+      - DB_PATH=/lc_base/data.db
+      - PORT=8080
+      - GIN_MODE=release
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mycart-network
+
+  # Optional: Nginx reverse proxy for production-like setup
+  nginx-dev:
+    image: nginx:alpine
+    container_name: mycart-nginx-dev
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - mycart-dev
+    restart: unless-stopped
+    networks:
+      - mycart-network
+
+networks:
+  mycart-network:
+    driver: bridge
+
+volumes:
+  lc_base:
+  lc_digitals:
+  lc_uploads:
+  site:
