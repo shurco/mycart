@@ -102,6 +102,53 @@ func TestCoinbase_Validate(t *testing.T) {
 	}
 }
 
+func TestPortone_Validate(t *testing.T) {
+	t.Parallel()
+	t.Run("valid portone settings", func(t *testing.T) {
+		valid := Portone{
+			StoreID:    "store-12345678-1234-1234-1234-123456789012",
+			ChannelKey: "channel-key-example-long-enough",
+			ApiSecret:  "api-secret-example-long-enough-value",
+		}
+		if err := valid.Validate(); err != nil {
+			t.Errorf("valid portone rejected: %v", err)
+		}
+	})
+
+	t.Run("invalid store_id too short", func(t *testing.T) {
+		invalid := Portone{
+			StoreID:    "short",
+			ChannelKey: "channel-key-example-long-enough",
+			ApiSecret:  "api-secret-example-long-enough-value",
+		}
+		if err := invalid.Validate(); err == nil {
+			t.Error("invalid portone store_id accepted")
+		}
+	})
+
+	t.Run("invalid channel_key too short", func(t *testing.T) {
+		invalid := Portone{
+			StoreID:    "store-12345678-1234-1234-1234-123456789012",
+			ChannelKey: "short",
+			ApiSecret:  "api-secret-example-long-enough-value",
+		}
+		if err := invalid.Validate(); err == nil {
+			t.Error("invalid portone channel_key accepted")
+		}
+	})
+
+	t.Run("invalid api_secret too short", func(t *testing.T) {
+		invalid := Portone{
+			StoreID:    "store-12345678-1234-1234-1234-123456789012",
+			ChannelKey: "channel-key-example-long-enough",
+			ApiSecret:  "short",
+		}
+		if err := invalid.Validate(); err == nil {
+			t.Error("invalid portone api_secret accepted")
+		}
+	})
+}
+
 func TestWebhook_Validate(t *testing.T) {
 	t.Parallel()
 	if err := (Webhook{Url: "https://example.com/hook"}).Validate(); err != nil {

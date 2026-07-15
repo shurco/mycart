@@ -118,6 +118,23 @@ func (v Coinbase) Validate() error {
 	)
 }
 
+// Portone is ...
+type Portone struct {
+	StoreID    string `json:"store_id"`
+	ChannelKey string `json:"channel_key"`
+	ApiSecret  string `json:"api_secret"`
+	Active     bool   `json:"active"`
+}
+
+// Validate is ...
+func (v Portone) Validate() error {
+	return validation.ValidateStruct(&v,
+		validation.Field(&v.StoreID, validation.Length(24, 50)),
+		validation.Field(&v.ChannelKey, validation.Length(20, 100)),
+		validation.Field(&v.ApiSecret, validation.Length(30, 200)),
+	)
+}
+
 // Dummy is ...
 type Dummy struct {
 	Active bool `json:"active"`
@@ -130,6 +147,7 @@ type PaymentSystem struct {
 	Paypal      Paypal      `json:"paypal"`
 	Spectrocoin Spectrocoin `json:"spectrocoin"`
 	Coinbase    Coinbase    `json:"coinbase"`
+	Portone     Portone     `json:"portone"`
 	Dummy       Dummy       `json:"dummy"`
 }
 
@@ -140,6 +158,7 @@ func (v PaymentSystem) Validate() error {
 		validation.Field(&v.Paypal),
 		validation.Field(&v.Spectrocoin),
 		validation.Field(&v.Coinbase),
+		validation.Field(&v.Portone),
 	)
 }
 
