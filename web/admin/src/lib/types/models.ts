@@ -100,6 +100,13 @@ export interface CoinbaseSettings {
   api_key: string
 }
 
+export interface PortoneSettings {
+  active: boolean
+  store_id: string
+  channel_key: string
+  api_secret: string
+}
+
 export interface SmtpSettings {
   host: string
   port: string
