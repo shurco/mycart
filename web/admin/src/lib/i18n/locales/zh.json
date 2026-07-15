@@ -213,9 +213,12 @@
   "payment": {
     "stripe": "Stripe",
     "paypal": "PayPal",
+    "portone": "PortOne",
     "spectrocoin": "Spectrocoin",
     "secretKey": "密钥",
     "clientId": "客户端 ID",
+    "storeId": "商店 ID",
+    "channelKey": "渠道密钥",
     "merchantId": "商户 ID",
     "projectId": "项目 ID",
     "privateKey": "私钥",
