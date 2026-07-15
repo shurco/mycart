@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -185,4 +188,128 @@ func CompletePortonePayment(c fiber.Ctx) error {
 	return webutil.Response(c, fiber.StatusOK, "Payment verified", map[string]string{
 		"status": payment.Status,
 	})
+}
+
+// verifyWebhookSignature verifies webhook signature using HMAC-SHA256
+func verifyWebhookSignature(body []byte, signature string, secret string) bool {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(body)
+	expectedSignature := hex.EncodeToString(mac.Sum(nil))
+	return hmac.Equal([]byte(signature), []byte(expectedSignature))
+}
+
+// PortoneWebhook handles PortOne webhook notifications
+//
+// @Summary      PortOne webhook
+// @Description  Handle PortOne webhook notifications for payment events
+// @Tags         Cart
+// @Accept       json
+// @Produce      json
+// @Param        PortOne-Signature header string true "Webhook signature"
+// @Success      200 {string} string "OK"
+// @Failure      401 {string} string "Unauthorized"
+// @Router       /api/payment/portone/webhook [post]
+func PortoneWebhook(c fiber.Ctx) error {
+	db := queries.DB()
+	log := logging.New()
+
+	// Read raw body for signature verification
+	body := c.Body()
+
+	// Load PortOne settings
+	settings, err := queries.GetSettingByGroup[models.Portone](c.Context(), db)
+	if err != nil {
+		log.ErrorStack(err)
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	// Verify webhook signature
+	signature := c.Get("PortOne-Signature")
+	if signature == "" {
+		log.Error("Missing webhook signature")
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	if !verifyWebhookSignature(body, signature, settings.ApiSecret) {
+		log.Error("Invalid webhook signature")
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	// Parse webhook payload
+	var webhook struct {
+		Type string `json:"type"`
+		Data struct {
+			PaymentID string `json:"paymentId"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &webhook); err != nil {
+		log.ErrorStack(err)
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	// Extract payment_id
+	paymentID := webhook.Data.PaymentID
+	if paymentID == "" {
+		log.Error("Missing payment_id in webhook")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	// Get payment to extract cart_id
+	resp, err := callPortoneAPI("/payments/"+paymentID, settings.ApiSecret)
+	if err != nil {
+		log.ErrorStack(err)
+		return c.SendStatus(fiber.StatusOK) // Return 200 to prevent retry storms
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Error("Failed to get payment from PortOne API: %d", resp.StatusCode)
+		return c.SendStatus(fiber.StatusOK) // Return 200 to prevent retry storms
+	}
+
+	var payment struct {
+		Status     string `json:"status"`
+		CustomData string `json:"customData"`
+		Amount     struct {
+			Total    int    `json:"total"`
+			Currency string `json:"currency"`
+		} `json:"amount"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payment); err != nil {
+		log.ErrorStack(err)
+		return c.SendStatus(fiber.StatusOK)
+	}
+
+	var customData struct {
+		CartID string `json:"cart_id"`
+	}
+	if err := json.Unmarshal([]byte(payment.CustomData), &customData); err != nil {
+		log.ErrorStack(err)
+		return c.SendStatus(fiber.StatusOK)
+	}
+
+	// Load cart
+	cart, err := db.Cart(c.Context(), customData.CartID)
+	if err != nil {
+		log.ErrorStack(err)
+		return c.SendStatus(fiber.StatusOK)
+	}
+
+	// Verify amount and currency
+	if payment.Amount.Total != int(cart.AmountTotal*100) || payment.Amount.Currency != cart.Currency {
+		log.Error("Amount/currency mismatch in webhook")
+		return c.SendStatus(fiber.StatusOK)
+	}
+
+	// Update cart status
+	if payment.Status == "PAID" || payment.Status == "VIRTUAL_ACCOUNT_ISSUED" {
+		cart.PaymentID = paymentID
+		cart.PaymentStatus = "paid"
+		cart.PaymentSystem = "portone"
+		if err := db.UpdateCart(c.Context(), cart); err != nil {
+			log.ErrorStack(err)
+		}
+	}
+
+	return c.SendStatus(fiber.StatusOK)
 }
