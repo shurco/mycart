@@ -19,13 +19,17 @@
     "operationFailed": "작업 실패",
     "networkError": "네트워크 오류",
     "failedToLoadData": "데이터 로드 실패",
-    "failedToSaveData": "데이터 저장 실패"
+    "failedToSaveData": "데이터 저장 실패",
+    "footer": "푸터"
   },
   "menu": {
     "products": "상품",
     "carts": "장바구니",
     "pages": "페이지",
     "settings": "설정"
+  },
+  "form": {
+    "pleaseSelect": "선택하세요"
   },
   "settings": {
     "title": "설정",
@@ -78,7 +82,31 @@
     "failedToSaveSettings": "설정 저장 실패",
     "testLetterSent": "테스트 레터가 전송되었습니다",
     "failedToSendTestLetter": "테스트 레터 전송 실패",
-    "currency": "통화"
+    "currency": "통화",
+    "paymentProviders": "결제 제공업체"
+  },
+  "payment": {
+    "stripe": "Stripe",
+    "paypal": "PayPal",
+    "spectrocoin": "Spectrocoin",
+    "secretKey": "비밀 키",
+    "clientId": "클라이언트 ID",
+    "merchantId": "판매자 ID",
+    "projectId": "프로젝트 ID",
+    "privateKey": "개인 키",
+    "failedToLoad": "설정 로드 실패",
+    "failedToSave": "설정 저장 실패"
+  },
+  "digital": {
+    "addData": "데이터 추가",
+    "dataAdded": "데이터 추가됨",
+    "failedToAddData": "데이터 추가 실패",
+    "codeSold": "이 코드는 판매되었습니다 (cart_id: {{cart_id}})",
+    "sold": "판매됨",
+    "digitalType": "디지털 {{type}}",
+    "fileDescription": "사용자가 구매하는 상품입니다. 결제 후 구매자에게 전송될 파일을 업로드하세요. 파일은 결제 시 제공된 이메일 주소로 전송됩니다.",
+    "dataDescription": "판매하려는 디지털 상품을 입력하세요. 라이선스 키와 같은 고유한 항목일 수 있습니다.",
+    "digitalFile": "디지털 파일"
   },
   "products": {
     "title": "상품",
@@ -118,6 +146,30 @@
     "failedToDeleteImage": "이미지 삭제 실패",
     "free": "무료"
   },
+  "pages": {
+    "title": "페이지",
+    "noPages": "페이지를 찾을 수 없습니다",
+    "name": "이름",
+    "slug": "URL",
+    "position": "위치",
+    "content": "콘텐츠",
+    "active": "활성",
+    "seo": "SEO",
+    "addPage": "페이지 추가",
+    "editPage": "페이지 편집",
+    "failedToLoad": "페이지 로드 실패",
+    "failedToSave": "페이지 저장 실패",
+    "failedToDelete": "페이지 삭제 실패",
+    "typeContentHere": "여기에 콘텐츠를 입력하세요",
+    "failedToLoadPage": "페이지 로드 실패",
+    "pageSaved": "페이지 저장됨",
+    "failedToSavePage": "페이지 저장 실패",
+    "pageStatusUpdated": "페이지 상태 업데이트됨",
+    "failedToUpdatePage": "페이지 업데이트 실패",
+    "seoTitle": "제목",
+    "seoKeywords": "키워드",
+    "seoDescription": "설명"
+  },
   "carts": {
     "title": "장바구니",
     "cartId": "장바구니 ID",
@@ -132,18 +184,6 @@
     "cancelled": "취소됨",
     "priceColumn": "가격"
   },
-  "pages": {
-    "title": "페이지",
-    "addPage": "페이지 추가",
-    "editPage": "페이지 편집",
-    "deletePage": "페이지 삭제",
-    "pageName": "페이지 이름",
-    "pageContent": "페이지 콘텐츠",
-    "pageActive": "페이지 활성",
-    "noPages": "페이지 없음",
-    "slug": "슬러그",
-    "content": "콘텐츠"
-  },
   "auth": {
     "login": "로그인",
     "logout": "로그아웃",
@@ -151,5 +191,28 @@
     "password": "비밀번호",
     "loginFailed": "로그인 실패",
     "invalidCredentials": "잘못된 자격 증명"
+  },
+  "install": {
+    "title": "설치",
+    "domain": "도메인",
+    "siteName": "사이트 이름",
+    "email": "이메일",
+    "password": "비밀번호",
+    "install": "설치"
+  },
+  "letter": {
+    "payment": "결제 레터",
+    "purchase": "구매 레터"
+  },
+  "pagination": {
+    "previous": "이전",
+    "next": "다음",
+    "page": "페이지"
+  },
+  "validation": {
+    "required": "필수 항목입니다",
+    "email": "유효한 이메일을 입력하세요",
+    "minLength": "최소 {{length}}자 이상이어야 합니다",
+    "maxLength": "최대 {{length}}자까지 가능합니다"
   }
 }
