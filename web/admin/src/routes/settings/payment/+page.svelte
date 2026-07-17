@@ -12,6 +12,7 @@
   import { loadSettings as loadSettingsHelper, saveSettings } from '$lib/utils/settingsHelpers'
   import { loadData } from '$lib/utils/apiHelpers'
   import { translate } from '$lib/i18n'
+  import { CURRENCIES } from '$lib/config/currencies'
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
   import type { PaymentSettings } from '$lib/types/models'
 
@@ -26,7 +27,7 @@
   })
   let formErrors = $state<Record<string, string>>({})
 
-  const currencyOptions = ['EUR', 'USD', 'JPY', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'SEK']
+  const currencyOptions = CURRENCIES.map(c => c.code)
 
   let unsubscribe: (() => void) | null = null
 
