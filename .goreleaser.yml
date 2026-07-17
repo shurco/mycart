@@ -86,31 +86,9 @@ changelog:
       order: 9999
 
 dockers_v2:
-  - id: dockerhub
+  - id: release
     images:
       - 'shurco/mycart'
-    tags:
-      - 'v{{ .Version }}'
-      - 'latest'
-    platforms:
-      - linux/amd64
-      - linux/arm64
-    dockerfile: Dockerfile.goreleaser
-    flags:
-      - '--pull'
-    labels:
-      'io.artifacthub.package.readme-url': 'https://raw.githubusercontent.com/shurco/mycart/main/README.md'
-      'io.artifacthub.package.maintainers': '[{"name":"Dmitry Shurco"}]'
-      'io.artifacthub.package.license': 'MIT'
-      'org.opencontainers.image.description': '🛒 myCart - shopping-cart in 1 file'
-      'org.opencontainers.image.created': '{{.Date}}'
-      'org.opencontainers.image.name': '{{.ProjectName}}'
-      'org.opencontainers.image.revision': '{{.FullCommit}}'
-      'org.opencontainers.image.version': '{{.Version}}'
-      'org.opencontainers.image.source': '{{.GitURL}}'
-
-  - id: ghcr
-    images:
       - 'ghcr.io/shurco/mycart'
     tags:
       - 'v{{ .Version }}'
@@ -119,8 +97,10 @@ dockers_v2:
       - linux/amd64
       - linux/arm64
     dockerfile: Dockerfile.goreleaser
+    sbom: false
     flags:
       - '--pull'
+      - '--provenance=false'
     labels:
       'io.artifacthub.package.readme-url': 'https://raw.githubusercontent.com/shurco/mycart/main/README.md'
       'io.artifacthub.package.maintainers': '[{"name":"Dmitry Shurco"}]'
