@@ -61,6 +61,98 @@ func PaymentList(c fiber.Ctx) error {
 	return webutil.Response(c, fiber.StatusOK, "Payment list", paymentList)
 }
 
+// CreateCart creates a cart record in the database for PortOne payment flow.
+// Unlike traditional providers that create cart during /cart/payment,
+// PortOne needs cart_id upfront to pass to browser SDK.
+//
+// @Summary      Create cart
+// @Description  Create a cart record and return its ID for browser-based payment (PortOne)
+// @Tags         Cart
+// @Accept       json
+// @Produce      json
+// @Param        request body models.CartPayment true "Cart creation request"
+// @Success      200 {object} webutil.HTTPResponse "Cart created"
+// @Failure      400 {object} webutil.HTTPResponse "Validation error"
+// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
+// @Router       /api/cart/create [post]
+func CreateCart(c fiber.Ctx) error {
+	db := queries.DB()
+	log := logging.New()
+	payment := new(models.CartPayment)
+
+	if err := c.Bind().Body(payment); err != nil {
+		log.ErrorStack(err)
+		return webutil.StatusBadRequest(c, err.Error())
+	}
+
+	setting, err := db.GetSettingByKey(c.Context(), "currency")
+	if err != nil {
+		log.ErrorStack(err)
+		return webutil.StatusInternalServerError(c)
+	}
+	currency := setting["currency"].Value.(string)
+
+	products, err := db.ListProducts(c.Context(), false, 0, 0, "", payment.Products...)
+	if err != nil {
+		log.ErrorStack(err)
+		return webutil.StatusInternalServerError(c)
+	}
+
+	// Calculate total amount
+	var amountTotal int
+	for _, product := range products.Products {
+		quantity := 1
+		for _, cartProduct := range payment.Products {
+			if cartProduct.ProductID == product.ID {
+				quantity = cartProduct.Quantity
+			}
+		}
+		amountTotal += product.Amount * quantity
+	}
+
+	// Generate cart ID
+	cartID := security.RandomString()
+
+	// Create cart record
+	if err := db.AddCart(c.Context(), &models.Cart{
+		Core: models.Core{
+			ID: cartID,
+		},
+		Email:         payment.Email,
+		Cart:          payment.Products,
+		AmountTotal:   amountTotal,
+		Currency:      currency,
+		PaymentStatus: litepay.NEW,
+		PaymentSystem: payment.Provider,
+	}); err != nil {
+		log.ErrorStack(err)
+		return webutil.StatusInternalServerError(c)
+	}
+
+	// Send webhook for cart initiation
+	hook := &webhook.Payment{
+		Event:     webhook.PAYMENT_INITIATION,
+		TimeStamp: time.Now().Unix(),
+		Data: webhook.Data{
+			PaymentSystem: payment.Provider,
+			PaymentStatus: litepay.NEW,
+			CartID:        cartID,
+			TotalAmount:   amountTotal,
+			Currency:      currency,
+		},
+	}
+	if err := webhook.SendPaymentHook(hook); err != nil {
+		log.ErrorStack(err)
+		// Don't fail cart creation if webhook fails
+	}
+
+	return webutil.Response(c, fiber.StatusOK, "Cart created", map[string]interface{}{
+		"cart_id":      cartID,
+		"amount_total": amountTotal,
+		"currency":     currency,
+	})
+}
+
 // GetCart returns cart information by cart_id.
 //
 // @Summary      Get cart (public)

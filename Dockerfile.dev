@@ -48,7 +48,7 @@ COPY --from=admin-builder /app/web/admin/build ./web/admin/build
 COPY --from=site-builder /app/web/site/build ./web/site/build
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o mycart ./cmd
+RUN CGO_ENABLED=0 GOOS=linux go build -installsuffix cgo -ldflags="-w -s" -o mycart ./cmd
 
 # Stage 4: Final Runtime Image
 FROM alpine:latest
