@@ -1,12 +1,14 @@
 import { writable, derived, get } from 'svelte/store'
 import zh from './locales/zh.json'
 import en from './locales/en.json'
+import ko from './locales/ko.json'
 
-export type Locale = 'zh' | 'en'
+export type Locale = 'zh' | 'en' | 'ko'
 
 const translations: Record<Locale, any> = {
   zh,
-  en
+  en,
+  ko
 }
 
 const defaultLocale: Locale = 'en'
@@ -18,7 +20,7 @@ function createLocaleStore() {
   // Load locale from localStorage on initialization
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('locale') as Locale
-    if (saved && (saved === 'zh' || saved === 'en')) {
+    if (saved && (saved === 'zh' || saved === 'en' || saved === 'ko')) {
       set(saved)
     }
   }
@@ -91,17 +93,25 @@ export function getAvailableLocales(currentLocale: Locale): Array<{ code: Locale
   const localeNames: Record<Locale, Record<Locale, string>> = {
     en: {
       en: 'English',
-      zh: '中文'
+      zh: '中文',
+      ko: '한국어'
     },
     zh: {
       en: 'English',
-      zh: '中文'
+      zh: '中文',
+      ko: '한국어'
+    },
+    ko: {
+      en: 'English',
+      zh: '中文',
+      ko: '한국어'
     }
   }
   
   return [
     { code: 'en', name: localeNames[currentLocale].en },
-    { code: 'zh', name: localeNames[currentLocale].zh }
+    { code: 'zh', name: localeNames[currentLocale].zh },
+    { code: 'ko', name: localeNames[currentLocale].ko }
   ]
 }
 

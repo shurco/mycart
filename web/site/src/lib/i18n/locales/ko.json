@@ -1,0 +1,103 @@
+{
+  "common": {
+    "loading": "로딩 중...",
+    "poweredBy": "myCart 제공"
+  },
+  "languages": {
+    "en": "English",
+    "zh": "中文",
+    "ko": "한국어"
+  },
+  "header": {
+    "cart": "장바구니"
+  },
+  "footer": {
+    "follow": "팔로우:",
+    "allRightsReserved": "모든 권리 보유",
+    "poweredBy": "myCart 제공"
+  },
+  "home": {
+    "products": "상품",
+    "noProductsFound": "상품을 찾을 수 없습니다",
+    "loading": "로딩 중..."
+  },
+  "cart": {
+    "yourCart": "장바구니",
+    "cartIsEmpty": "장바구니가 비어있습니다",
+    "emptyMessage": "장바구니가 비어 있습니다. 쇼핑을 계속하려면 상품을 추가하세요.",
+    "goToHome": "홈으로 가기",
+    "itemsCount": "항목 ({{count}})",
+    "total": "합계",
+    "enterEmail": "이메일 입력",
+    "emailFreeDescription": "항목이 전송될 이메일 주소를 입력하세요.",
+    "emailPaidDescription": "결제 후 항목이 전송될 이메일 주소를 입력하세요. 또한 결제 시스템을 선택하세요.",
+    "emailPlaceholder": "EMAIL@EXAMPLE.COM",
+    "selectPaymentSystem": "결제 시스템 선택",
+    "stripe": "Stripe",
+    "stripeDescription": "카드 및 기타 결제 수단을 위한 인기 있는 결제 시스템",
+    "paypal": "PayPal",
+    "paypalDescription": "카드 및 PayPal 계정 자금을 위한 결제 시스템",
+    "spectrocoin": "Spectrocoin",
+    "spectrocoinDescription": "암호화폐 결제를 허용하는 결제 시스템",
+    "coinbase": "Coinbase Commerce",
+    "coinbaseDescription": "암호화폐 결제 시스템 (비트코인, 이더리움 등)",
+    "getForFree": "무료로 받기",
+    "checkout": "결제하기",
+    "noPaymentSystems": "사용 가능한 결제 시스템이 없습니다. 관리자에게 문의하세요.",
+    "selectPaymentError": "결제 시스템을 선택하세요",
+    "selectPaymentErrorPaid": "유료 항목에 대한 결제 시스템을 선택하세요",
+    "removeItem": "항목 제거"
+  },
+  "product": {
+    "addToCart": "장바구니에 추가",
+    "addToCartShort": "추가",
+    "removeFromCart": "장바구니에서 제거",
+    "removeFromCartShort": "제거",
+    "free": "무료",
+    "new": "새로운",
+    "description": "설명",
+    "previousImage": "이전 이미지",
+    "nextImage": "다음 이미지"
+  },
+  "error": {
+    "notFound": "페이지를 찾을 수 없습니다",
+    "notFoundTitle": "찾을 수 없음",
+    "notFoundMessage": "찾으시는 페이지가 존재하지 않거나 이동되었습니다.",
+    "errorOccurred": "오류가 발생했습니다",
+    "checkUrl": "URL에 오타가 없는지 확인하거나 홈페이지로 돌아가 상품을 탐색하세요.",
+    "errorTitle": "오류",
+    "contactAdmin": "잠시 후 다시 시도하세요. 오류가 사라지지 않으면 관리자에게 문의하세요."
+  },
+  "payment": {
+    "success": {
+      "title": "결제 성공!",
+      "message": "구매해 주셔서 감사합니다. 주문이 성공적으로 처리되었습니다.",
+      "orderDetails": "주문 세부정보",
+      "quantity": "수량:",
+      "each": "각",
+      "redirecting": "몇 초 후 홈페이지로 리디렉션됩니다...",
+      "cartIdMissing": "장바구니 ID가 없습니다",
+      "loadFailed": "장바구니 정보를 불러오지 못했습니다"
+    },
+    "cancel": {
+      "title": "결제 취소됨",
+      "message": "결제가 취소되었습니다. 장바구니로 돌아가서 다시 시도할 수 있습니다.",
+      "returnToCart": "장바구니로 돌아가기"
+    },
+    "failed": "결제 실패"
+  },
+  "pagination": {
+    "previous": "이전",
+    "next": "다음"
+  },
+  "overlay": {
+    "close": "닫기"
+  },
+  "cookies": {
+    "title": "쿠키 동의",
+    "description": "저희는 귀하의 브라우징 경험을 향상시키고 사이트 트래픽을 분석하기 위해 쿠키를 사용합니다. '수락'을 클릭하시면 쿠키 사용에 동의하시는 것입니다. ",
+    "privacyLink": "개인정보 보호정책에서 자세히 알아보기",
+    "accept": "수락",
+    "reject": "거부"
+  }
+}
