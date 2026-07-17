@@ -55,3 +55,9 @@ web/*/build/
 .shared/
 docker/docker-compose_private.yml
 /graphify-out/
+
+docker/Dockerfile.dev.bak
+lc_base/
+mycart
+web/admin/package-lock.json
+web/site/package-lock.json
