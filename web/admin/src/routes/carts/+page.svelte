@@ -7,6 +7,7 @@
   import Pagination from '$lib/components/Pagination.svelte'
   import { loadData, handleApiCall } from '$lib/utils/apiHelpers'
   import { apiPost } from '$lib/utils'
+  import { formatCurrency } from '$lib/utils/currency'
   import { costFormat, formatDate } from '$lib/utils'
   import { STRIPE_DASHBOARD_URL } from '$lib/utils/constants'
   import type { Cart } from '$lib/types/models'
@@ -114,7 +115,7 @@
           >
             <td>{cart.email || '-'}</td>
             <td>
-              {costFormat(cart.amount_total)} {cart.currency || ''}
+              {formatCurrency(cart.amount_total / 100, cart.currency || 'USD')}
             </td>
             <td
               class={cart.payment_status === 'paid'
