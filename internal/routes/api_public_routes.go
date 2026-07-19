@@ -22,6 +22,7 @@ func ApiPublicRoutes(c *fiber.App) {
 	cart.Post("/payment/callback", handlers.PaymentCallback)
 
 	c.Get("/api/cart/payment", handlers.PaymentList)
+	c.Post("/api/cart/create", handlers.CreateCart)
 	c.Get("/api/cart/portone-config", handlers.GetPortoneConfig)
 	c.Get("/api/cart/:cart_id", handlers.GetCart)
 	c.Post("/api/payment/portone/complete", handlers.CompletePortonePayment)

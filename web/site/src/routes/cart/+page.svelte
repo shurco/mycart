@@ -172,16 +172,34 @@
         const paymentId = `payment-${generateUUID()}`
         console.log('Generated payment ID:', paymentId)
 
+        // Create cart record first and get cart_id
+        console.log('Creating cart record...')
+        const cartCreateRes = await apiPost<{ cart_id: string; amount_total: number; currency: string }>('/api/cart/create', {
+          email: email,
+          provider: 'portone',
+          products: cart.map((item) => ({ id: item.id, quantity: 1 }))
+        })
+        console.log('Cart create response:', cartCreateRes)
+
+        if (!cartCreateRes.success || !cartCreateRes.result?.cart_id) {
+          error = 'Failed to create cart: ' + (cartCreateRes.message || 'Unknown error')
+          showOverlay = true
+          return
+        }
+
+        const cartId = cartCreateRes.result.cart_id
+        console.log('Cart created with ID:', cartId)
+
         // Prepare payment request
         const paymentRequest = {
-          payMethod: "EASY_PAY",
           storeId: portoneStoreId,
           channelKey: portoneChannelKey,
           paymentId: paymentId,
           orderName: `Order ${cart.length} items`,
-          totalAmount: cartTotal, // PortOne uses smallest currency unit (cents)
+          totalAmount: cartTotal,
           currency: "KRW",
-          customData: JSON.stringify({ cart_id: email })
+          payMethod: "CARD",
+          customData: { cart_id: cartId }
         }
         console.log('Payment request object:', paymentRequest)
 
@@ -202,7 +220,7 @@
         console.log('Verifying payment with backend...')
         const verifyRes = await apiPost('/api/payment/portone/complete', {
           payment_id: response.paymentId,
-          cart_id: email
+          cart_id: cartId
         })
         console.log('Backend verification response:', verifyRes)
 
