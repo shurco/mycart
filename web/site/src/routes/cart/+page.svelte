@@ -198,7 +198,7 @@
           orderName: `Order ${cart.length} items`,
           totalAmount: cartTotal,
           currency: "KRW",
-          payMethod: "CARD",
+          payMethod: "EASY_PAY",
           customData: { cart_id: cartId }
         }
         console.log('Payment request object:', paymentRequest)
