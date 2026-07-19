@@ -127,7 +127,7 @@ func CompletePortonePayment(c fiber.Ctx) error {
 	}
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		log.Error("PortOne API error: %d %s", resp.StatusCode, string(body))
+		log.Error().Msgf("PortOne API error: %d %s", resp.StatusCode, string(body))
 		return webutil.StatusInternalServerError(c)
 	}
 
@@ -153,13 +153,13 @@ func CompletePortonePayment(c fiber.Ctx) error {
 
 	// Verify amount (PortOne uses smallest currency unit, e.g. cents)
 	if payment.Amount.Total != int(cart.AmountTotal*100) {
-		log.Error("Amount mismatch: expected %d, got %d", int(cart.AmountTotal*100), payment.Amount.Total)
+		log.Error().Msgf("Amount mismatch: expected %d, got %d", int(cart.AmountTotal*100), payment.Amount.Total)
 		return webutil.StatusBadRequest(c, "Amount mismatch")
 	}
 
 	// Verify currency
 	if payment.Amount.Currency != cart.Currency {
-		log.Error("Currency mismatch: expected %s, got %s", cart.Currency, payment.Amount.Currency)
+		log.Error().Msgf("Currency mismatch: expected %s, got %s", cart.Currency, payment.Amount.Currency)
 		return webutil.StatusBadRequest(c, "Currency mismatch")
 	}
 
@@ -172,7 +172,7 @@ func CompletePortonePayment(c fiber.Ctx) error {
 		return webutil.StatusBadRequest(c, "Failed to parse custom data")
 	}
 	if customData.CartID != request.CartID {
-		log.Error("Cart ID mismatch: expected %s, got %s", request.CartID, customData.CartID)
+		log.Error().Msgf("Cart ID mismatch: expected %s, got %s", request.CartID, customData.CartID)
 		return webutil.StatusBadRequest(c, "Cart ID mismatch")
 	}
 
@@ -226,12 +226,12 @@ func PortoneWebhook(c fiber.Ctx) error {
 	// Verify webhook signature
 	signature := c.Get("PortOne-Signature")
 	if signature == "" {
-		log.Error("Missing webhook signature")
+		log.Error().Msg("Missing webhook signature")
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
 	if !verifyWebhookSignature(body, signature, settings.ApiSecret) {
-		log.Error("Invalid webhook signature")
+		log.Error().Msg("Invalid webhook signature")
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
@@ -250,7 +250,7 @@ func PortoneWebhook(c fiber.Ctx) error {
 	// Extract payment_id
 	paymentID := webhook.Data.PaymentID
 	if paymentID == "" {
-		log.Error("Missing payment_id in webhook")
+		log.Error().Msg("Missing payment_id in webhook")
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 
@@ -263,7 +263,7 @@ func PortoneWebhook(c fiber.Ctx) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Error("Failed to get payment from PortOne API: %d", resp.StatusCode)
+		log.Error().Msgf("Failed to get payment from PortOne API: %d", resp.StatusCode)
 		return c.SendStatus(fiber.StatusOK) // Return 200 to prevent retry storms
 	}
 
@@ -297,7 +297,7 @@ func PortoneWebhook(c fiber.Ctx) error {
 
 	// Verify amount and currency
 	if payment.Amount.Total != int(cart.AmountTotal*100) || payment.Amount.Currency != cart.Currency {
-		log.Error("Amount/currency mismatch in webhook")
+		log.Error().Msg("Amount/currency mismatch in webhook")
 		return c.SendStatus(fiber.StatusOK)
 	}
 
