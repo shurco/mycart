@@ -4,6 +4,7 @@
   import { cartStore } from '$lib/stores/cart'
   import { settingsStore } from '$lib/stores/settings'
   import { apiGet } from '$lib/utils/api'
+  import { formatCurrency } from '$lib/utils/currency'
   import { costFormat } from '$lib/utils/costFormat'
   import { getProductImageUrl } from '$lib/utils/imageUrl'
   import { goto } from '$app/navigation'
@@ -66,8 +67,8 @@
   })
 
   function totalAmount(): string {
-    if (!cart) return '0'
-    return costFormat(cart.amount_total)
+    if (!cart) return formatCurrency(0, currency)
+    return formatCurrency(cart.amount_total / 100, cart.currency)
   }
 </script>
 
@@ -121,17 +122,11 @@
                   </div>
                   <div class="text-right">
                     <p class="text-2xl font-black text-black">
-                      {costFormat(item.amount * item.quantity)}
-                      {#if item.amount !== 0 && item.amount}
-                        {cart.currency}
-                      {/if}
+                      {item.amount === 0 ? t('product.free') : formatCurrency((item.amount * item.quantity) / 100, cart.currency)}
                     </p>
                     {#if item.quantity > 1}
                       <p class="text-lg text-gray-600">
-                        {costFormat(item.amount)}
-                        {#if item.amount !== 0 && item.amount}
-                          {' ' + t('payment.success.each')}
-                        {/if}
+                        {item.amount === 0 ? t('product.free') : formatCurrency(item.amount / 100, cart.currency) + ' ' + t('payment.success.each')}
                       </p>
                     {/if}
                   </div>
@@ -145,9 +140,6 @@
               <span class="text-3xl font-black tracking-tighter text-black uppercase"> {t('cart.total')} </span>
               <span class="text-4xl font-black text-black">
                 {totalAmount()}
-                {#if cart && cart.amount_total !== 0}
-                  {cart.currency}
-                {/if}
               </span>
             </div>
           </div>

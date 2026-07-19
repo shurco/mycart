@@ -3,6 +3,7 @@
   import { cartStore } from '$lib/stores/cart'
   import { settingsStore } from '$lib/stores/settings'
   import { apiGet, apiPost } from '$lib/utils/api'
+  import { formatCurrency } from '$lib/utils/currency'
   import { costFormat } from '$lib/utils/costFormat'
   import { getProductImageUrl } from '$lib/utils/imageUrl'
   import { hasPaymentProviders } from '$lib/utils/payment'
@@ -94,7 +95,7 @@
   let showPayments = $derived(!isFree && hasPaymentProviders(payments))
 
   // Computed value instead of function
-  let totalCartAmount = $derived(costFormat(cartTotal) === 'free' ? t('product.free') : costFormat(cartTotal))
+  let totalCartAmount = $derived(cartTotal === 0 ? t('product.free') : formatCurrency(cartTotal / 100, currency))
 
   async function checkOut(e: Event) {
     e.preventDefault()
@@ -187,14 +188,11 @@
                     </div>
                     <div class="flex items-center gap-4">
                       <span
-                        class="text-2xl font-black {costFormat(item.amount) === 'free'
+                        class="text-2xl font-black {item.amount === 0
                           ? 'text-green-500'
                           : 'text-black'}"
                       >
-                        {costFormat(item.amount) === 'free' ? t('product.free') : costFormat(item.amount)}
-                        {#if item.amount !== 0 && item.amount}
-                          {currency}
-                        {/if}
+                        {item.amount === 0 ? t('product.free') : formatCurrency(item.amount / 100, currency)}
                       </span>
                       <button
                         type="button"
@@ -219,9 +217,6 @@
               <span class="text-3xl font-black tracking-tighter text-black uppercase"> {t('cart.total')} </span>
               <span class="text-4xl font-black {cartTotal === 0 ? 'text-green-500' : 'text-black'}">
                 {totalCartAmount}
-                {#if cart.length > 0 && cartTotal !== 0}
-                  {currency}
-                {/if}
               </span>
             </div>
           </div>
