@@ -4,6 +4,7 @@
   import { settingsStore } from '$lib/stores/settings'
   import { apiGet, apiPost } from '$lib/utils/api'
   import { costFormat } from '$lib/utils/costFormat'
+  import { formatCurrency } from /utils/currency
   import { getProductImageUrl } from '$lib/utils/imageUrl'
   import { hasPaymentProviders } from '$lib/utils/payment'
   import { getLocalStorage, setLocalStorage, removeLocalStorage } from '$lib/utils/browser'
@@ -37,6 +38,14 @@
   let isLoadingPaymentMethods = $state(false)
   let portoneStoreId = $state('')
   let portoneChannelKey = $state('')
+  let portoneDebugEnabled = $state(false)
+
+  // Helper function for conditional logging
+  function debugLog(...args: any[]) {
+    if (portoneDebugEnabled) {
+      console.log(...args)
+    }
+  }
 
   let cart = $derived($cartStore)
   let currency = $derived($settingsStore?.main.currency || '')
@@ -44,6 +53,7 @@
   // Calculate total cart amount in cents
   let cartTotal = $derived(cart.reduce((sum, item) => sum + item.amount, 0))
   let isFree = $derived(cartTotal === 0)
+  let totalCartAmount = $derived(formatCurrency(cartTotal, currency))
 
   // Handle payment provider based on cart state
   $effect(() => {
@@ -87,10 +97,11 @@
 
         // Load PortOne config if portone is available
         if (payments.portone) {
-          const portoneRes = await apiGet<{ store_id: string; channel_key: string }>('/api/cart/portone-config')
+          const portoneRes = await apiGet<{ store_id: string; channel_key: string; debug_enabled: boolean }>('/api/cart/portone-config')
           if (portoneRes.success && portoneRes.result) {
             portoneStoreId = portoneRes.result.store_id
             portoneChannelKey = portoneRes.result.channel_key
+            portoneDebugEnabled = portoneRes.result.debug_enabled
           }
         }
       } else {
@@ -118,16 +129,16 @@
   let showPayments = $derived(!isFree && hasPaymentProviders(payments))
 
   // Computed value instead of function
-  let totalCartAmount = $derived(costFormat(cartTotal) === 'free' ? t('product.free') : costFormat(cartTotal))
+  let totalCartAmount = $derived(formatCurrency(cartTotal, currency))
 
   async function checkOut(e: Event) {
     e.preventDefault()
 
-    console.log('=== CHECKOUT STARTED ===')
-    console.log('Email:', email)
-    console.log('Provider:', provider)
-    console.log('Cart:', cart)
-    console.log('Is Free:', isFree)
+    debugLog('=== CHECKOUT STARTED ===')
+    debugLog('Email:', email)
+    debugLog('Provider:', provider)
+    debugLog('Cart:', cart)
+    debugLog('Is Free:', isFree)
 
     setLocalStorage('email', email)
     error = undefined
@@ -145,9 +156,9 @@
 
     // Handle PortOne payment with browser SDK
     if (provider === 'portone') {
-      console.log('=== PORTONE PAYMENT FLOW ===')
-      console.log('PortOne SDK available?', typeof PortOne !== 'undefined')
-      console.log('PortOne.requestPayment available?', typeof PortOne?.requestPayment === 'function')
+      debugLog('=== PORTONE PAYMENT FLOW ===')
+      debugLog('PortOne SDK available?', typeof PortOne !== 'undefined')
+      debugLog('PortOne.requestPayment available?', typeof PortOne?.requestPayment === 'function')
 
       showOverlay = true
 
@@ -159,7 +170,7 @@
           return
         }
 
-        console.log('PortOne payment request:', {
+        debugLog('PortOne payment request:', {
           storeId: portoneStoreId,
           channelKey: portoneChannelKey,
           cartTotal: cartTotal,
@@ -170,16 +181,16 @@
 
         // Generate unique payment ID
         const paymentId = `payment-${generateUUID()}`
-        console.log('Generated payment ID:', paymentId)
+        debugLog('Generated payment ID:', paymentId)
 
         // Create cart record first and get cart_id
-        console.log('Creating cart record...')
+        debugLog('Creating cart record...')
         const cartCreateRes = await apiPost<{ cart_id: string; amount_total: number; currency: string }>('/api/cart/create', {
           email: email,
           provider: 'portone',
           products: cart.map((item) => ({ id: item.id, quantity: 1 }))
         })
-        console.log('Cart create response:', cartCreateRes)
+        debugLog('Cart create response:', cartCreateRes)
 
         if (!cartCreateRes.success || !cartCreateRes.result?.cart_id) {
           error = 'Failed to create cart: ' + (cartCreateRes.message || 'Unknown error')
@@ -188,7 +199,7 @@
         }
 
         const cartId = cartCreateRes.result.cart_id
-        console.log('Cart created with ID:', cartId)
+        debugLog('Cart created with ID:', cartId)
 
         // Prepare payment request
         const paymentRequest = {
@@ -419,7 +430,7 @@
                     </div>
                   {/if}
 
-                  {#if payments.portone && currency === 'KRW'}
+                  {#if payments.portone}
                     <div>
                       <input type="radio" bind:group={provider} value="portone" id="portone" class="peer hidden" />
                       <label
