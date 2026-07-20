@@ -4,7 +4,7 @@
   import { settingsStore } from '$lib/stores/settings'
   import { apiGet, apiPost } from '$lib/utils/api'
   import { costFormat } from '$lib/utils/costFormat'
-  import { formatCurrency } from /utils/currency
+  import { formatCurrency } from '$lib/utils/currency'
   import { getProductImageUrl } from '$lib/utils/imageUrl'
   import { hasPaymentProviders } from '$lib/utils/payment'
   import { getLocalStorage, setLocalStorage, removeLocalStorage } from '$lib/utils/browser'
