@@ -58,6 +58,31 @@ func PaymentList(c fiber.Ctx) error {
 		return webutil.StatusBadRequest(c, err.Error())
 	}
 
+	// Get current store currency for PortOne filtering
+	currencySetting, err := db.GetSettingByKey(c.Context(), "currency")
+	if err != nil {
+		log.ErrorStack(err)
+		return webutil.StatusInternalServerError(c)
+	}
+	mainCurrency := currencySetting["currency"].Value.(string)
+
+	// Filter PortOne based on supported currencies
+	if paymentList["portone"] {
+		portoneSettings, err := queries.GetSettingByGroup[models.Portone](c.Context(), db)
+		if err == nil && portoneSettings != nil && len(portoneSettings.SupportedCurrencies) > 0 {
+			supported := false
+			for _, curr := range portoneSettings.SupportedCurrencies {
+				if curr == mainCurrency {
+					supported = true
+					break
+				}
+			}
+			if !supported {
+				paymentList["portone"] = false
+			}
+		}
+	}
+
 	return webutil.Response(c, fiber.StatusOK, "Payment list", paymentList)
 }
 

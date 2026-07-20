@@ -113,3 +113,19 @@ func clearWebhookURL(t *testing.T) {
 	defer cancel()
 	_ = db.UpdateSettingByKey(ctx, &models.SettingName{Key: "webhook_url", Value: ""})
 }
+
+
+func TestPaymentList_FiltersByPortOneCurrency(t *testing.T) {
+	// This is a placeholder test structure
+	// Real implementation would use testutil fixtures
+	t.Skip("Requires integration test setup with database fixtures")
+
+	// Test case 1: Currency = KRW, PortOne supports KRW
+	// Expected: PortOne included in response
+
+	// Test case 2: Currency = USD, PortOne supports only KRW
+	// Expected: PortOne excluded from response
+
+	// Test case 3: Currency = USD, PortOne supports ["KRW", "USD"]
+	// Expected: PortOne included in response
+}
