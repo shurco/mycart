@@ -11,8 +11,9 @@
     MIN_PORTONE_API_SECRET_LENGTH,
     ERROR_MESSAGES
   } from '$lib/constants/validation'
-  import type { PortoneSettings } from '$lib/types/models'
+  import type { PortoneSettings, PaymentSettings } from '$lib/types/models'
   import { translate } from '$lib/i18n'
+  import { loadSettings } from '$lib/utils/settingsHelpers'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -22,8 +23,6 @@
   }
 
   let { onclose }: Props = $props()
-
-  const AVAILABLE_CURRENCIES = ['KRW', 'USD', 'JPY', 'EUR', 'GBP']
 
   let settings = $state<PortoneSettings>({
     active: false,
@@ -35,6 +34,8 @@
   })
   let formErrors = $state<Record<string, string>>({})
   let unsubscribe: (() => void) | null = null
+  let storeCurrency = $state<string>('')
+  let showCurrencyWarning = $derived(storeCurrency && storeCurrency !== 'KRW')
 
   onMount(async () => {
     const loaded = await loadPaymentSettings<PortoneSettings>('portone', settings)
@@ -42,6 +43,15 @@
       ...loaded,
       debug_enabled: loaded.debug_enabled ?? false,
       supported_currencies: loaded.supported_currencies ?? ['KRW']
+    }
+
+    // Load store's default currency
+    const paymentSettings = await loadSettings<PaymentSettings>('payment', { currency: '' })
+    console.log('PortOne: Loaded payment settings:', paymentSettings)
+    if (paymentSettings?.currency) {
+      storeCurrency = paymentSettings.currency
+      console.log('PortOne: Store currency set to:', storeCurrency)
+      console.log('PortOne: Show warning?', storeCurrency !== 'KRW')
     }
 
     unsubscribe = systemStore.subscribe((store) => {
@@ -54,16 +64,6 @@
   onDestroy(() => {
     unsubscribe?.()
   })
-
-  function toggleCurrency(currency: string) {
-    const currencies = settings.supported_currencies ?? []
-    const index = currencies.indexOf(currency)
-    if (index > -1) {
-      settings.supported_currencies = currencies.filter(c => c !== currency)
-    } else {
-      settings.supported_currencies = [...currencies, currency]
-    }
-  }
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault()
@@ -162,25 +162,14 @@
         <p class="text-xs text-gray-500 mt-1">{t('payment.portone.debugEnabledDesc') || 'Show debug logs in browser console'}</p>
       </dl>
 
-      <dl class="mx-auto -my-3 mt-5 mb-0 space-y-4 text-sm">
-        <div>
-          <label class="font-medium block mb-2">{t('payment.portone.supportedCurrencies') || 'Supported Currencies'}</label>
-          <p class="text-xs text-gray-500 mb-3">{t('payment.portone.supportedCurrenciesDesc') || 'Select currencies this provider accepts'}</p>
-          <div class="flex flex-wrap gap-3">
-            {#each AVAILABLE_CURRENCIES as currency}
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={settings.supported_currencies?.includes(currency)}
-                  onchange={() => toggleCurrency(currency)}
-                  class="w-4 h-4"
-                />
-                <span>{currency}</span>
-              </label>
-            {/each}
-          </div>
+      {#if showCurrencyWarning}
+        <div class="mx-auto mt-5 p-3 bg-yellow-50 border border-yellow-200 rounded text-yellow-800">
+          <p class="text-sm font-medium">⚠️ {t('payment.portone.currencyWarning')}</p>
+          <p class="text-xs mt-1">
+            {t('payment.portone.currencyWarningDesc', { currency: storeCurrency })}
+          </p>
         </div>
-      </dl>
+      {/if}
     </div>
 
     <div class="pt-8">

@@ -61,3 +61,7 @@ lc_base/
 mycart
 web/admin/package-lock.json
 web/site/package-lock.json
+
+tmp/
+mycart-linux
+mycart-test

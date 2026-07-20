@@ -128,9 +128,6 @@
 
   let showPayments = $derived(!isFree && hasPaymentProviders(payments))
 
-  // Computed value instead of function
-  let totalCartAmount = $derived(formatCurrency(cartTotal, currency))
-
   async function checkOut(e: Event) {
     e.preventDefault()
 

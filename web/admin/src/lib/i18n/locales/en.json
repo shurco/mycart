@@ -217,7 +217,9 @@
       "debugEnabled": "Debug Mode",
       "debugEnabledDesc": "Show debug logs in browser console (for troubleshooting)",
       "supportedCurrencies": "Supported Currencies",
-      "supportedCurrenciesDesc": "Currencies this provider accepts. PortOne will only appear when store currency matches."
+      "supportedCurrenciesDesc": "Currencies this provider accepts. PortOne will only appear when store currency matches.",
+      "currencyWarning": "Currency Mismatch Warning",
+      "currencyWarningDesc": "Store default currency is {{currency}}, but PortOne only supports KRW. Please update the store currency in payment settings."
     },
     "spectrocoin": "Spectrocoin",
     "secretKey": "Secret Key",
