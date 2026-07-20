@@ -23,17 +23,26 @@
 
   let { onclose }: Props = $props()
 
+  const AVAILABLE_CURRENCIES = ['KRW', 'USD', 'JPY', 'EUR', 'GBP']
+
   let settings = $state<PortoneSettings>({
     active: false,
     store_id: '',
     channel_key: '',
-    api_secret: ''
+    api_secret: '',
+    debug_enabled: false,
+    supported_currencies: ['KRW']
   })
   let formErrors = $state<Record<string, string>>({})
   let unsubscribe: (() => void) | null = null
 
   onMount(async () => {
-    settings = await loadPaymentSettings<PortoneSettings>('portone', settings)
+    const loaded = await loadPaymentSettings<PortoneSettings>('portone', settings)
+    settings = {
+      ...loaded,
+      debug_enabled: loaded.debug_enabled ?? false,
+      supported_currencies: loaded.supported_currencies ?? ['KRW']
+    }
 
     unsubscribe = systemStore.subscribe((store) => {
       if (store.payments?.portone !== undefined) {
@@ -45,6 +54,16 @@
   onDestroy(() => {
     unsubscribe?.()
   })
+
+  function toggleCurrency(currency: string) {
+    const currencies = settings.supported_currencies ?? []
+    const index = currencies.indexOf(currency)
+    if (index > -1) {
+      settings.supported_currencies = currencies.filter(c => c !== currency)
+    } else {
+      settings.supported_currencies = [...currencies, currency]
+    }
+  }
 
   async function handleSubmit(event: SubmitEvent) {
     event.preventDefault()
@@ -130,6 +149,37 @@
           error={formErrors.api_secret}
           ico="key"
         />
+      </dl>
+
+      <dl class="mx-auto -my-3 mt-5 mb-0 space-y-4 text-sm">
+        <div class="flex items-center gap-4">
+          <label for="debug-enabled" class="font-medium">{t('payment.portone.debugEnabled') || 'Debug Mode'}</label>
+          <FormToggle
+            id="debug-enabled"
+            bind:value={settings.debug_enabled}
+          />
+        </div>
+        <p class="text-xs text-gray-500 mt-1">{t('payment.portone.debugEnabledDesc') || 'Show debug logs in browser console'}</p>
+      </dl>
+
+      <dl class="mx-auto -my-3 mt-5 mb-0 space-y-4 text-sm">
+        <div>
+          <label class="font-medium block mb-2">{t('payment.portone.supportedCurrencies') || 'Supported Currencies'}</label>
+          <p class="text-xs text-gray-500 mb-3">{t('payment.portone.supportedCurrenciesDesc') || 'Select currencies this provider accepts'}</p>
+          <div class="flex flex-wrap gap-3">
+            {#each AVAILABLE_CURRENCIES as currency}
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.supported_currencies?.includes(currency)}
+                  onchange={() => toggleCurrency(currency)}
+                  class="w-4 h-4"
+                />
+                <span>{currency}</span>
+              </label>
+            {/each}
+          </div>
+        </div>
       </dl>
     </div>
 

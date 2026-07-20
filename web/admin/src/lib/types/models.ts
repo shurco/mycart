@@ -105,6 +105,8 @@ export interface PortoneSettings {
   store_id: string
   channel_key: string
   api_secret: string
+  debug_enabled?: boolean
+  supported_currencies?: string[]
 }
 
 export interface SmtpSettings {

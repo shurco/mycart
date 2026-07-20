@@ -213,7 +213,12 @@
   "payment": {
     "stripe": "Stripe",
     "paypal": "PayPal",
-    "portone": "PortOne",
+    "portone": {
+      "debugEnabled": "Debug Mode",
+      "debugEnabledDesc": "Show debug logs in browser console (for troubleshooting)",
+      "supportedCurrencies": "Supported Currencies",
+      "supportedCurrenciesDesc": "Currencies this provider accepts. PortOne will only appear when store currency matches."
+    },
     "spectrocoin": "Spectrocoin",
     "secretKey": "Secret Key",
     "clientId": "Client ID",
