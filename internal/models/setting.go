@@ -120,10 +120,12 @@ func (v Coinbase) Validate() error {
 
 // Portone is ...
 type Portone struct {
-	StoreID    string `json:"store_id"`
-	ChannelKey string `json:"channel_key"`
-	ApiSecret  string `json:"api_secret"`
-	Active     bool   `json:"active"`
+	StoreID             string   `json:"store_id"`
+	ChannelKey          string   `json:"channel_key"`
+	ApiSecret           string   `json:"api_secret"`
+	Active              bool     `json:"active"`
+	DebugEnabled        bool     `json:"debug_enabled"`
+	SupportedCurrencies []string `json:"supported_currencies"`
 }
 
 // Validate is ...

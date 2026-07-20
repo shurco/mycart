@@ -255,3 +255,63 @@ func TestPaymentSystem_ValidateDelegates(t *testing.T) {
 		t.Error("bad stripe must fail validation")
 	}
 }
+
+func TestPortone_Validate_DebugEnabled(t *testing.T) {
+	tests := []struct {
+		name      string
+		portone   Portone
+		wantError bool
+	}{
+		{
+			name: "valid with debug enabled",
+			portone: Portone{
+				StoreID:             strings.Repeat("a", 24),
+				ChannelKey:          strings.Repeat("b", 20),
+				ApiSecret:           strings.Repeat("c", 30),
+				DebugEnabled:        true,
+				SupportedCurrencies: []string{"KRW"},
+			},
+			wantError: false,
+		},
+		{
+			name: "valid with debug disabled",
+			portone: Portone{
+				StoreID:             strings.Repeat("a", 24),
+				ChannelKey:          strings.Repeat("b", 20),
+				ApiSecret:           strings.Repeat("c", 30),
+				DebugEnabled:        false,
+				SupportedCurrencies: []string{"KRW"},
+			},
+			wantError: false,
+		},
+		{
+			name: "valid with multiple currencies",
+			portone: Portone{
+				StoreID:             strings.Repeat("a", 24),
+				ChannelKey:          strings.Repeat("b", 20),
+				ApiSecret:           strings.Repeat("c", 30),
+				SupportedCurrencies: []string{"KRW", "USD", "JPY"},
+			},
+			wantError: false,
+		},
+		{
+			name: "valid with empty currencies array",
+			portone: Portone{
+				StoreID:             strings.Repeat("a", 24),
+				ChannelKey:          strings.Repeat("b", 20),
+				ApiSecret:           strings.Repeat("c", 30),
+				SupportedCurrencies: []string{},
+			},
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.portone.Validate()
+			if (err != nil) != tt.wantError {
+				t.Errorf("Portone.Validate() error = %v, wantError %v", err, tt.wantError)
+			}
+		})
+	}
+}
