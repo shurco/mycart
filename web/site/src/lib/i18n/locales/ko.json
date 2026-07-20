@@ -22,6 +22,8 @@
     "loading": "로딩 중..."
   },
   "cart": {
+    "portone": "PortOne",
+    "portoneDescription": "간편결제 서비스",
     "yourCart": "장바구니",
     "cartIsEmpty": "장바구니가 비어있습니다",
     "emptyMessage": "장바구니가 비어 있습니다. 쇼핑을 계속하려면 상품을 추가하세요.",
