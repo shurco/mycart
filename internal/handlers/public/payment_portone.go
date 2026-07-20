@@ -41,10 +41,11 @@ func GetPortoneConfig(c fiber.Ctx) error {
 		return webutil.StatusInternalServerError(c)
 	}
 
-	// Only expose store_id and channel_key, NOT api_secret
-	config := map[string]string{
-		"store_id":    settings.StoreID,
-		"channel_key": settings.ChannelKey,
+	// Only expose store_id, channel_key, and debug_enabled, NOT api_secret
+	config := map[string]interface{}{
+		"store_id":      settings.StoreID,
+		"channel_key":   settings.ChannelKey,
+		"debug_enabled": settings.DebugEnabled,
 	}
 
 	return webutil.Response(c, fiber.StatusOK, "PortOne config", config)
