@@ -276,7 +276,8 @@
           product.digital = { ...product.digital, filled: originalProduct.digital.filled }
         }
       }
-      products[index] = product
+      // Immutable update - create new array to avoid duplicate keys in Svelte 5
+      products = [...products.slice(0, index), product, ...products.slice(index + 1)]
     }
     if (drawerProduct?.product.id === product.id) {
       // Preserve digital.filled from original product if it wasn't in response
@@ -454,22 +455,25 @@
   async function toggleActive(product: Product, index: number) {
     const originalActive = product.active
     const newActive = !product.active
-    
-    // Optimistic update - update directly instead of map
-    products[index] = { ...products[index], active: newActive }
+
+    // Optimistic update - immutable to avoid duplicate keys in Svelte 5
+    const updatedProduct = { ...products[index], active: newActive }
+    products = [...products.slice(0, index), updatedProduct, ...products.slice(index + 1)]
 
     try {
       const res = await apiUpdate(`/api/_/products/${product.id}/active`, {})
       if (!res.success) {
-        // Revert on failure
-        products[index] = { ...products[index], active: originalActive }
+        // Revert on failure - immutable
+        const revertedProduct = { ...products[index], active: originalActive }
+        products = [...products.slice(0, index), revertedProduct, ...products.slice(index + 1)]
         showMessage(res.message || t('products.failedToUpdateProduct'), 'connextError')
       } else {
         showMessage(t('products.productStatusUpdated') || res.message, 'connextSuccess')
       }
     } catch (error) {
-      // Revert on error
-      products[index] = { ...products[index], active: originalActive }
+      // Revert on error - immutable
+      const revertedProduct = { ...products[index], active: originalActive }
+      products = [...products.slice(0, index), revertedProduct, ...products.slice(index + 1)]
       showMessage(t('common.networkError'), 'connextError')
     }
   }
