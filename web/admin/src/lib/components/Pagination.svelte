@@ -55,7 +55,7 @@
       {t('pagination.previous')}
     </button>
 
-    {#each getVisiblePages() as page (page)}
+    {#each getVisiblePages() as page, index (index)}
       {#if page === -1}
         <span class="px-2">...</span>
       {:else}
