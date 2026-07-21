@@ -16,7 +16,7 @@
   import SvgIcon from '$lib/components/SvgIcon.svelte'
   import Pagination from '$lib/components/Pagination.svelte'
   import { loadData, saveData, deleteData, toggleActive as toggleActiveApi } from '$lib/utils/apiHelpers'
-  import { costFormat, formatPrice, formatDate, sortByDate, confirmDelete, showMessage } from '$lib/utils'
+  import { costFormat, formatPrice, formatDate, confirmDelete, showMessage } from '$lib/utils'
   import { apiDelete, apiUpdate } from '$lib/utils/api'
   import { validators, validateFields } from '$lib/utils/validation'
   import { MIN_NAME_LENGTH, MIN_SLUG_LENGTH, ERROR_MESSAGES } from '$lib/constants/validation'
@@ -149,7 +149,7 @@
       t('products.failedToLoad')
     )
     if (result) {
-      products = sortByDate(result.products || [])
+      products = result.products || []
       currency = result.currency || ''
       total = result.total || 0
     }
