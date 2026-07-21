@@ -200,7 +200,7 @@
             </FormButton>
           </div>
         {:else}
-          {#each localOptions as option, index (option)}
+          {#each localOptions as option, index (index)}
             <OptionEditor
               {option}
               optionIndex={index}

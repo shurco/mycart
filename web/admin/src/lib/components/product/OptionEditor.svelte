@@ -88,7 +88,7 @@
   </div>
 
   <div class="mb-2">
-    {#each localOption.values as value, index}
+    {#each localOption.values as value, index (index)}
       <div class="mb-2 flex items-center gap-2">
         <div class="flex-1">
           <FormInput
