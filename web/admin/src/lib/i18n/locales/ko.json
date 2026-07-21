@@ -113,6 +113,8 @@
     "noProducts": "상품을 찾을 수 없습니다",
     "name": "이름",
     "slug": "URL",
+    "slugPlaceholder": "SLUG",
+    "slugGenerationError": "서버에서 슬러그 생성 실패. 대체 값을 사용합니다.",
     "brief": "요약",
     "description": "설명",
     "amount": "금액",

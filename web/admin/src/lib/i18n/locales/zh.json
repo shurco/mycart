@@ -124,6 +124,8 @@
     "noProducts": "未找到商品",
     "name": "名称",
     "slug": "URL",
+    "slugPlaceholder": "SLUG",
+    "slugGenerationError": "无法从服务器生成slug。使用备用值。",
     "brief": "简介",
     "description": "描述",
     "amount": "价格",

@@ -124,6 +124,8 @@
     "noProducts": "No products found",
     "name": "Name",
     "slug": "URL",
+    "slugPlaceholder": "SLUG",
+    "slugGenerationError": "Failed to generate slug from server. Using fallback.",
     "brief": "Brief",
     "description": "Description",
     "amount": "Amount",
