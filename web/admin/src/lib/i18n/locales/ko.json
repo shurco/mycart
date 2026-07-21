@@ -195,7 +195,7 @@
       "requiredFields": "필수 필드",
       "optionalFields": "선택 필드",
       "variantFields": "변형 필드",
-      "variantNote": "변형 값은 세미콜론으로 구분됩니다 (예: Size: S;M;L)"
+      "variantNote": "변형 형식: [옵션:값1;값2]=>변형데이터|변형데이터 (예: [Size:S;M;L]=>S,0,10,SKU-S|M,500,20,SKU-M)"
     }
   },
   "pages": {

@@ -205,7 +205,7 @@
       "requiredFields": "必填字段",
       "optionalFields": "可选字段",
       "variantFields": "变体字段",
-      "variantNote": "变体值用分号分隔（例如：Size: S;M;L）"
+      "variantNote": "变体格式：[选项:值1;值2]=>变体数据|变体数据 (例如：[Size:S;M;L]=>S,0,10,SKU-S|M,500,20,SKU-M)"
     }
   },
   "carts": {

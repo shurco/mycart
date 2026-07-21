@@ -250,8 +250,8 @@
     </h3>
     <div class="space-y-2 text-sm text-blue-800">
       <p><strong>{t('products.csv.requiredFields')}:</strong> name, slug, amount, digital</p>
-      <p><strong>{t('products.csv.optionalFields')}:</strong> description, quantity, sku, active</p>
-      <p><strong>{t('products.csv.variantFields')}:</strong> option1_name, option1_values, option2_name, option2_values, variant_prices, variant_quantities, variant_skus</p>
+      <p><strong>{t('products.csv.optionalFields')}:</strong> brief, description, images, attributes, quantity, sku, active</p>
+      <p><strong>{t('products.csv.variantFields')}:</strong> variants</p>
       <p class="text-xs">{t('products.csv.variantNote')}</p>
     </div>
   </div>

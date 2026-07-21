@@ -205,7 +205,7 @@
       "requiredFields": "Required fields",
       "optionalFields": "Optional fields",
       "variantFields": "Variant fields",
-      "variantNote": "Variant values are semicolon-separated (e.g., Size: S;M;L)"
+      "variantNote": "Variant format: [Option:Value1;Value2]=>VariantData|VariantData (e.g., [Size:S;M;L]=>S,0,10,SKU-S|M,500,20,SKU-M)"
     }
   },
   "carts": {
