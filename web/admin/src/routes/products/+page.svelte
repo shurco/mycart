@@ -25,6 +25,7 @@
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
   import type { Product, ProductOption, ProductVariant } from '$lib/types/models'
   import { translate } from '$lib/i18n'
+  import { generateSlug } from '$lib/utils/slugGenerator'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -117,6 +118,23 @@
     amountDisplay = value
     formData.amount = value
     target.value = value
+  }
+
+  async function handleNameBlur() {
+    // Only generate if slug is empty
+    if (formData.slug) return
+
+    // Don't generate for empty name
+    if (!formData.name.trim()) return
+
+    const result = await generateSlug(formData.name)
+    formData.slug = result.slug
+
+    if (result.error) {
+      formErrors.slug = t('products.slugGenerationError')
+    } else {
+      delete formErrors.slug
+    }
   }
 
   onMount(async () => {
@@ -648,7 +666,7 @@
         }}>
           <div class="flow-root">
             <dl class="mx-auto -my-3 mt-2 mb-0 space-y-4 text-sm">
-              <FormInput id="name" title={t('products.name')} bind:value={formData.name} error={formErrors.name} ico="at-symbol" />
+              <FormInput id="name" title={t('products.name')} bind:value={formData.name} error={formErrors.name} ico="at-symbol" onfocusout={handleNameBlur} />
               <div class="flex flex-row">
                 <div class="pr-3">
                   <FormInput
@@ -679,6 +697,7 @@
                       bind:value={formData.slug}
                       error={formErrors.slug}
                       ico="glob-alt"
+                      placeholder={t('products.slugPlaceholder')}
                     />
                   </div>
                   <div class="grow">
@@ -693,7 +712,7 @@
                   </div>
                 </div>
               {:else}
-                <FormInput id="slug" title={t('products.slug')} bind:value={formData.slug} error={formErrors.slug} ico="glob-alt" />
+                <FormInput id="slug" title={t('products.slug')} bind:value={formData.slug} error={formErrors.slug} ico="glob-alt" placeholder={t('products.slugPlaceholder')} />
               {/if}
 
               <hr />
