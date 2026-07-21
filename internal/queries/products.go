@@ -11,6 +11,7 @@ import (
 	"github.com/shurco/mycart/internal/models"
 	"github.com/shurco/mycart/pkg/errors"
 	"github.com/shurco/mycart/pkg/security"
+	"github.com/shurco/mycart/pkg/slugify"
 )
 
 // ProductQueries is a struct that embeds a pointer to an sql.DB.
@@ -39,11 +40,13 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 				product.brief,
 				product.slug,
 				product.amount,
+				product.has_variants,
 				product.active,
 				product.digital,
 				EXISTS(SELECT 1 FROM digital_data WHERE digital_data.product_id = product.id AND digital_data.cart_id IS NULL) OR
 				EXISTS(SELECT 1 FROM digital_file WHERE digital_file.product_id = product.id) AS digital_filled,
 				(SELECT json_group_array(json_object('id', product_image.id, 'name', product_image.name, 'ext', product_image.ext)) as images FROM product_image WHERE product_id = product.id GROUP BY id LIMIT 1) as image,
+				(SELECT json_group_array(json_object('id', product_variant.id)) FROM product_variant WHERE product_id = product.id AND active = 1) as variants,
 				strftime('%s', created)
 			FROM product
 		`
@@ -88,8 +91,8 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
-		var image, digitalType sql.NullString
-		var digitalFilled sql.NullBool
+		var image, variants, digitalType sql.NullString
+		var digitalFilled, hasVariants sql.NullBool
 		product := models.Product{}
 		err := rows.Scan(
 			&product.ID,
@@ -97,10 +100,12 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 			&product.Brief,
 			&product.Slug,
 			&product.Amount,
+			&hasVariants,
 			&product.Active,
 			&digitalType,
 			&digitalFilled,
 			&image,
+			&variants,
 			&product.Created,
 		)
 		if err != nil {
@@ -109,6 +114,16 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 
 		if image.Valid && image.String != `[{"id":null,"name":null,"ext":null}]` {
 			if err := json.Unmarshal([]byte(image.String), &product.Images); err != nil {
+				return nil, err
+			}
+		}
+
+		if hasVariants.Valid {
+			product.HasVariants = hasVariants.Bool
+		}
+
+		if variants.Valid && variants.String != `[{"id":null}]` && variants.String != "[]" {
+			if err := json.Unmarshal([]byte(variants.String), &product.Variants); err != nil {
 				return nil, err
 			}
 		}
@@ -149,18 +164,21 @@ func (q *ProductQueries) Product(ctx context.Context, private bool, id string) (
 	query := `
 			SELECT DISTINCT
 				product.id,
-				product.name, 
+				product.name,
 				product.brief,
-				product.desc, 
-				product.slug, 
+				product.desc,
+				product.slug,
 				product.amount,
+				product.quantity,
+				product.sku,
+				product.has_variants,
 				product.active,
-				product.metadata, 
-				product.attribute, 
+				product.metadata,
+				product.attribute,
 				product.digital,
-				product.seo, 
+				product.seo,
 				json_group_array(json_object('id', pi.id, 'name', pi.name, 'ext', pi.ext)) as images,
-				strftime('%s', product.created), 
+				strftime('%s', product.created),
 				strftime('%s', product.updated)
 	`
 
@@ -168,19 +186,22 @@ func (q *ProductQueries) Product(ctx context.Context, private bool, id string) (
 	if private {
 		query += `, EXISTS(SELECT 1 FROM digital_data WHERE digital_data.product_id = product.id AND digital_data.cart_id IS NULL) OR
 				EXISTS(SELECT 1 FROM digital_file WHERE digital_file.product_id = product.id) AS digital_filled
-			FROM product 
+			FROM product
 			LEFT JOIN product_image pi ON product.id = pi.product_id
-			WHERE product.id = ?`
+			WHERE product.id = ?
+			GROUP BY product.id`
 	} else {
 		query += `
-			FROM product 
+			FROM product
 			LEFT JOIN product_image pi ON product.id = pi.product_id
-			WHERE product.slug = ? AND product.deleted = 0 AND product.active = 1`
+			WHERE product.slug = ? AND product.deleted = 0 AND product.active = 1
+			GROUP BY product.id`
 	}
 
-	var images, metadata, attributes, digitalType, seo sql.NullString
+	var images, metadata, attributes, digitalType, seo, sku sql.NullString
 	var updated sql.NullInt64
-	var digitalFilled sql.NullBool
+	var digitalFilled, hasVariants sql.NullBool
+	var quantity sql.NullInt64
 
 	scanArgs := []any{
 		&product.ID,
@@ -189,6 +210,9 @@ func (q *ProductQueries) Product(ctx context.Context, private bool, id string) (
 		&product.Description,
 		&product.Slug,
 		&product.Amount,
+		&quantity,
+		&sku,
+		&hasVariants,
 		&product.Active,
 		&metadata,
 		&attributes,
@@ -251,6 +275,113 @@ func (q *ProductQueries) Product(ctx context.Context, private bool, id string) (
 		}
 	}
 
+	if quantity.Valid {
+		product.Quantity = int(quantity.Int64)
+	}
+
+	if sku.Valid {
+		product.SKU = sku.String
+	}
+
+	if hasVariants.Valid {
+		product.HasVariants = hasVariants.Bool
+	}
+
+	// Load options and variants if product has variants
+	if product.HasVariants {
+		// Load all options first
+		optionsQuery := `
+			SELECT id, name, position
+			FROM product_option
+			WHERE product_id = ?
+			ORDER BY position`
+
+		optionRows, err := q.DB.QueryContext(ctx, optionsQuery, product.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		optionIDs := []string{}
+		optionMap := make(map[string]*models.ProductOption)
+
+		for optionRows.Next() {
+			option := models.ProductOption{ProductID: product.ID}
+			if err := optionRows.Scan(&option.ID, &option.Name, &option.Position); err != nil {
+				optionRows.Close()
+				return nil, err
+			}
+			optionIDs = append(optionIDs, option.ID)
+			optionMap[option.ID] = &option
+			product.Options = append(product.Options, option)
+		}
+		optionRows.Close()
+
+		// Load all option values
+		if len(optionIDs) > 0 {
+			valuesQuery := `
+				SELECT id, option_id, value, position
+				FROM product_option_value
+				WHERE option_id IN (SELECT id FROM product_option WHERE product_id = ?)
+				ORDER BY option_id, position`
+
+			valuesRows, err := q.DB.QueryContext(ctx, valuesQuery, product.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			for valuesRows.Next() {
+				value := models.ProductOptionValue{}
+				if err := valuesRows.Scan(&value.ID, &value.OptionID, &value.Value, &value.Position); err != nil {
+					valuesRows.Close()
+					return nil, err
+				}
+
+				// Find the option and append the value
+				for i := range product.Options {
+					if product.Options[i].ID == value.OptionID {
+						product.Options[i].Values = append(product.Options[i].Values, value)
+						break
+					}
+				}
+			}
+			valuesRows.Close()
+		}
+
+		// Load variants
+		variantsQuery := `
+			SELECT id, sku, price_surcharge, quantity, option_values, active
+			FROM product_variant
+			WHERE product_id = ? AND deleted = 0`
+
+		variantRows, err := q.DB.QueryContext(ctx, variantsQuery, product.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		for variantRows.Next() {
+			variant := models.ProductVariant{ProductID: product.ID}
+			var optionValues string
+			var sku sql.NullString
+
+			if err := variantRows.Scan(&variant.ID, &sku, &variant.PriceSurcharge, &variant.Quantity, &optionValues, &variant.Active); err != nil {
+				variantRows.Close()
+				return nil, err
+			}
+
+			if sku.Valid {
+				variant.SKU = sku.String
+			}
+
+			if err := json.Unmarshal([]byte(optionValues), &variant.OptionValues); err != nil {
+				variantRows.Close()
+				return nil, err
+			}
+
+			product.Variants = append(product.Variants, variant)
+		}
+		variantRows.Close()
+	}
+
 	return product, nil
 }
 
@@ -308,17 +439,32 @@ func (q *ProductQueries) UpdateProduct(ctx context.Context, product *models.Prod
 		return err
 	}
 
-	stmt, err := q.DB.PrepareContext(ctx, `
-			UPDATE product SET 
-				name = ?, 
-				brief = ?, 
-				desc = ?, 
-				slug = ?, 
-				amount = ?, 
-				metadata = ?, 
-				attribute = ?, 
-				seo = ?, 
-				updated = datetime('now') 
+	// Start transaction for atomic updates
+	tx, err := q.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// Update main product fields including variant-related columns
+	stmt, err := tx.PrepareContext(ctx, `
+			UPDATE product SET
+				name = ?,
+				brief = ?,
+				desc = ?,
+				slug = ?,
+				amount = ?,
+				quantity = ?,
+				sku = ?,
+				has_variants = ?,
+				metadata = ?,
+				attribute = ?,
+				seo = ?,
+				updated = datetime('now')
 			WHERE id = ?
 		`)
 	if err != nil {
@@ -326,18 +472,106 @@ func (q *ProductQueries) UpdateProduct(ctx context.Context, product *models.Prod
 	}
 	defer func() { _ = stmt.Close() }()
 
+	// Handle empty SKU as NULL
+	var productSKU sql.NullString
+	if product.SKU != "" {
+		productSKU = sql.NullString{String: product.SKU, Valid: true}
+	}
+
 	_, err = stmt.ExecContext(ctx,
 		product.Name,
 		product.Brief,
 		product.Description,
 		product.Slug,
 		product.Amount,
+		product.Quantity,
+		productSKU,
+		product.HasVariants,
 		metadata,
 		attributes,
 		seo,
 		product.ID,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Handle variant data if product has variants
+	if product.HasVariants {
+		// Delete existing options (cascades to option values)
+		_, err = tx.ExecContext(ctx, `DELETE FROM product_option WHERE product_id = ?`, product.ID)
+		if err != nil {
+			return err
+		}
+
+		// Delete existing variants
+		_, err = tx.ExecContext(ctx, `DELETE FROM product_variant WHERE product_id = ?`, product.ID)
+		if err != nil {
+			return err
+		}
+
+		// Insert new options and their values
+		for _, option := range product.Options {
+			optionID := security.RandomString()
+
+			_, err = tx.ExecContext(ctx,
+				`INSERT INTO product_option (id, product_id, name, position) VALUES (?, ?, ?, ?)`,
+				optionID, product.ID, option.Name, option.Position,
+			)
+			if err != nil {
+				return err
+			}
+
+			// Insert option values
+			for _, value := range option.Values {
+				valueID := security.RandomString()
+				_, err = tx.ExecContext(ctx,
+					`INSERT INTO product_option_value (id, option_id, value, position) VALUES (?, ?, ?, ?)`,
+					valueID, optionID, value.Value, value.Position,
+				)
+				if err != nil {
+					return err
+				}
+			}
+		}
+
+		// Insert new variants
+		for _, variant := range product.Variants {
+			variantID := security.RandomString()
+
+			// Marshal option_values map to JSON
+			optionValuesJSON, err := json.Marshal(variant.OptionValues)
+			if err != nil {
+				return err
+			}
+
+			// Handle empty SKU as NULL to avoid unique constraint violations
+			var skuValue sql.NullString
+			if variant.SKU != "" {
+				skuValue = sql.NullString{String: variant.SKU, Valid: true}
+			}
+
+			_, err = tx.ExecContext(ctx,
+				`INSERT INTO product_variant (id, product_id, sku, price_surcharge, quantity, option_values, active) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				variantID, product.ID, skuValue, variant.PriceSurcharge, variant.Quantity, string(optionValuesJSON), variant.Active,
+			)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		// If has_variants is false, clean up any existing variant data
+		_, err = tx.ExecContext(ctx, `DELETE FROM product_option WHERE product_id = ?`, product.ID)
+		if err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, `DELETE FROM product_variant WHERE product_id = ?`, product.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 // DeleteProduct removes a product from the database based on its ID.
@@ -669,4 +903,342 @@ func (q *ProductQueries) DeleteDigital(ctx context.Context, productID, digitalID
 	}
 
 	return nil
+}
+
+// AddProductWithVariants adds a product with its options and variants in a transaction
+func (q *ProductQueries) AddProductWithVariants(ctx context.Context, product *models.Product) (*models.Product, error) {
+	tx, err := q.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// 1. Insert product
+	query := `
+		INSERT INTO product (
+			id, name, brief, desc, slug, amount, quantity, sku,
+			has_variants, metadata, attribute, digital, active
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	metadata, err := json.Marshal(product.Metadata)
+	if err != nil {
+		return nil, fmt.Errorf("marshal metadata: %w", err)
+	}
+
+	attributes, err := json.Marshal(product.Attributes)
+	if err != nil {
+		return nil, fmt.Errorf("marshal attributes: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx, query,
+		product.ID,
+		product.Name,
+		product.Brief,
+		product.Description,
+		product.Slug,
+		product.Amount,
+		product.Quantity,
+		product.SKU,
+		product.HasVariants,
+		string(metadata),
+		string(attributes),
+		product.Digital.Type,
+		product.Active,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("insert product: %w", err)
+	}
+
+	// 2. Insert product images
+	for i, img := range product.Images {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO product_image (id, product_id, name, ext, orig_name, position)
+			VALUES (?, ?, ?, ?, ?, ?)
+		`, img.ID, product.ID, img.Name, img.Ext, img.OrigName, i)
+		if err != nil {
+			return nil, fmt.Errorf("insert product image: %w", err)
+		}
+	}
+
+	// 3. Insert options and option values
+	for _, option := range product.Options {
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO product_option (id, product_id, name, position)
+			VALUES (?, ?, ?, ?)
+		`, option.ID, product.ID, option.Name, option.Position)
+		if err != nil {
+			return nil, fmt.Errorf("insert option: %w", err)
+		}
+
+		for _, value := range option.Values {
+			_, err = tx.ExecContext(ctx, `
+				INSERT INTO product_option_value (id, option_id, value, position)
+				VALUES (?, ?, ?, ?)
+			`, value.ID, option.ID, value.Value, value.Position)
+			if err != nil {
+				return nil, fmt.Errorf("insert option value: %w", err)
+			}
+		}
+	}
+
+	// 4. Insert variants
+	for _, variant := range product.Variants {
+		// Marshal option values to JSON
+		optionValuesJSON, err := json.Marshal(variant.OptionValues)
+		if err != nil {
+			return nil, fmt.Errorf("marshal option values: %w", err)
+		}
+
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO product_variant (
+				id, product_id, sku, price_surcharge, quantity, option_values, active
+			) VALUES (?, ?, ?, ?, ?, ?, ?)
+		`, variant.ID, product.ID, variant.SKU, variant.PriceSurcharge, variant.Quantity, string(optionValuesJSON), variant.Active)
+		if err != nil {
+			return nil, fmt.Errorf("insert variant: %w", err)
+		}
+
+		// Insert variant-option relationships
+		for optionName, optionValue := range variant.OptionValues {
+			// Find the option value ID
+			var optionValueID string
+			err = tx.QueryRowContext(ctx, `
+				SELECT pov.id
+				FROM product_option_value pov
+				JOIN product_option po ON pov.option_id = po.id
+				WHERE po.product_id = ? AND po.name = ? AND pov.value = ?
+			`, product.ID, optionName, optionValue).Scan(&optionValueID)
+			if err != nil {
+				return nil, fmt.Errorf("find option value ID: %w", err)
+			}
+
+			_, err = tx.ExecContext(ctx, `
+				INSERT INTO product_variant_option (variant_id, option_value_id)
+				VALUES (?, ?)
+			`, variant.ID, optionValueID)
+			if err != nil {
+				return nil, fmt.Errorf("insert variant-option relationship: %w", err)
+			}
+		}
+
+		// Insert variant images
+		for i, img := range variant.Images {
+			_, err = tx.ExecContext(ctx, `
+				INSERT INTO product_variant_image (id, variant_id, name, ext, orig_name, position)
+				VALUES (?, ?, ?, ?, ?, ?)
+			`, img.ID, variant.ID, img.Name, img.Ext, img.OrigName, i)
+			if err != nil {
+				return nil, fmt.Errorf("insert variant image: %w", err)
+			}
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return product, nil
+}
+
+// GetProductWithVariants retrieves a product with all its options and variants
+func (q *ProductQueries) GetProductWithVariants(ctx context.Context, productID string) (*models.Product, error) {
+	product := &models.Product{}
+
+	// 1. Get product base data
+	query := `
+		SELECT id, name, brief, desc, slug, amount, quantity, sku,
+		       has_variants, metadata, attribute, digital, active
+		FROM product
+		WHERE id = ? AND deleted = FALSE
+	`
+
+	var metadata, attributes string
+	var digitalType sql.NullString
+
+	err := q.DB.QueryRowContext(ctx, query, productID).Scan(
+		&product.ID,
+		&product.Name,
+		&product.Brief,
+		&product.Description,
+		&product.Slug,
+		&product.Amount,
+		&product.Quantity,
+		&product.SKU,
+		&product.HasVariants,
+		&metadata,
+		&attributes,
+		&digitalType,
+		&product.Active,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query product: %w", err)
+	}
+
+	// Parse JSON fields
+	if err = json.Unmarshal([]byte(metadata), &product.Metadata); err != nil {
+		return nil, fmt.Errorf("unmarshal metadata: %w", err)
+	}
+	if err = json.Unmarshal([]byte(attributes), &product.Attributes); err != nil {
+		return nil, fmt.Errorf("unmarshal attributes: %w", err)
+	}
+	if digitalType.Valid {
+		product.Digital.Type = digitalType.String
+	}
+
+	// 2. Get product images
+	imageRows, err := q.DB.QueryContext(ctx, `
+		SELECT id, name, ext, orig_name
+		FROM product_image
+		WHERE product_id = ?
+		ORDER BY position
+	`, productID)
+	if err != nil {
+		return nil, fmt.Errorf("query product images: %w", err)
+	}
+	defer imageRows.Close()
+
+	for imageRows.Next() {
+		var img models.File
+		if err := imageRows.Scan(&img.ID, &img.Name, &img.Ext, &img.OrigName); err != nil {
+			return nil, fmt.Errorf("scan product image: %w", err)
+		}
+		product.Images = append(product.Images, img)
+	}
+
+	// Skip options/variants if product doesn't have variants
+	if !product.HasVariants {
+		return product, nil
+	}
+
+	// Continue in next part...
+	return q.loadProductOptions(ctx, product)
+}
+
+// loadProductOptions loads options, option values, and variants for a product
+func (q *ProductQueries) loadProductOptions(ctx context.Context, product *models.Product) (*models.Product, error) {
+	// 3. Get options
+	optionRows, err := q.DB.QueryContext(ctx, `
+		SELECT id, name, position
+		FROM product_option
+		WHERE product_id = ?
+		ORDER BY position
+	`, product.ID)
+	if err != nil {
+		return nil, fmt.Errorf("query options: %w", err)
+	}
+	defer optionRows.Close()
+
+	optionMap := make(map[string]*models.ProductOption)
+
+	for optionRows.Next() {
+		option := models.ProductOption{ProductID: product.ID}
+		if err := optionRows.Scan(&option.ID, &option.Name, &option.Position); err != nil {
+			return nil, fmt.Errorf("scan option: %w", err)
+		}
+		optionMap[option.ID] = &option
+		product.Options = append(product.Options, option)
+	}
+
+	// 4. Get option values
+	for i := range product.Options {
+		valueRows, err := q.DB.QueryContext(ctx, `
+			SELECT id, value, position
+			FROM product_option_value
+			WHERE option_id = ?
+			ORDER BY position
+		`, product.Options[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("query option values: %w", err)
+		}
+
+		for valueRows.Next() {
+			value := models.ProductOptionValue{OptionID: product.Options[i].ID}
+			if err := valueRows.Scan(&value.ID, &value.Value, &value.Position); err != nil {
+				valueRows.Close()
+				return nil, fmt.Errorf("scan option value: %w", err)
+			}
+			product.Options[i].Values = append(product.Options[i].Values, value)
+		}
+		valueRows.Close()
+	}
+
+	// 5. Get variants
+	variantRows, err := q.DB.QueryContext(ctx, `
+		SELECT id, sku, price_surcharge, quantity, active
+		FROM product_variant
+		WHERE product_id = ?
+	`, product.ID)
+	if err != nil {
+		return nil, fmt.Errorf("query variants: %w", err)
+	}
+	defer variantRows.Close()
+
+	for variantRows.Next() {
+		variant := models.ProductVariant{
+			ProductID:    product.ID,
+			OptionValues: make(map[string]string),
+		}
+
+		var sku sql.NullString
+		if err := variantRows.Scan(&variant.ID, &sku, &variant.PriceSurcharge, &variant.Quantity, &variant.Active); err != nil {
+			return nil, fmt.Errorf("scan variant: %w", err)
+		}
+		if sku.Valid {
+			variant.SKU = sku.String
+		}
+
+		// Get variant option values
+		optValueRows, err := q.DB.QueryContext(ctx, `
+			SELECT po.name, pov.value
+			FROM product_variant_option pvo
+			JOIN product_option_value pov ON pvo.option_value_id = pov.id
+			JOIN product_option po ON pov.option_id = po.id
+			WHERE pvo.variant_id = ?
+		`, variant.ID)
+		if err != nil {
+			return nil, fmt.Errorf("query variant option values: %w", err)
+		}
+
+		for optValueRows.Next() {
+			var optionName, optionValue string
+			if err := optValueRows.Scan(&optionName, &optionValue); err != nil {
+				optValueRows.Close()
+				return nil, fmt.Errorf("scan variant option value: %w", err)
+			}
+			variant.OptionValues[optionName] = optionValue
+		}
+		optValueRows.Close()
+
+		// Get variant images
+		imgRows, err := q.DB.QueryContext(ctx, `
+			SELECT id, name, ext, orig_name
+			FROM product_variant_image
+			WHERE variant_id = ?
+			ORDER BY position
+		`, variant.ID)
+		if err != nil {
+			return nil, fmt.Errorf("query variant images: %w", err)
+		}
+
+		for imgRows.Next() {
+			var img models.File
+			if err := imgRows.Scan(&img.ID, &img.Name, &img.Ext, &img.OrigName); err != nil {
+				imgRows.Close()
+				return nil, fmt.Errorf("scan variant image: %w", err)
+			}
+			variant.Images = append(variant.Images, img)
+		}
+		imgRows.Close()
+
+		product.Variants = append(product.Variants, variant)
+	}
+
+	return product, nil
+}
+
+// GenerateUniqueSlug generates a unique URL-friendly slug from product name
+func (q *ProductQueries) GenerateUniqueSlug(ctx context.Context, name string, excludeProductID string) (string, error) {
+	service := slugify.NewSlugService(q.DB)
+	return service.Generate(ctx, name, excludeProductID)
 }

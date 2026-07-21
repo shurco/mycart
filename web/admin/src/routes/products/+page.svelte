@@ -5,6 +5,8 @@
   import ProductView from '$lib/components/product/View.svelte'
   import ProductSeo from '$lib/components/product/Seo.svelte'
   import ProductDigital from '$lib/components/product/Digital.svelte'
+  import VariantManager from '$lib/components/product/VariantManager.svelte'
+  import CsvImportExport from '$lib/components/product/CsvImportExport.svelte'
   import FormButton from '$lib/components/form/Button.svelte'
   import FormInput from '$lib/components/form/Input.svelte'
   import FormSelect from '$lib/components/form/Select.svelte'
@@ -21,7 +23,7 @@
   import { CENTS_PER_UNIT, DEFAULT_AMOUNT } from '$lib/constants/pricing'
   import { DEFAULT_PAGE_SIZE } from '$lib/constants/pagination'
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
-  import type { Product } from '$lib/types/models'
+  import type { Product, ProductOption, ProductVariant } from '$lib/types/models'
   import { translate } from '$lib/i18n'
 
   // Reactive translation function
@@ -43,7 +45,7 @@
   let currency = $state('')
   let loading = $state(true)
   let drawerOpen = $state(false)
-  let drawerMode = $state<'view' | 'add' | 'edit' | 'seo' | 'digital'>('view')
+  let drawerMode = $state<'view' | 'add' | 'edit' | 'seo' | 'digital' | 'csv'>('view')
   let drawerProduct = $state<DrawerProduct | null>(null)
   let drawerIndex = $state(-1)
   let currentPage = $state(1)
@@ -56,12 +58,17 @@
     brief: string
     description: string
     amount: string | number
+    quantity?: number
+    sku?: string
+    has_variants?: boolean
     active: boolean
     metadata: Array<{ key: string; value: string }>
     attributes: string[]
     digital: {
       type: '' | 'file' | 'data' | 'api'
     }
+    options?: ProductOption[]
+    variants?: ProductVariant[]
   }
 
   let formData = $state<ProductFormData>({
@@ -70,12 +77,17 @@
     brief: '',
     description: '',
     amount: DEFAULT_AMOUNT,
+    quantity: 0,
+    sku: '',
+    has_variants: false,
     active: true,
     metadata: [],
     attributes: [],
     digital: {
       type: ''
-    }
+    },
+    options: [],
+    variants: []
   })
   let formErrors = $state<Record<string, string>>({})
   let productImages = $state<Product['images']>([])
@@ -143,12 +155,17 @@
       brief: '',
       description: '',
       amount: '0',
+      quantity: 0,
+      sku: '',
+      has_variants: false,
       active: true,
       metadata: [],
       attributes: [],
       digital: {
         type: ''
-      }
+      },
+      options: [],
+      variants: []
     }
     amountDisplay = '0'
     productImages = []
@@ -176,10 +193,15 @@
         brief: result.brief || '',
         description: result.description || '',
         amount: amountStr,
+        quantity: result.quantity || 0,
+        sku: result.sku || '',
+        has_variants: result.has_variants || false,
         active: result.active !== undefined ? result.active : true,
         metadata: result.metadata || [],
         attributes: result.attributes || [],
-        digital: result.digital || { type: '' }
+        digital: result.digital || { type: '' },
+        options: result.options || [],
+        variants: result.variants || []
       }
       amountDisplay = amountStr
       productImages = result.images || []
@@ -201,6 +223,16 @@
 
   async function handleDigitalContentUpdate() {
     await loadProducts()
+  }
+
+  function openCsv() {
+    drawerMode = 'csv'
+    drawerOpen = true
+  }
+
+  async function handleCsvImportComplete() {
+    await loadProducts()
+    closeDrawer()
   }
 
   function closeDrawer() {
@@ -266,12 +298,33 @@
     const isUpdate = drawerMode === 'edit' && drawerProduct !== null
     const url = isUpdate ? `/api/_/products/${drawerProduct!.product.id}` : '/api/_/products'
     const amountInCents = Math.round((amountValue || 0) * CENTS_PER_UNIT)
+
+    // Convert Svelte 5 $state proxies to plain objects for JSON serialization
     const submitData: Partial<Product> = {
       ...formData,
-      amount: amountInCents
+      amount: amountInCents,
+      options: formData.options ? JSON.parse(JSON.stringify(formData.options)) : [],
+      variants: formData.variants ? JSON.parse(JSON.stringify(formData.variants)) : []
     }
 
-    const result = await saveData<Product>(url, submitData, isUpdate, t('products.failedToSave'), t('products.failedToSave'))
+    console.log('=== PRODUCT SAVE DEBUG ===')
+    console.log('has_variants:', submitData.has_variants)
+    console.log('options:', JSON.stringify(submitData.options, null, 2))
+    console.log('variants:', JSON.stringify(submitData.variants, null, 2))
+    console.log('Full submitData:', submitData)
+
+    const result = await saveData<Product>(
+      url,
+      submitData,
+      isUpdate,
+      isUpdate ? t('products.updated') : t('products.created'),
+      t('products.failedToSave')
+    )
+
+    console.log('=== SAVE RESULT ===')
+    console.log('Result has_variants:', result?.has_variants)
+    console.log('Result options:', result?.options)
+    console.log('Result variants:', result?.variants)
     if (result) {
       if (isUpdate) {
         updateProductInList(result)
@@ -343,6 +396,12 @@
 
   function deleteAttributeRecord(index: number) {
     formData.attributes = (formData.attributes || []).filter((_, i) => i !== index)
+  }
+
+  function handleVariantUpdate(data: { hasVariants: boolean; options: ProductOption[]; variants: ProductVariant[] }) {
+    formData.has_variants = data.hasVariants
+    formData.options = data.options
+    formData.variants = data.variants
   }
 
   async function deleteProductImage(index: number) {
@@ -430,7 +489,10 @@
 <Main>
   <div class="mb-5 flex items-center justify-between">
     <h1>{t('products.title')}</h1>
-    <FormButton name={t('products.addProduct')} color="green" ico="plus" onclick={openAdd} />
+    <div class="flex gap-2">
+      <FormButton name={`${t('products.csv.import')} / ${t('products.csv.export')}`} variant="secondary" ico="arrow-path" onclick={openCsv} />
+      <FormButton name={t('products.addProduct')} color="green" ico="plus" onclick={openAdd} />
+    </div>
   </div>
 
   {#if loading}
@@ -550,6 +612,11 @@
       <ProductSeo drawer={drawerProduct} onclose={closeDrawer} />
     {:else if drawerMode === 'digital' && drawerProduct}
       <ProductDigital drawer={drawerProduct} onContentUpdate={handleDigitalContentUpdate} onclose={closeDrawer} />
+    {:else if drawerMode === 'csv'}
+      <div class="pb-8">
+        <h1>{t('products.csv.importProducts')} / {t('products.csv.exportProducts')}</h1>
+      </div>
+      <CsvImportExport onImportComplete={handleCsvImportComplete} />
     {:else}
       <div>
         <div class="pb-8">
@@ -570,7 +637,15 @@
           </div>
         </div>
 
-        <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+        <form onsubmit={(e) => {
+          e.preventDefault();
+          const form = e.currentTarget;
+          if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+          }
+          handleSubmit();
+        }}>
           <div class="flow-root">
             <dl class="mx-auto -my-3 mt-2 mb-0 space-y-4 text-sm">
               <FormInput id="name" title={t('products.name')} bind:value={formData.name} error={formErrors.name} ico="at-symbol" />
@@ -695,6 +770,16 @@
                   </button>
                 </div>
               </div>
+
+              <hr />
+              <VariantManager
+                hasVariants={formData.has_variants || false}
+                options={formData.options || []}
+                variants={formData.variants || []}
+                basePrice={typeof formData.amount === 'string' ? parseFloat(formData.amount) * 100 : (formData.amount || 0)}
+                currency={currency}
+                onUpdate={handleVariantUpdate}
+              />
 
               {#if drawerMode === 'edit' && fullProductData}
                 <hr />

@@ -67,6 +67,8 @@ Formerly known as **litecart** (legacy project name kept here for discoverabilit
 
 🌐 **Multi-language Support**: Built-in internationalization (i18n) support allows you to create multilingual stores. By default, myCart includes support for English and Chinese languages. The language switcher is available in both the admin panel and the public site, making it easy to manage content in multiple languages and provide a localized shopping experience for your customers.
 
+🎨 **Product Variants**: Offer products with multiple options (size, color, style, etc.) with separate inventory tracking, pricing, and SKUs for each variant. Automatically generate all combinations or manually manage specific variants with quantity and availability control.
+
 
 ## ⬇️&nbsp;&nbsp;Installation
 
@@ -432,6 +434,97 @@ Free products are perfect for:
 - All standard features work with free products: email delivery, digital file downloads, license keys, and webhooks
 - Free products are included in order history and cart management just like paid products
 - No external payment processing occurs - orders are immediately marked as paid when using Dummy Payment
+
+
+## 🎨&nbsp;&nbsp;Product Variants
+
+myCart supports product variants, allowing you to sell products with multiple options like size, color, material, or any other attribute. Each variant can have its own price, inventory quantity, and SKU.
+
+### What are Product Variants?
+
+Product variants enable you to offer a single product with multiple options without creating separate product listings. For example:
+
+- **T-Shirt**: Size (S, M, L, XL) × Color (Red, Blue, Black)
+- **Software License**: License Type (Personal, Team, Enterprise) × Duration (Monthly, Annual)
+- **Digital Asset Pack**: Resolution (HD, 4K) × Format (PNG, SVG)
+
+### Creating Products with Variants
+
+To create a product with variants:
+
+1. In the admin panel, navigate to **Products** and create or edit a product
+2. Enable **Product has variants** checkbox
+3. Define **Options** (up to 3 options per product):
+   - Enter option name (e.g., "Size", "Color")
+   - Add option values (up to 10 values per option)
+4. **Generate Variants** automatically creates all possible combinations
+5. For each variant, you can customize:
+   - **SKU**: Unique stock keeping unit identifier
+   - **Price Surcharge**: Additional cost (positive or negative) added to base product price
+   - **Quantity**: Stock level for this specific variant
+   - **Active**: Toggle variant availability
+
+### How Variants Work
+
+#### Admin Panel
+- **Automatic Generation**: Variants are generated using Cartesian product of all option combinations
+- **Individual Management**: Each variant has independent pricing, inventory, and SKU
+- **Bulk Import/Export**: CSV format supports importing and exporting products with variants
+- **Inventory Tracking**: Quantity is tracked per variant, not per product
+
+#### Storefront
+- **Smart Selection**: Option values automatically show/hide based on variant availability
+- **Real-time Pricing**: Total price updates as customers select options
+- **Stock Status**: Clear indication of in-stock vs. out-of-stock variants
+- **Cart Management**: Each variant is treated as a separate cart item, allowing customers to purchase multiple variants of the same product
+
+### CSV Import/Export
+
+Products with variants can be imported and exported via CSV. The format uses semicolon-delimited values for complex fields:
+
+```csv
+name,slug,amount,has_variants,options,variants
+"T-Shirt","t-shirt",1999,true,"Size:S;M;L|Color:Red;Blue","S;Red;TSHIRT-S-RED;0;100|M;Red;TSHIRT-M-RED;0;100"
+```
+
+**Options format**: `OptionName:Value1;Value2;Value3|NextOption:Value1;Value2`
+
+**Variants format**: `OptionValue1;OptionValue2;SKU;PriceSurcharge;Quantity|NextVariant...`
+
+The CSV importer validates:
+- Option structure (1-3 options, 1-10 values per option)
+- Variant completeness (all combinations defined)
+- Numeric fields (price surcharge, quantity)
+- Slug uniqueness with auto-generation
+
+### Use Cases
+
+Product variants are perfect for:
+
+- **Apparel**: Size, color, material combinations
+- **Digital Products**: License tiers, subscription durations
+- **Subscriptions**: Billing periods, feature sets
+- **Services**: Service levels, package sizes
+- **Downloadable Content**: Formats, resolutions, quality tiers
+
+### Technical Details
+
+- **Database Schema**: Normalized design with 6 tables (product, product_option, product_option_value, product_variant, product_variant_option)
+- **Price Calculation**: Final price = base product amount + variant price surcharge (in cents)
+- **Inventory**: Quantity tracked per variant; 0 quantity shows as "OUT OF STOCK"
+- **Soft Delete**: Deleted variants remain in database with `deleted=true` flag
+- **Option Limits**: Maximum 3 options per product, 10 values per option
+- **Cart Support**: Variants stored with `variant_id` and human-readable `variant_name` (e.g., "Size: M, Color: Red")
+- **Slug Generation**: Automatic unique slug creation with incremental suffixes for CSV imports
+
+### Variant-Specific Features
+
+- **Dynamic Pricing**: Each variant can increase or decrease the base price
+- **Independent Inventory**: Track stock separately for each variant
+- **SKU Management**: Unique identifiers for each variant for inventory systems
+- **Availability Control**: Enable/disable specific variants without deleting them
+- **Visual Indicators**: Admin UI shows total price (base + surcharge) and stock status
+- **Validation**: Option combinations must match defined variants; missing or extra data is rejected
 
 
 ## 🧩&nbsp;&nbsp;For developers

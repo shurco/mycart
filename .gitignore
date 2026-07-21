@@ -55,3 +55,10 @@ web/*/build/
 .shared/
 docker/docker-compose_private.yml
 /graphify-out/
+
+# Runtime directories
+lc_base/
+tmp/
+
+# Compiled binary
+mycart

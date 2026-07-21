@@ -2,6 +2,8 @@
   interface Props {
     id?: string
     value?: boolean
+    checked?: boolean
+    label?: string
     disabled?: boolean
     onchange?: () => void
   }
@@ -9,9 +11,13 @@
   let {
     id = 'name',
     value = $bindable(false),
+    checked,
+    label,
     disabled = false,
     onchange
   }: Props = $props()
+
+  let computedValue = $derived(checked ?? value)
 
   function handleChange() {
     onchange?.()
@@ -60,3 +66,6 @@
 
   <span class="absolute inset-0 rounded-full bg-gray-300 transition peer-checked:bg-green-500"></span>
 </label>
+{#if label}
+  <span class="ml-3 text-sm font-medium text-gray-700">{label}</span>
+{/if}

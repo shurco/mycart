@@ -287,3 +287,79 @@ func createTestImageBadMIME(t *testing.T) (*bytes.Buffer, string) {
 
 	return &body, w.FormDataContentType()
 }
+
+func TestGenerateSlugHandler(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Post("/api/_/products/slug/generate", GenerateSlug)
+
+	tests := []struct {
+		name       string
+		payload    string
+		wantStatus int
+		wantSlug   string
+	}{
+		{
+			name:       "basic slug generation",
+			payload:    `{"name": "Yoga Strap 6ft"}`,
+			wantStatus: 200,
+			wantSlug:   "yoga-strap-6ft",
+		},
+		{
+			name:       "empty name",
+			payload:    `{"name": ""}`,
+			wantStatus: 400,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp := testutil.DoRequest(t, app, http.MethodPost, "/api/_/products/slug/generate", tt.payload, "")
+			testutil.AssertStatus(t, resp, tt.wantStatus)
+			// Note: Full response validation will be added when handler is implemented
+		})
+	}
+}
+
+func TestAddProductWithVariants(t *testing.T) {
+	app, cookie, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+
+	app.Post("/api/_/products", AddProduct)
+
+	payload := `{
+		"name": "Test T-Shirt",
+		"slug": "test-tshirt",
+		"description": "A test shirt",
+		"amount": 2500,
+		"has_variants": true,
+		"digital": {"type": "file"},
+		"options": [
+			{
+				"name": "Size",
+				"values": [
+					{"value": "Small"},
+					{"value": "Medium"}
+				]
+			}
+		],
+		"variants": [
+			{
+				"sku": "TSHIRT-S",
+				"option_values": {"Size": "Small"},
+				"price_surcharge": 0,
+				"quantity": 10
+			},
+			{
+				"sku": "TSHIRT-M",
+				"option_values": {"Size": "Medium"},
+				"price_surcharge": 500,
+				"quantity": 5
+			}
+		]
+	}`
+
+	resp := testutil.DoRequest(t, app, http.MethodPost, "/api/_/products", payload, cookie)
+	testutil.AssertStatus(t, resp, http.StatusOK)
+}

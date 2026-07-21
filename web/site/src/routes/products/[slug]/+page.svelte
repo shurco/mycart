@@ -10,8 +10,12 @@
   import { updateSEOTags } from '$lib/utils/seo'
   import { isBrowser } from '$lib/utils/browser'
   import NotFoundPage from '$lib/components/NotFoundPage.svelte'
+  import VariantSelector from '$lib/components/VariantSelector.svelte'
+  import QuantityInput from '$lib/components/QuantityInput.svelte'
+  import CartItemCard from '$lib/components/CartItemCard.svelte'
   import { translate } from '$lib/i18n'
   import { sanitizeHTML } from '$lib/utils/sanitize'
+  import type { ProductVariant } from '$lib/types/models'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -21,10 +25,44 @@
   let notFound = $state(false)
   let loading = $state(true)
   let currentSlide = $state(0)
+  let selectedVariant = $state<ProductVariant | null>(null)
+  let selectedQuantity = $state(1)
 
   let currency = $derived($settingsStore?.main.currency || '')
   let cart = $derived($cartStore)
-  let inCart = $derived(product ? cart.some((item) => item.id === product.id) : false)
+
+  let cartItem = $derived(
+    !product ? null :
+    product.has_variants ? (
+      !selectedVariant ? null :
+      cart.find((item) => item.id === product.id && item.variant_id === selectedVariant.id)
+    ) :
+    cart.find((item) => item.id === product.id && !item.variant_id)
+  )
+
+  let inCart = $derived(!!cartItem)
+  let currentQuantity = $derived(cartItem?.quantity || 1)
+
+  let productCartItems = $derived(
+    !product ? [] :
+    cart.filter((item) => item.id === product.id)
+  )
+
+  let displayPrice = $derived(() => {
+    if (!product) return 0
+    if (product.has_variants && selectedVariant) {
+      return product.amount + selectedVariant.price_surcharge
+    }
+    return product.amount
+  })
+
+  let canAddToCart = $derived(() => {
+    if (!product) return false
+    if (product.has_variants) {
+      return selectedVariant !== null && selectedVariant.quantity > 0
+    }
+    return true
+  })
 
   $effect(() => {
     const slug = page.params.slug
@@ -34,6 +72,7 @@
       load = false
       notFound = false
       currentSlide = 0
+      selectedVariant = null
       loadProduct(slug)
     }
   })
@@ -55,9 +94,50 @@
     }
   }
 
+  function handleVariantChange(variant: ProductVariant | null) {
+    selectedVariant = variant
+  }
+
+  // Sync selectedQuantity with cart when item added/removed
+  $effect(() => {
+    if (cartItem) {
+      selectedQuantity = cartItem.quantity
+    } else {
+      selectedQuantity = 1
+    }
+  })
+
+  function handleQuantityIncrement() {
+    if (inCart) {
+      const variantId = selectedVariant?.id
+      cartStore.incrementQuantity(product!.id, variantId)
+    } else {
+      selectedQuantity++
+    }
+  }
+
+  function handleQuantityDecrement() {
+    if (inCart) {
+      const variantId = selectedVariant?.id
+      cartStore.decrementQuantity(product!.id, variantId)
+    } else {
+      selectedQuantity = Math.max(1, selectedQuantity - 1)
+    }
+  }
+
+  function handleQuantityChange(newQty: number) {
+    if (inCart) {
+      const variantId = selectedVariant?.id
+      cartStore.updateQuantity(product!.id, variantId, newQty)
+    } else {
+      selectedQuantity = newQty
+    }
+  }
+
   function handleToggleCart() {
     if (!product) return
-    toggleCartItem(product, cart)
+    if (product.has_variants && !selectedVariant) return
+    toggleCartItem(product, cart, selectedVariant, selectedQuantity)
   }
 
   function nextSlide(length: number) {
@@ -153,18 +233,56 @@
               </div>
             {/if}
 
-            <div class="mb-6 flex items-baseline gap-3">
-              <span class="text-5xl font-black tracking-tight text-black">
-                {costFormat(product.amount) === 'free' ? t('product.free') : costFormat(product.amount)}
-              </span>
-              {#if product.amount !== 0 && product.amount}
-                <span class="text-2xl font-bold text-gray-700 uppercase">{currency}</span>
-              {/if}
+            {#if !product.has_variants}
+              <div class="mb-6 flex items-baseline gap-3">
+                <span class="text-5xl font-black tracking-tight text-black">
+                  {costFormat(product.amount) === 'free' ? t('product.free') : costFormat(product.amount)}
+                </span>
+                {#if product.amount !== 0 && product.amount}
+                  <span class="text-2xl font-bold text-gray-700 uppercase">{currency}</span>
+                {/if}
+              </div>
+            {/if}
+
+            {#if product.has_variants && product.options && product.variants}
+              <div class="mb-6">
+                <VariantSelector
+                  options={product.options}
+                  variants={product.variants}
+                  basePrice={product.amount}
+                  {currency}
+                  onVariantChange={handleVariantChange}
+                />
+              </div>
+            {/if}
+
+            <div class="mb-6">
+              <label class="mb-2 block text-sm font-black uppercase tracking-wider text-black">
+                {t('product.quantity')}
+              </label>
+              <div class="flex justify-center">
+                {#if inCart}
+                  <QuantityInput
+                    quantity={currentQuantity}
+                    onIncrement={handleQuantityIncrement}
+                    onDecrement={handleQuantityDecrement}
+                    onChange={handleQuantityChange}
+                  />
+                {:else}
+                  <QuantityInput
+                    quantity={selectedQuantity}
+                    onIncrement={handleQuantityIncrement}
+                    onDecrement={handleQuantityDecrement}
+                    onChange={handleQuantityChange}
+                  />
+                {/if}
+              </div>
             </div>
 
             <button
               onclick={handleToggleCart}
-              class="w-full cursor-pointer border-4 border-black px-8 py-4 text-lg font-black tracking-wider uppercase transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] {inCart
+              disabled={!canAddToCart()}
+              class="w-full cursor-pointer border-4 border-black px-8 py-4 text-lg font-black tracking-wider uppercase transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] disabled:cursor-not-allowed disabled:opacity-50 {inCart
                 ? 'bg-red-500 text-white'
                 : 'bg-green-500 text-white'}"
             >
@@ -187,6 +305,19 @@
           </div>
         </div>
       </div>
+
+      {#if productCartItems.length > 0}
+        <div class="mt-12">
+          <h2 class="mb-6 text-3xl font-black tracking-tighter uppercase text-black">
+            {t('cart.inYourCart')}
+          </h2>
+          <div class="space-y-4">
+            {#each productCartItems as item (item.variant_id || 'base')}
+              <CartItemCard {item} />
+            {/each}
+          </div>
+        </div>
+      {/if}
 
       {#if product.description}
         <div class="mt-12">

@@ -1,3 +1,34 @@
+export interface ProductOptionValue {
+  id?: string
+  option_id?: string
+  value: string
+  position: number
+}
+
+export interface ProductOption {
+  id?: string
+  product_id?: string
+  name: string
+  values: ProductOptionValue[]
+  position: number
+}
+
+export interface ProductVariant {
+  id?: string
+  product_id?: string
+  sku?: string
+  price_surcharge: number
+  quantity: number
+  option_values: Record<string, string>
+  active: boolean
+  images?: Array<{
+    id: string
+    name: string
+    ext: string
+    orig_name: string
+  }>
+}
+
 export interface Product {
   id: string
   name: string
@@ -5,6 +36,9 @@ export interface Product {
   brief?: string
   description?: string
   amount: number | string
+  quantity?: number
+  sku?: string
+  has_variants?: boolean
   active: boolean
   created?: string
   updated?: string
@@ -20,6 +54,8 @@ export interface Product {
     ext: string
     orig_name: string
   }>
+  options?: ProductOption[]
+  variants?: ProductVariant[]
   seo?: {
     title?: string
     keywords?: string

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/pkg/security"
 )
 
 func validProductInput() *models.Product {
@@ -375,5 +376,193 @@ func TestAddProduct_PersistsMetadataAndAttributes(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(priv.Attributes, ","), "size-M") {
 		t.Errorf("attributes not persisted: %+v", priv.Attributes)
+	}
+}
+
+func TestAddProductWithVariants(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	product := &models.Product{
+		Core:        models.Core{ID: security.RandomString()},
+		Name:        "Test T-Shirt",
+		Description: "A test shirt",
+		Slug:        "test-tshirt",
+		Amount:      2500,
+		HasVariants: true,
+		Digital:     models.Digital{Type: "file"},
+		Options: []models.ProductOption{
+			{
+				ID:       security.RandomString(),
+				Name:     "Size",
+				Position: 0,
+				Values: []models.ProductOptionValue{
+					{ID: security.RandomString(), Value: "Small", Position: 0},
+					{ID: security.RandomString(), Value: "Medium", Position: 1},
+				},
+			},
+		},
+		Variants: []models.ProductVariant{
+			{
+				ID:             security.RandomString(),
+				SKU:            "TEST-SMALL",
+				OptionValues:   map[string]string{"Size": "Small"},
+				PriceSurcharge: 0,
+				Quantity:       10,
+				Active:         true,
+			},
+			{
+				ID:             security.RandomString(),
+				SKU:            "TEST-MEDIUM",
+				OptionValues:   map[string]string{"Size": "Medium"},
+				PriceSurcharge: 500,
+				Quantity:       5,
+				Active:         true,
+			},
+		},
+	}
+
+	result, err := db.AddProductWithVariants(ctx, product)
+	if err != nil {
+		t.Fatalf("AddProductWithVariants() error = %v", err)
+	}
+
+	if result.ID != product.ID {
+		t.Errorf("Expected product ID %s, got %s", product.ID, result.ID)
+	}
+
+	// Verify options were created
+	var optionCount int
+	err = db.ProductQueries.QueryRowContext(ctx, "SELECT COUNT(*) FROM product_option WHERE product_id = ?", product.ID).Scan(&optionCount)
+	if err != nil {
+		t.Fatalf("Failed to count options: %v", err)
+	}
+	if optionCount != 1 {
+		t.Errorf("Expected 1 option, got %d", optionCount)
+	}
+
+	// Verify option values were created
+	var valueCount int
+	err = db.ProductQueries.QueryRowContext(ctx, "SELECT COUNT(*) FROM product_option_value WHERE option_id = ?", product.Options[0].ID).Scan(&valueCount)
+	if err != nil {
+		t.Fatalf("Failed to count option values: %v", err)
+	}
+	if valueCount != 2 {
+		t.Errorf("Expected 2 option values, got %d", valueCount)
+	}
+
+	// Verify variants were created
+	var variantCount int
+	err = db.ProductQueries.QueryRowContext(ctx, "SELECT COUNT(*) FROM product_variant WHERE product_id = ?", product.ID).Scan(&variantCount)
+	if err != nil {
+		t.Fatalf("Failed to count variants: %v", err)
+	}
+	if variantCount != 2 {
+		t.Errorf("Expected 2 variants, got %d", variantCount)
+	}
+}
+
+func TestGetProductWithVariants(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	// First create a product with variants
+	product := &models.Product{
+		Core:        models.Core{ID: security.RandomString()},
+		Name:        "Test Product",
+		Description: "Test description",
+		Slug:        "test-product",
+		Amount:      1000,
+		HasVariants: true,
+		Digital:     models.Digital{Type: "file"},
+		Options: []models.ProductOption{
+			{
+				ID:       security.RandomString(),
+				Name:     "Color",
+				Position: 0,
+				Values: []models.ProductOptionValue{
+					{ID: security.RandomString(), Value: "Red", Position: 0},
+				},
+			},
+		},
+		Variants: []models.ProductVariant{
+			{
+				ID:             security.RandomString(),
+				SKU:            "TEST-RED",
+				OptionValues:   map[string]string{"Color": "Red"},
+				PriceSurcharge: 100,
+				Quantity:       20,
+				Active:         true,
+			},
+		},
+	}
+
+	_, err := db.AddProductWithVariants(ctx, product)
+	if err != nil {
+		t.Fatalf("Setup failed: %v", err)
+	}
+
+	// Now retrieve it
+	retrieved, err := db.GetProductWithVariants(ctx, product.ID)
+	if err != nil {
+		t.Fatalf("GetProductWithVariants() error = %v", err)
+	}
+
+	if retrieved.ID != product.ID {
+		t.Errorf("Expected ID %s, got %s", product.ID, retrieved.ID)
+	}
+
+	if len(retrieved.Options) != 1 {
+		t.Errorf("Expected 1 option, got %d", len(retrieved.Options))
+	}
+
+	if len(retrieved.Variants) != 1 {
+		t.Errorf("Expected 1 variant, got %d", len(retrieved.Variants))
+	}
+
+	if retrieved.Variants[0].Quantity != 20 {
+		t.Errorf("Expected variant quantity 20, got %d", retrieved.Variants[0].Quantity)
+	}
+}
+
+func TestGenerateUniqueSlug(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	// Create a product with slug "test-product"
+	_, err := db.ProductQueries.ExecContext(ctx, `
+		INSERT INTO product (id, name, slug, desc, amount, digital, active, deleted)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, security.RandomString(), "Test", "test-product", "desc", 1000, "file", true, false)
+	if err != nil {
+		t.Fatalf("Failed to create test product: %v", err)
+	}
+
+	tests := []struct {
+		name      string
+		input     string
+		excludeID string
+		want      string
+	}{
+		{
+			name:  "new unique slug",
+			input: "New Product",
+			want:  "new-product",
+		},
+		{
+			name:  "duplicate slug",
+			input: "Test Product",
+			want:  "test-product-2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := db.GenerateUniqueSlug(ctx, tt.input, tt.excludeID)
+			if err != nil {
+				t.Errorf("GenerateUniqueSlug() error = %v", err)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("GenerateUniqueSlug() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

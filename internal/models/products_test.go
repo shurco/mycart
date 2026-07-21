@@ -113,3 +113,186 @@ func TestData_Validate(t *testing.T) {
 		t.Error("bad ID length must fail")
 	}
 }
+
+func TestProductOptionValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		option  ProductOption
+		wantErr bool
+	}{
+		{
+			name: "valid option",
+			option: ProductOption{
+				Name: "Size",
+				Values: []ProductOptionValue{
+					{Value: "Small"},
+					{Value: "Medium"},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty name",
+			option: ProductOption{
+				Name: "",
+				Values: []ProductOptionValue{
+					{Value: "Small"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "too many values",
+			option: ProductOption{
+				Name: "Size",
+				Values: make([]ProductOptionValue, 11), // Max is 10
+			},
+			wantErr: true,
+		},
+		{
+			name: "no values",
+			option: ProductOption{
+				Name:   "Size",
+				Values: []ProductOptionValue{},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.option.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ProductOption.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestProductVariantValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		variant ProductVariant
+		wantErr bool
+	}{
+		{
+			name: "valid variant",
+			variant: ProductVariant{
+				OptionValues:   map[string]string{"Size": "Medium"},
+				Quantity:       10,
+				PriceSurcharge: 0,
+			},
+			wantErr: false,
+		},
+		{
+			name: "negative quantity",
+			variant: ProductVariant{
+				OptionValues:   map[string]string{"Size": "Medium"},
+				Quantity:       -1,
+				PriceSurcharge: 0,
+			},
+			wantErr: true,
+		},
+		{
+			name: "too many option values",
+			variant: ProductVariant{
+				OptionValues: map[string]string{
+					"Size":     "Medium",
+					"Color":    "Red",
+					"Material": "Cotton",
+					"Style":    "Casual", // Max is 3
+				},
+				Quantity: 10,
+			},
+			wantErr: true,
+		},
+		{
+			name: "no option values",
+			variant: ProductVariant{
+				OptionValues: map[string]string{},
+				Quantity:     10,
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.variant.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ProductVariant.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestProductValidationWithVariants(t *testing.T) {
+	tests := []struct {
+		name    string
+		product Product
+		wantErr bool
+	}{
+		{
+			name: "valid product with variants",
+			product: Product{
+				Core:        Core{ID: "123456789012345"},
+				Name:        "T-Shirt",
+				Description: "A nice shirt",
+				Slug:        "t-shirt",
+				Amount:      2500,
+				Quantity:    0,
+				HasVariants: true,
+				Options: []ProductOption{
+					{Name: "Size", Values: []ProductOptionValue{{Value: "M"}}},
+				},
+				Variants: []ProductVariant{
+					{OptionValues: map[string]string{"Size": "M"}, Quantity: 10},
+				},
+				Digital: Digital{Type: "file"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "too many options",
+			product: Product{
+				Core:        Core{ID: "123456789012345"},
+				Name:        "T-Shirt",
+				Description: "A nice shirt",
+				Slug:        "t-shirt",
+				Amount:      2500,
+				HasVariants: true,
+				Options: []ProductOption{
+					{Name: "Size", Values: []ProductOptionValue{{Value: "M"}}},
+					{Name: "Color", Values: []ProductOptionValue{{Value: "Red"}}},
+					{Name: "Material", Values: []ProductOptionValue{{Value: "Cotton"}}},
+					{Name: "Style", Values: []ProductOptionValue{{Value: "Casual"}}}, // Max is 3
+				},
+				Digital: Digital{Type: "file"},
+			},
+			wantErr: true,
+		},
+		{
+			name: "too many variants",
+			product: Product{
+				Core:        Core{ID: "123456789012345"},
+				Name:        "T-Shirt",
+				Description: "A nice shirt",
+				Slug:        "t-shirt",
+				Amount:      2500,
+				HasVariants: true,
+				Variants:    make([]ProductVariant, 101), // Max is 100
+				Digital:     Digital{Type: "file"},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.product.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Product.Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

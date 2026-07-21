@@ -22,6 +22,7 @@
   },
   "cart": {
     "yourCart": "您的购物车",
+    "inYourCart": "在您的购物车中",
     "cartIsEmpty": "购物车为空",
     "emptyMessage": "您的购物车是空的。添加一些商品以继续购物。",
     "goToHome": "返回首页",
@@ -45,18 +46,30 @@
     "noPaymentSystems": "支付系统不可用。请联系管理员。",
     "selectPaymentError": "请选择支付系统",
     "selectPaymentErrorPaid": "请为付费商品选择支付系统",
+    "remove": "移除",
     "removeItem": "删除商品"
   },
   "product": {
     "addToCart": "加入购物车",
     "addToCartShort": "加入",
+    "add": "加入",
     "removeFromCart": "从购物车移除",
     "removeFromCartShort": "移除",
+    "remove": "移除",
     "free": "免费",
     "new": "新品",
     "description": "描述",
     "previousImage": "上一张图片",
-    "nextImage": "下一张图片"
+    "nextImage": "下一张图片",
+    "selectedVariant": "已选择",
+    "inStock": "有货",
+    "outOfStock": "缺货",
+    "variantNotAvailable": "此组合不可用",
+    "selectOptions": "选择选项",
+    "details": "详情",
+    "quantity": "数量",
+    "variant": "款式",
+    "variants": "款式"
   },
   "error": {
     "notFound": "页面未找到",

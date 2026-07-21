@@ -22,6 +22,7 @@
   },
   "cart": {
     "yourCart": "YOUR CART",
+    "inYourCart": "IN YOUR CART",
     "cartIsEmpty": "CART IS EMPTY",
     "emptyMessage": "Your cart is empty. Add some products to continue shopping.",
     "goToHome": "GO TO HOME",
@@ -45,18 +46,30 @@
     "noPaymentSystems": "NO PAYMENT SYSTEMS AVAILABLE. CONTACT ADMINISTRATOR.",
     "selectPaymentError": "Please select a payment system",
     "selectPaymentErrorPaid": "Please select a payment system for paid items",
+    "remove": "REMOVE",
     "removeItem": "Remove item"
   },
   "product": {
     "addToCart": "ADD TO CART",
     "addToCartShort": "ADD",
+    "add": "ADD",
     "removeFromCart": "REMOVE FROM CART",
     "removeFromCartShort": "REMOVE",
+    "remove": "REMOVE",
     "free": "FREE",
     "new": "NEW",
     "description": "DESCRIPTION",
     "previousImage": "Previous image",
-    "nextImage": "Next image"
+    "nextImage": "Next image",
+    "selectedVariant": "SELECTED",
+    "inStock": "IN STOCK",
+    "outOfStock": "OUT OF STOCK",
+    "variantNotAvailable": "THIS COMBINATION IS NOT AVAILABLE",
+    "selectOptions": "SELECT OPTIONS",
+    "details": "DETAILS",
+    "quantity": "QUANTITY",
+    "variant": "variant",
+    "variants": "variants"
   },
   "error": {
     "notFound": "Page not found",

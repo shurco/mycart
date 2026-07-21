@@ -11,6 +11,7 @@
   import type { PaymentMethods } from '$lib/types/models'
   import { goto } from '$app/navigation'
   import Overlay from '$lib/components/Overlay.svelte'
+  import CartItemCard from '$lib/components/CartItemCard.svelte'
   import { handleNavigation } from '$lib/utils/navigation'
   import { translate } from '$lib/i18n'
 
@@ -23,12 +24,13 @@
   let showOverlay = $state(false)
   let error = $state<string | undefined>(undefined)
   let isLoadingPaymentMethods = $state(false)
+  let hasAttemptedLoadingPayments = $state(false)
 
   let cart = $derived($cartStore)
   let currency = $derived($settingsStore?.main.currency || '')
 
-  // Calculate total cart amount in cents
-  let cartTotal = $derived(cart.reduce((sum, item) => sum + item.amount, 0))
+  // Calculate total cart amount in cents (amount * quantity for each item)
+  let cartTotal = $derived(cart.reduce((sum, item) => sum + (item.amount * item.quantity), 0))
   let isFree = $derived(cartTotal === 0)
 
   // Handle payment provider based on cart state
@@ -41,14 +43,17 @@
         provider = ''
         removeLocalStorage('provider')
       }
+      // Reset payment loading flag when cart becomes free
+      // This allows reloading if user adds paid items again later
+      hasAttemptedLoadingPayments = false
     } else if (!isFree) {
       // If cart is no longer free, reset provider and load payment methods
       if (provider === 'dummy') {
         provider = ''
         removeLocalStorage('provider')
       }
-      // Load payment methods if not already loaded and not currently loading
-      if (!hasPaymentProviders(payments) && !isLoadingPaymentMethods) {
+      // Load payment methods only once per cart state change - don't retry if already attempted
+      if (!hasAttemptedLoadingPayments && !isLoadingPaymentMethods) {
         loadPaymentMethods().catch(() => {
           error = 'Failed to load payment methods. Please refresh the page.'
           showOverlay = true
@@ -64,6 +69,7 @@
     }
 
     isLoadingPaymentMethods = true
+    hasAttemptedLoadingPayments = true
     try {
       const res = await apiGet<PaymentMethods>('/api/cart/payment')
       if (res.success && res.result) {
@@ -170,45 +176,11 @@
             <h2 class="mb-6 text-3xl font-black tracking-tighter text-black uppercase">
               {t('cart.itemsCount', { count: cart.length })}
             </h2>
-            <ul class="list-none space-y-4">
-              {#each cart as item (item.id)}
-                <li class="border-4 border-black bg-white p-4">
-                  <div class="flex items-center gap-4">
-                    <div class="overflow-hidden border-4 border-black">
-                      <img src={getProductImageUrl(item.image, 'sm')} alt={item.name} class="h-20 w-20 object-cover" />
-                    </div>
-                    <div class="flex-1">
-                      <a
-                        href="/products/{item.slug}"
-                        target="_blank"
-                        class="cursor-pointer text-xl font-black tracking-tight text-black uppercase decoration-yellow-300 decoration-4 underline-offset-4 hover:underline"
-                      >
-                        {item.name}
-                      </a>
-                    </div>
-                    <div class="flex items-center gap-4">
-                      <span
-                        class="text-2xl font-black {item.amount === 0
-                          ? 'text-green-500'
-                          : 'text-black'}"
-                      >
-                        {item.amount === 0 ? t('product.free') : formatCurrency(item.amount / 100, currency)}
-                      </span>
-                      <button
-                        type="button"
-                        class="cursor-pointer border-4 border-black bg-red-500 p-2 text-sm font-black text-white uppercase transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
-                        onclick={() => cartStore.remove(item.id)}
-                        aria-label={t('cart.removeItem')}
-                      >
-                        <svg class="h-5 w-5">
-                          <use href="/assets/img/sprite.svg#trash" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </li>
+            <div class="space-y-4">
+              {#each cart as item (`${item.id}-${item.variant_id || 'no-variant'}`)}
+                <CartItemCard {item} />
               {/each}
-            </ul>
+            </div>
           </div>
 
           <!-- Total -->
