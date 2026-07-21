@@ -74,6 +74,9 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 		query += queryPublic
 	}
 
+	// Add stable ordering for deterministic pagination
+	query += " ORDER BY product.created DESC, product.id ASC"
+
 	// Add pagination
 	if limit > 0 {
 		query += " LIMIT ?"
