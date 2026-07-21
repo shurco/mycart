@@ -746,6 +746,17 @@ func ExportProducts(c fiber.Ctx) error {
 
 	// Write product rows
 	for _, product := range products.Products {
+		// For products with variants, load full product data to get options and variants
+		if product.HasVariants {
+			fullProduct, err := db.Product(c.Context(), true, product.ID)
+			if err != nil {
+				log.ErrorStack(err)
+				// Continue with partial data if we can't load full product
+			} else {
+				product = *fullProduct
+			}
+		}
+
 		active := "false"
 		if product.Active {
 			active = "true"
