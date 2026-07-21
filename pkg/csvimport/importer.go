@@ -148,6 +148,49 @@ func (c *CSVImporter) parseProduct(record []string, headerMap map[string]int) (m
 		product.Active = true
 	}
 
+	// Parse brief
+	if idx, ok := headerMap["brief"]; ok && idx < len(record) {
+		product.Brief = record[idx]
+	}
+
+	// Parse images (pipe-separated URLs/filenames)
+	if idx, ok := headerMap["images"]; ok && idx < len(record) && record[idx] != "" {
+		imageStrs := strings.Split(record[idx], "|")
+		for _, imgStr := range imageStrs {
+			imgStr = strings.TrimSpace(imgStr)
+			if imgStr == "" {
+				continue
+			}
+
+			// Extract extension from filename
+			ext := ""
+			if dotIdx := strings.LastIndex(imgStr, "."); dotIdx != -1 {
+				ext = imgStr[dotIdx+1:]
+			}
+
+			// Generate UUID for name
+			name := security.RandomString()
+
+			product.Images = append(product.Images, models.File{
+				ID:       security.RandomString(),
+				Name:     name,
+				Ext:      ext,
+				OrigName: imgStr,
+			})
+		}
+	}
+
+	// Parse attributes (pipe-separated strings)
+	if idx, ok := headerMap["attributes"]; ok && idx < len(record) && record[idx] != "" {
+		attrStrs := strings.Split(record[idx], "|")
+		for _, attr := range attrStrs {
+			trimmed := strings.TrimSpace(attr)
+			if trimmed != "" {
+				product.Attributes = append(product.Attributes, trimmed)
+			}
+		}
+	}
+
 	// Parse variant options
 	product.HasVariants, product.Options, product.Variants = c.parseVariants(record, headerMap)
 
