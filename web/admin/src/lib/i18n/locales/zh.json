@@ -187,7 +187,7 @@
       "importProducts": "导入商品",
       "importDescription": "上传 CSV 文件以导入或更新商品",
       "import": "导入",
-      "importSuccess": "成功导入 {count} 个商品",
+      "importSuccess": "成功导入 {{count}} 个商品",
       "importFailed": "导入商品失败",
       "selectFile": "选择 CSV 文件",
       "noFileSelected": "请选择 CSV 文件",

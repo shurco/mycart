@@ -187,7 +187,7 @@
       "importProducts": "Import Products",
       "importDescription": "Upload a CSV file to import or update products",
       "import": "Import",
-      "importSuccess": "Successfully imported {count} products",
+      "importSuccess": "Successfully imported {{count}} products",
       "importFailed": "Failed to import products",
       "selectFile": "Select CSV File",
       "noFileSelected": "Please select a CSV file",
