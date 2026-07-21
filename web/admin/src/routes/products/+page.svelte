@@ -144,6 +144,7 @@
   async function loadProducts(page = currentPage) {
     loading = true
     currentPage = page
+    products = [] // Clear products before loading to prevent duplicate keys during transition
     const result = await loadData<ProductsResponse>(
       `/api/_/products?page=${page}&limit=${limit}`,
       t('products.failedToLoad')
