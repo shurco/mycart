@@ -269,7 +269,7 @@ Simple Product,simple-product,No variants,500,file,,,,,,,`
 	}
 
 	// Verify CSV header
-	if !strings.HasPrefix(exportCSV, "name,slug,description,amount") {
+	if !strings.HasPrefix(exportCSV, "name,slug,brief,description,images,attributes,amount") {
 		t.Error("Export CSV should have correct header")
 	}
 }
