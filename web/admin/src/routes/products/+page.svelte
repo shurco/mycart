@@ -520,7 +520,7 @@
   </div>
 
   {#if loading}
-    <div class="py-8 text-center">{t('common.loading')}</div>
+    <div class="py-8 text-center">{t('common.loading')} [PAGE {currentPage}] [FIX v2.0]</div>
   {:else if products.length === 0}
     <div class="py-8 text-center text-gray-500">{t('products.noProducts')}</div>
   {:else}
