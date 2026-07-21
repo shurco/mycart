@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/disintegration/imaging"
 	"github.com/gofiber/fiber/v3"
@@ -628,6 +629,89 @@ func ImportProducts(c fiber.Ctx) error {
 	return webutil.Response(c, fiber.StatusOK, "Import completed", result)
 }
 
+// buildImageString joins image filenames with pipe separator
+func buildImageString(images []models.File) string {
+	if len(images) == 0 {
+		return ""
+	}
+
+	filenames := make([]string, len(images))
+	for i, img := range images {
+		// Use original name if available, otherwise construct from name + ext
+		if img.OrigName != "" {
+			filenames[i] = img.OrigName
+		} else if img.Ext != "" {
+			filenames[i] = img.Name + "." + img.Ext
+		} else {
+			filenames[i] = img.Name
+		}
+	}
+
+	return strings.Join(filenames, "|")
+}
+
+// buildAttributeString joins attributes with pipe separator
+func buildAttributeString(attributes []string) string {
+	if len(attributes) == 0 {
+		return ""
+	}
+	return strings.Join(attributes, "|")
+}
+
+// buildVariantsB3String generates B3 format variant string
+func buildVariantsB3String(product models.Product) string {
+	if !product.HasVariants || len(product.Options) == 0 {
+		return ""
+	}
+
+	// Build options part: [OptionName:Value1;Value2]
+	var optionsParts []string
+	for _, option := range product.Options {
+		if len(option.Values) == 0 {
+			continue
+		}
+
+		valueStrs := make([]string, len(option.Values))
+		for i, val := range option.Values {
+			valueStrs[i] = val.Value
+		}
+
+		optionsParts = append(optionsParts, fmt.Sprintf("[%s:%s]", option.Name, strings.Join(valueStrs, ";")))
+	}
+
+	if len(optionsParts) == 0 {
+		return ""
+	}
+
+	optionsStr := strings.Join(optionsParts, "")
+
+	// Build variants part: OptionValue1,OptionValue2,Price,Qty,SKU
+	var variantParts []string
+	for _, variant := range product.Variants {
+		var parts []string
+
+		// Add option values in order
+		for _, option := range product.Options {
+			if val, ok := variant.OptionValues[option.Name]; ok {
+				parts = append(parts, val)
+			}
+		}
+
+		// Add price, quantity, SKU
+		parts = append(parts, fmt.Sprintf("%d", variant.PriceSurcharge))
+		parts = append(parts, fmt.Sprintf("%d", variant.Quantity))
+		parts = append(parts, variant.SKU)
+
+		variantParts = append(variantParts, strings.Join(parts, ","))
+	}
+
+	if len(variantParts) == 0 {
+		return optionsStr + "=>"
+	}
+
+	return optionsStr + "=>" + strings.Join(variantParts, "|")
+}
+
 // ExportProducts exports products to CSV
 //
 // @Summary      Export products to CSV
@@ -654,7 +738,7 @@ func ExportProducts(c fiber.Ctx) error {
 	c.Set("Content-Disposition", "attachment; filename=products.csv")
 
 	// Write CSV header
-	header := "name,slug,description,amount,quantity,sku,digital,active\n"
+	header := "name,slug,brief,description,images,attributes,amount,quantity,sku,variants,digital,active\n"
 	if _, err := c.Write([]byte(header)); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusInternalServerError(c)
@@ -667,13 +751,17 @@ func ExportProducts(c fiber.Ctx) error {
 			active = "true"
 		}
 
-		row := fmt.Sprintf("%s,%s,%s,%d,%d,%s,%s,%s\n",
+		row := fmt.Sprintf("%s,%s,%s,%s,%s,%s,%d,%d,%s,%s,%s,%s\n",
 			escapeCSV(product.Name),
 			escapeCSV(product.Slug),
+			escapeCSV(product.Brief),
 			escapeCSV(product.Description),
+			escapeCSV(buildImageString(product.Images)),
+			escapeCSV(buildAttributeString(product.Attributes)),
 			product.Amount,
 			product.Quantity,
 			escapeCSV(product.SKU),
+			escapeCSV(buildVariantsB3String(product)),
 			product.Digital.Type,
 			active,
 		)
