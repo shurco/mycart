@@ -1,15 +1,8 @@
-export function sortByDate<T extends { created?: string; id?: string }>(items: T[], order: 'asc' | 'desc' = 'desc'): T[] {
+export function sortByDate<T extends { created?: string }>(items: T[], order: 'asc' | 'desc' = 'desc'): T[] {
   return [...items].sort((a, b) => {
     const dateA = a.created ? new Date(a.created).getTime() : 0
     const dateB = b.created ? new Date(b.created).getTime() : 0
-    const dateComparison = order === 'desc' ? dateB - dateA : dateA - dateB
-
-    // If dates are equal, use ID as tiebreaker for stable sort
-    if (dateComparison === 0 && a.id && b.id) {
-      return a.id.localeCompare(b.id)
-    }
-
-    return dateComparison
+    return order === 'desc' ? dateB - dateA : dateA - dateB
   })
 }
 
