@@ -1,6 +1,6 @@
 services:
   mycart:
-    image: shurco/mycart:latest
+    image: ghcr.io/shurco/mycart:latest
     container_name: mycart
     restart: always
     volumes:

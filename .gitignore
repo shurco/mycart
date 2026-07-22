@@ -57,4 +57,14 @@ docker/docker-compose_private.yml
 /graphify-out/
 
 # Temporary files
+docker/Dockerfile.dev.bak
+lc_base/
+mycart
+web/admin/package-lock.json
+web/site/package-lock.json
+
 tmp/
+mycart-linux
+mycart-test
+
+CLAUDE.md

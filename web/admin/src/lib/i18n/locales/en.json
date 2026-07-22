@@ -213,9 +213,20 @@
   "payment": {
     "stripe": "Stripe",
     "paypal": "PayPal",
+    "portone": {
+      "debugEnabled": "Debug Mode",
+      "debugEnabledDesc": "Show debug logs in browser console (for troubleshooting)",
+      "supportedCurrencies": "Supported Currencies",
+      "supportedCurrenciesDesc": "Currencies this provider accepts. PortOne will only appear when store currency matches.",
+      "currencyWarning": "Currency Mismatch Warning",
+      "currencyWarningDesc": "Store default currency is {{currency}}, but PortOne only supports KRW. Please update the store currency in payment settings.",
+      "pgSupportInfo": "At the moment, PortOne PG supports only Kakao Easypay."
+    },
     "spectrocoin": "Spectrocoin",
     "secretKey": "Secret Key",
     "clientId": "Client ID",
+    "storeId": "Store ID",
+    "channelKey": "Channel Key",
     "merchantId": "Merchant ID",
     "projectId": "Project ID",
     "privateKey": "Private key",

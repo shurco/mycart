@@ -54,6 +54,7 @@ Change Tailwind classes to your desired style:
 Add SVG logos to `web/site/static/assets/img/payments/`:
 - `stripe.svg`
 - `paypal.svg`
+- `portone.svg`
 - `spectrocoin.svg`
 - `coinbase.svg`
 
@@ -283,6 +284,90 @@ All texts are stored in `web/site/src/lib/i18n/locales/`:
     <div class="text-green-500 peer-checked:block hidden">✓</div>
   </div>
 </label>
+```
+
+## PortOne Configuration
+
+PortOne is a Korean payment gateway supporting credit cards, virtual accounts, and mobile payments.
+
+### Setup Instructions
+
+1. **Sign up at [PortOne Developer](https://portone.io)**
+   - Create an account
+   - Verify your email
+
+2. **Create a Store and Channel**
+   - Go to Console → Stores
+   - Create a new store
+   - Create a payment channel within the store
+   - Select payment methods to enable (credit card, virtual account, etc.)
+
+3. **Copy Credentials**
+   - **Store ID**: Format `store-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+   - **Channel Key**: Your channel's unique identifier
+   - **API Secret**: V2 API secret key (keep this secure)
+
+4. **Configure Webhook URL**
+   - In PortOne Console, go to Webhooks
+   - Add webhook URL: `https://yourdomain.com/api/payment/portone/webhook`
+   - Select events: `Transaction.Paid`, `Transaction.VirtualAccountIssued`
+
+5. **Enter Credentials in mycart Admin Panel**
+   - Navigate to Settings → Payment → PortOne
+   - Paste Store ID, Channel Key, and API Secret
+   - Toggle Active to enable PortOne payments
+   - Click Save
+
+### Test Mode
+
+For development and testing:
+- Use PortOne's test channel credentials
+- Test payments won't charge real money
+- Use test card numbers from [PortOne documentation](https://developers.portone.io/docs/ko/readme)
+
+### Supported Payment Methods
+
+- **Credit/Debit Cards**: Visa, Mastercard, JCB, etc.
+- **Virtual Accounts**: Bank transfer via virtual account number
+- **Mobile Payments**: Samsung Pay, Apple Pay, Naver Pay, Kakao Pay
+- **Korean Bank Transfers**: Direct bank account transfers
+
+### Payment Flow
+
+Unlike other providers, PortOne uses a browser SDK:
+
+1. Customer selects PortOne and clicks checkout
+2. Frontend calls `PortOne.requestPayment()` with store/channel config
+3. PortOne displays payment UI (modal or redirect)
+4. Customer completes payment
+5. Frontend receives payment result
+6. Frontend verifies payment with backend (`POST /api/payment/portone/complete`)
+7. Backend validates with PortOne API and updates cart
+
+### Customization
+
+Add PortOne logo to `web/site/static/assets/img/payments/portone.svg`
+
+Example custom styling:
+
+```svelte
+{#if payments.portone}
+  <div>
+    <input type="radio" bind:group={provider} value="portone" id="portone" class="peer hidden" />
+    <label
+      for="portone"
+      class="block cursor-pointer border-4 border-black bg-white p-6 peer-checked:border-yellow-300 peer-checked:bg-yellow-300"
+    >
+      <div class="flex items-center gap-4">
+        <img src="/assets/img/payments/portone.svg" alt="PortOne" class="h-10" />
+        <div>
+          <p class="mb-2 text-xl font-black tracking-tight text-black uppercase">{t('cart.portone')}</p>
+          <p class="text-lg text-black">{t('cart.portoneDescription')}</p>
+        </div>
+      </div>
+    </label>
+  </div>
+{/if}
 ```
 
 ## Recommendations

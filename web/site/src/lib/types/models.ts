@@ -52,6 +52,7 @@ export interface PaymentMethods {
   paypal?: boolean
   spectrocoin?: boolean
   coinbase?: boolean
+  portone?: boolean
 }
 
 export interface CurrencyTruncationSettings {
