@@ -156,9 +156,6 @@
     console.log(`[loadProducts] Starting - page ${page}`)
     loading = true
     currentPage = page
-    products = [] // Clear products before loading to prevent duplicate keys during transition
-    console.log('[loadProducts] Cleared products array')
-
     const result = await loadData<ProductsResponse>(
       `/api/_/products?page=${page}&limit=${limit}`,
       t('products.failedToLoad')
