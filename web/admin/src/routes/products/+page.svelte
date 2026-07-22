@@ -108,6 +108,30 @@
   // Display value for price (in regular units, not cents)
   let amountDisplay = $state('0')
 
+  // Converts Product from API to form data format with price conversion
+  function convertProductToFormData(product: Product): ProductFormData {
+    const amountValue = typeof product.amount === 'string' ? parseFloat(product.amount) : (product.amount || 0)
+    const amountInUnits = amountValue / CENTS_PER_UNIT
+    const amountStr = amountInUnits.toFixed(2)
+
+    return {
+      name: product.name || '',
+      slug: product.slug || '',
+      brief: product.brief || '',
+      description: product.description || '',
+      amount: amountStr,
+      quantity: product.quantity || 0,
+      sku: product.sku || '',
+      has_variants: product.has_variants || false,
+      active: product.active !== undefined ? product.active : true,
+      metadata: product.metadata || [],
+      attributes: product.attributes || [],
+      digital: product.digital || { type: '' },
+      options: product.options || [],
+      variants: product.variants || []
+    }
+  }
+
   function handleAmountInput(event: Event) {
     const target = event.target as HTMLInputElement
     let value = target.value
@@ -217,27 +241,8 @@
     const result = await loadData<Product>(`/api/_/products/${product.id}`, 'Failed to load product')
     if (result) {
       fullProductData = result
-      // Convert price from cents to regular number for form
-      const amountValue = typeof result.amount === 'string' ? parseFloat(result.amount) : (result.amount || 0)
-      const amountInUnits = amountValue / CENTS_PER_UNIT
-      const amountStr = amountInUnits.toFixed(2)
-      formData = {
-        name: result.name || '',
-        slug: result.slug || '',
-        brief: result.brief || '',
-        description: result.description || '',
-        amount: amountStr,
-        quantity: result.quantity || 0,
-        sku: result.sku || '',
-        has_variants: result.has_variants || false,
-        active: result.active !== undefined ? result.active : true,
-        metadata: result.metadata || [],
-        attributes: result.attributes || [],
-        digital: result.digital || { type: '' },
-        options: result.options || [],
-        variants: result.variants || []
-      }
-      amountDisplay = amountStr
+      formData = convertProductToFormData(result)
+      amountDisplay = typeof formData.amount === 'string' ? formData.amount : formData.amount.toString()
       productImages = result.images || []
       drawerOpen = true
     }
