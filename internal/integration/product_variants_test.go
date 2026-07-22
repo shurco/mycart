@@ -169,19 +169,10 @@ func TestIntegration_CSV_ImportExport_Roundtrip(t *testing.T) {
 Test Product,test-product,Test description,1000,file,Size,S;M;L,Color,Red;Blue,0;0;100;100;200;200,10;10;15;15;20;20,TP-S-R;TP-S-B;TP-M-R;TP-M-B;TP-L-R;TP-L-B
 Simple Product,simple-product,No variants,500,file,,,,,,,`
 
-	// Create multipart form with CSV file
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", "products.csv")
-	if err != nil {
-		t.Fatalf("Failed to create form file: %v", err)
-	}
-	part.Write([]byte(csvContent))
-	writer.Close()
-
 	// Step 2: Preview import
+	body, contentType := createMultipartCSVRequest(t, csvContent, "products.csv")
 	req := httptest.NewRequest(http.MethodPost, "/api/_/products/import/preview", body)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Cookie", cookie)
 
 	resp, err := app.Test(req, fiber.TestConfig{Timeout: 10 * time.Second})
@@ -217,14 +208,9 @@ Simple Product,simple-product,No variants,500,file,,,,,,,`
 	}
 
 	// Step 3: Execute import
-	body2 := &bytes.Buffer{}
-	writer2 := multipart.NewWriter(body2)
-	part2, _ := writer2.CreateFormFile("file", "products.csv")
-	part2.Write([]byte(csvContent))
-	writer2.Close()
-
+	body2, contentType2 := createMultipartCSVRequest(t, csvContent, "products.csv")
 	req2 := httptest.NewRequest(http.MethodPost, "/api/_/products/import", body2)
-	req2.Header.Set("Content-Type", writer2.FormDataContentType())
+	req2.Header.Set("Content-Type", contentType2)
 	req2.Header.Set("Cookie", cookie)
 
 	resp2, err := app.Test(req2, fiber.TestConfig{Timeout: 10 * time.Second})
@@ -252,21 +238,7 @@ Simple Product,simple-product,No variants,500,file,,,,,,,`
 	}
 
 	// Step 4: Export and verify
-	exportReq := httptest.NewRequest(http.MethodGet, "/api/_/products/export", nil)
-	exportReq.Header.Set("Cookie", cookie)
-
-	exportResp, err := app.Test(exportReq, fiber.TestConfig{Timeout: 10 * time.Second})
-	if err != nil {
-		t.Fatalf("Export request failed: %v", err)
-	}
-	defer exportResp.Body.Close()
-
-	if exportResp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200, got %d", exportResp.StatusCode)
-	}
-
-	exportBody, _ := io.ReadAll(exportResp.Body)
-	exportCSV := string(exportBody)
+	exportCSV := executeCSVExport(t, app, cookie)
 
 	// Verify CSV contains imported products
 	if !strings.Contains(exportCSV, "test-product") {
@@ -281,6 +253,39 @@ Simple Product,simple-product,No variants,500,file,,,,,,,`
 	if !strings.HasPrefix(exportCSV, "name,slug,brief,description,images,attributes,amount") {
 		t.Error("Export CSV should have correct header")
 	}
+}
+
+// createMultipartCSVRequest creates a multipart form request with CSV content
+func createMultipartCSVRequest(t *testing.T, csvContent string, filename string) (*bytes.Buffer, string) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", filename)
+	if err != nil {
+		t.Fatalf("Failed to create form file: %v", err)
+	}
+	part.Write([]byte(csvContent))
+	writer.Close()
+
+	return body, writer.FormDataContentType()
+}
+
+// executeCSVExport executes CSV export request and returns CSV content
+func executeCSVExport(t *testing.T, app *fiber.App, cookie string) string {
+	exportReq := httptest.NewRequest(http.MethodGet, "/api/_/products/export", nil)
+	exportReq.Header.Set("Cookie", cookie)
+
+	exportResp, err := app.Test(exportReq, fiber.TestConfig{Timeout: 10 * time.Second})
+	if err != nil {
+		t.Fatalf("Export request failed: %v", err)
+	}
+	defer exportResp.Body.Close()
+
+	if exportResp.StatusCode != http.StatusOK {
+		t.Fatalf("Expected status 200, got %d", exportResp.StatusCode)
+	}
+
+	exportBody, _ := io.ReadAll(exportResp.Body)
+	return string(exportBody)
 }
 
 func TestIntegration_SlugGeneration_UniquenessDuringImport(t *testing.T) {
