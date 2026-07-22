@@ -50,9 +50,10 @@ func (q *SettingQueries) GroupFieldMap(settings any) map[string]any {
 		}
 	case *models.Payment:
 		return map[string]any{
-			"currency":      &s.Currency,
-			"truncation":    &s.Truncation,
-			"number_format": &s.NumberFormat,
+			"currency":       &s.Currency,
+			"truncation":     &s.Truncation,
+			"number_format":  &s.NumberFormat,
+			"symbol_display": &s.SymbolDisplay,
 		}
 	case *models.Stripe:
 		return map[string]any{
@@ -174,6 +175,14 @@ func (q *SettingQueries) GetSettingByGroup(ctx context.Context, settings any) (a
 					}
 					*ptr = &nf
 				}
+			case **models.SymbolDisplaySettings:
+				if value != "" {
+					var sd models.SymbolDisplaySettings
+					if err := json.Unmarshal([]byte(value), &sd); err != nil {
+						return nil, err
+					}
+					*ptr = &sd
+				}
 			}
 		}
 	}
@@ -229,6 +238,14 @@ func (q *SettingQueries) UpdateSettingByGroup(ctx context.Context, settings any)
 				value = string(jsonBytes)
 			}
 		case **models.NumberFormatSettings:
+			if *v != nil {
+				jsonBytes, err := json.Marshal(*v)
+				if err != nil {
+					return err
+				}
+				value = string(jsonBytes)
+			}
+		case **models.SymbolDisplaySettings:
 			if *v != nil {
 				jsonBytes, err := json.Marshal(*v)
 				if err != nil {
