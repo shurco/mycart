@@ -240,9 +240,7 @@
       </div>
 
       <div class="pt-5">
-        <FormButton onclick={handleNumberFormatSubmit} color="green">
-          {t('common.save')}
-        </FormButton>
+        <FormButton onclick={handleNumberFormatSubmit} name="Save" color="green" />
       </div>
     </div>
 
@@ -261,6 +259,7 @@
               context="admin"
               value={payment.truncation?.admin[payment.currency] || { mode: 'none' }}
               onChange={(settings) => handleTruncationChange('admin', payment.currency, settings)}
+              numberFormat={payment.number_format}
             />
           </div>
 
@@ -272,6 +271,7 @@
               context="storefront"
               value={payment.truncation?.storefront[payment.currency] || { mode: 'none' }}
               onChange={(settings) => handleTruncationChange('storefront', payment.currency, settings)}
+              numberFormat={payment.number_format}
             />
           </div>
 

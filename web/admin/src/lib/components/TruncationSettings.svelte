@@ -3,16 +3,17 @@
   import { getCurrencyPattern, getUnitLabel } from '$lib/config/currencyUnits'
   import { formatCurrency, formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { locale } from '$lib/i18n'
-  import type { CurrencyTruncationSettings, TruncationSettings } from '$lib/types/models'
+  import type { CurrencyTruncationSettings, TruncationSettings, NumberFormatSettings } from '$lib/types/models'
 
   interface Props {
     currency: string
     context: 'admin' | 'storefront'
     value: CurrencyTruncationSettings
     onChange: (settings: CurrencyTruncationSettings) => void
+    numberFormat?: NumberFormatSettings
   }
 
-  let { currency, context, value, onChange }: Props = $props()
+  let { currency, context, value, onChange, numberFormat }: Props = $props()
 
   let currentLocale = $derived($locale)
   let pattern = $derived(getCurrencyPattern(currency))
@@ -85,17 +86,17 @@
   }
 
   // Preview: show how 13520 would be formatted
-  let previewBefore = $derived(formatCurrency(13520, currency))
+  let previewBefore = $derived(formatCurrency(13520, currency, numberFormat))
   let previewAfter = $derived(() => {
     const tempSettings: TruncationSettings = {
       admin: context === 'admin' ? { [currency]: value } : {},
       storefront: context === 'storefront' ? { [currency]: value } : {}
     }
-    return formatCurrencyWithTruncation(1352000, currency, context, tempSettings, currentLocale)
+    return formatCurrencyWithTruncation(1352000, currency, context, tempSettings, currentLocale, numberFormat)
   })
 </script>
 
-<div class="mb-4">
+<div class="mb-4 max-w-2xl">
   <FormSelect
     id="{context}-{currency}-mode"
     title="Price Display"
