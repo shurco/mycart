@@ -71,8 +71,13 @@ export function getUnitLabel(unitValue: number, currencyCode: string, locale: st
   const unit = pattern.units.find(u => u.value === unitValue)
   if (!unit) return ''
 
+  // For KRW/JPY, always use their native locale regardless of UI language
+  const effectiveLocale = currencyCode === 'KRW' ? 'ko'
+                        : currencyCode === 'JPY' ? 'ja'
+                        : locale
+
   // Return localized label, fallback to English
-  return unit.keys[locale] || unit.keys['en'] || ''
+  return unit.keys[effectiveLocale] || unit.keys['en'] || ''
 }
 
 // Find appropriate unit for flexible mode (returns largest unit that fits)
