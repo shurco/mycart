@@ -16,27 +16,41 @@
 
   let currentLocale = $derived($locale)
   let pattern = $derived(getCurrencyPattern(currency))
-  let showUnitDropdown = $derived(value.mode === 'fixed')
 
-  // Generate unit options based on currency pattern
-  let unitOptions = $derived(
-    pattern.units.map(unit => getUnitLabel(unit.value, currency, currentLocale))
-  )
+  // Generate combined options: none, fixed-K, fixed-M, fixed-B, flexible
+  let combinedOptions = $derived(() => {
+    const options = ['none']
 
-  const modeOptions = ['none', 'fixed', 'flexible']
-
-  function handleModeChange(newMode: string) {
-    onChange({
-      mode: newMode as 'none' | 'fixed' | 'flexible',
-      fixed_unit: newMode === 'fixed' ? unitOptions[0] : undefined
+    // Add fixed-{unit} options for each unit in the pattern
+    pattern.units.forEach(unit => {
+      const unitLabel = getUnitLabel(unit.value, currency, currentLocale)
+      options.push(`fixed-${unitLabel}`)
     })
-  }
 
-  function handleUnitChange(newUnit: string) {
-    onChange({
-      ...value,
-      fixed_unit: newUnit
-    })
+    options.push('flexible')
+    return options
+  })
+
+  // Convert internal value to combined format for display
+  let selectedOption = $derived(() => {
+    if (value.mode === 'none') return 'none'
+    if (value.mode === 'flexible') return 'flexible'
+    if (value.mode === 'fixed' && value.fixed_unit) {
+      return `fixed-${value.fixed_unit}`
+    }
+    return 'none'
+  })
+
+  // Parse combined option and update settings
+  function handleChange(option: string) {
+    if (option === 'none') {
+      onChange({ mode: 'none' })
+    } else if (option === 'flexible') {
+      onChange({ mode: 'flexible' })
+    } else if (option.startsWith('fixed-')) {
+      const unit = option.substring(6) // Remove "fixed-" prefix
+      onChange({ mode: 'fixed', fixed_unit: unit })
+    }
   }
 
   // Preview: show how 13520 would be formatted
@@ -55,21 +69,11 @@
   <div class="space-y-3">
     <FormSelect
       id="{context}-{currency}-mode"
-      title="Mode"
-      options={modeOptions}
-      value={value.mode}
-      onchange={(e) => handleModeChange(e.currentTarget.value)}
+      title="Price Display"
+      options={combinedOptions()}
+      value={selectedOption()}
+      onchange={(e) => handleChange(e.currentTarget.value)}
     />
-
-    {#if showUnitDropdown}
-      <FormSelect
-        id="{context}-{currency}-unit"
-        title="Unit"
-        options={unitOptions}
-        value={value.fixed_unit || unitOptions[0]}
-        onchange={(e) => handleUnitChange(e.currentTarget.value)}
-      />
-    {/if}
 
     {#if value.mode !== 'none'}
       <div class="text-sm text-gray-600">
