@@ -8,13 +8,14 @@
   import Coinbase from '$lib/components/payment/Coinbase.svelte'
   import FormButton from '$lib/components/form/Button.svelte'
   import FormSelect from '$lib/components/form/Select.svelte'
+  import TruncationSettings from '$lib/components/TruncationSettings.svelte'
   import { systemStore } from '$lib/stores/system'
   import { loadSettings as loadSettingsHelper, saveSettings } from '$lib/utils/settingsHelpers'
   import { loadData } from '$lib/utils/apiHelpers'
   import { translate } from '$lib/i18n'
   import { CURRENCIES } from '$lib/config/currencies'
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
-  import type { PaymentSettings } from '$lib/types/models'
+  import type { PaymentSettings, TruncationSettings as TruncationSettingsType, CurrencyTruncationSettings } from '$lib/types/models'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -28,6 +29,28 @@
   let formErrors = $state<Record<string, string>>({})
 
   const currencyOptions = CURRENCIES.map(c => c.code)
+
+  // Initialize truncation settings with defaults
+  const defaultTruncation = (): TruncationSettingsType => ({
+    admin: {},
+    storefront: {}
+  })
+
+  // Ensure all currencies have default 'none' mode
+  function ensureDefaults(truncation: TruncationSettingsType | undefined): TruncationSettingsType {
+    const result = truncation || defaultTruncation()
+
+    CURRENCIES.forEach(curr => {
+      if (!result.admin[curr.code]) {
+        result.admin[curr.code] = { mode: 'none' }
+      }
+      if (!result.storefront[curr.code]) {
+        result.storefront[curr.code] = { mode: 'none' }
+      }
+    })
+
+    return result
+  }
 
   let unsubscribe: (() => void) | null = null
 
@@ -61,6 +84,7 @@
 
     const paymentSettings = await loadSettingsHelper<PaymentSettings>('payment', payment)
     payment.currency = paymentSettings.currency
+    payment.truncation = ensureDefaults(paymentSettings.truncation)
   }
 
   async function handleCurrencySubmit() {
@@ -77,6 +101,21 @@
     }
 
     await saveSettings('payment', payment, 'Currency saved')
+  }
+
+  function handleTruncationChange(
+    context: 'admin' | 'storefront',
+    currency: string,
+    settings: CurrencyTruncationSettings
+  ) {
+    if (!payment.truncation) {
+      payment.truncation = defaultTruncation()
+    }
+    payment.truncation[context][currency] = settings
+  }
+
+  async function handleTruncationSubmit() {
+    await saveSettings('payment', payment, 'Truncation settings saved')
   }
 
   function openDrawer(mode: 'stripe' | 'paypal' | 'spectrocoin' | 'coinbase') {
@@ -111,6 +150,53 @@
         <FormButton type="submit" name={t('common.save')} color="green" />
       </div>
     </form>
+    <hr class="mt-5" />
+
+    <div class="mt-5">
+      <h2 class="mb-5">Price Display Settings</h2>
+
+      <div class="max-w-4xl space-y-6">
+        <!-- Admin Panel Settings -->
+        <div>
+          <h3 class="mb-3 text-lg font-semibold">Admin Panel</h3>
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {#each CURRENCIES as curr}
+              <TruncationSettings
+                currency={curr.code}
+                context="admin"
+                value={payment.truncation?.admin[curr.code] || { mode: 'none' }}
+                onChange={(settings) => handleTruncationChange('admin', curr.code, settings)}
+              />
+            {/each}
+          </div>
+        </div>
+
+        <!-- Storefront Settings -->
+        <div>
+          <h3 class="mb-3 text-lg font-semibold">Storefront</h3>
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {#each CURRENCIES as curr}
+              <TruncationSettings
+                currency={curr.code}
+                context="storefront"
+                value={payment.truncation?.storefront[curr.code] || { mode: 'none' }}
+                onChange={(settings) => handleTruncationChange('storefront', curr.code, settings)}
+              />
+            {/each}
+          </div>
+        </div>
+
+        <div class="pt-4">
+          <FormButton
+            type="button"
+            name={t('common.save')}
+            color="green"
+            onclick={handleTruncationSubmit}
+          />
+        </div>
+      </div>
+    </div>
+
     <hr class="mt-5" />
 
     <div class="mt-5">
