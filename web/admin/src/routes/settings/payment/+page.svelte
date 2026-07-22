@@ -206,7 +206,7 @@
 <Main>
   <div class="pb-10">
     <header class="mb-4">
-      <h1>Payment</h1>
+      <h1>{t('settings.payment')}</h1>
     </header>
 
     <form onsubmit={(e) => { e.preventDefault(); handleCurrencySubmit(); }} class="max-w-2xl">
@@ -225,11 +225,11 @@
     <hr class="mt-5" />
 
     <div class="mt-5 max-w-2xl">
-      <h2 class="mb-5">Number Formatting</h2>
+      <h2 class="mb-5">{t('settings.numberFormatting')}</h2>
 
       <FormSelect
         id="decimal-precision"
-        title="Decimal Precision"
+        title={t('settings.decimalPrecision')}
         options={['0', '1', '2']}
         bind:value={decimalPrecision}
         ico="hash"
@@ -237,8 +237,8 @@
 
       <div class="mb-4 flex items-center">
         <div class="pr-3">
-          <h3 class="text-sm font-medium text-gray-700">Show Trailing Zeros</h3>
-          <p class="text-sm text-gray-500">Display 1.00 instead of 1</p>
+          <h3 class="text-sm font-medium text-gray-700">{t('settings.showTrailingZeros')}</h3>
+          <p class="text-sm text-gray-500">{t('settings.showTrailingZerosDesc')}</p>
         </div>
         <div class="pt-1">
           <label for="toggle_trailing-zeros" class="none relative h-6 w-10 cursor-pointer [-webkit-tap-highlight-color:_transparent]">
@@ -262,29 +262,29 @@
       </div>
 
       <div class="mt-3 text-sm text-gray-600">
-        <div>Preview: 1.00 → {formatPreview(1.00)}</div>
-        <div>Preview: 1.23 → {formatPreview(1.23)}</div>
+        <div>{t('settings.preview')}: 1.00 → {formatPreview(1.00)}</div>
+        <div>{t('settings.preview')}: 1.23 → {formatPreview(1.23)}</div>
       </div>
 
       <div class="pt-5">
-        <FormButton onclick={handleNumberFormatSubmit} name="Save" color="green" />
+        <FormButton onclick={handleNumberFormatSubmit} name={t('common.save')} color="green" />
       </div>
     </div>
 
     <hr class="mt-5" />
 
     <div class="mt-5 max-w-2xl">
-      <h2 class="mb-5">Currency Display</h2>
+      <h2 class="mb-5">{t('settings.currencyDisplay')}</h2>
 
       <div class="mb-4">
-        <h3 class="mb-2 text-sm font-medium text-gray-700">Admin Panel Display</h3>
+        <h3 class="mb-2 text-sm font-medium text-gray-700">{t('settings.adminPanelDisplay')}</h3>
         <div class="flex gap-2">
           <button
             type="button"
             class="flex-1 rounded border px-4 py-2 text-sm font-medium transition-colors {symbolDisplay.admin === 'currency' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
             onclick={() => symbolDisplay.admin = 'currency'}
           >
-            Currency Symbol
+            {t('settings.currencySymbol')}
             <span class="block text-xs text-gray-500 mt-1">$130</span>
           </button>
           <button
@@ -292,21 +292,21 @@
             class="flex-1 rounded border px-4 py-2 text-sm font-medium transition-colors {symbolDisplay.admin === 'language' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
             onclick={() => symbolDisplay.admin = 'language'}
           >
-            Language Symbol
+            {t('settings.languageSymbol')}
             <span class="block text-xs text-gray-500 mt-1">130 Dollar</span>
           </button>
         </div>
       </div>
 
       <div class="mb-4">
-        <h3 class="mb-2 text-sm font-medium text-gray-700">Storefront Display</h3>
+        <h3 class="mb-2 text-sm font-medium text-gray-700">{t('settings.storefrontDisplay')}</h3>
         <div class="flex gap-2">
           <button
             type="button"
             class="flex-1 rounded border px-4 py-2 text-sm font-medium transition-colors {symbolDisplay.storefront === 'currency' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
             onclick={() => symbolDisplay.storefront = 'currency'}
           >
-            Currency Symbol
+            {t('settings.currencySymbol')}
             <span class="block text-xs text-gray-500 mt-1">$130</span>
           </button>
           <button
@@ -314,14 +314,14 @@
             class="flex-1 rounded border px-4 py-2 text-sm font-medium transition-colors {symbolDisplay.storefront === 'language' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
             onclick={() => symbolDisplay.storefront = 'language'}
           >
-            Language Symbol
+            {t('settings.languageSymbol')}
             <span class="block text-xs text-gray-500 mt-1">130 Dollar</span>
           </button>
         </div>
       </div>
 
       <div class="pt-5">
-        <FormButton onclick={handleSymbolDisplaySubmit} name="Save" color="green" />
+        <FormButton onclick={handleSymbolDisplaySubmit} name={t('common.save')} color="green" />
       </div>
     </div>
 
@@ -329,12 +329,12 @@
 
     {#if payment.currency}
       <div class="mt-5">
-        <h2 class="mb-5">Price Display Settings</h2>
+        <h2 class="mb-5">{t('settings.priceDisplaySettings')}</h2>
 
         <div class="max-w-4xl space-y-6">
           <!-- Admin Panel Settings -->
           <div>
-            <h3 class="mb-3 text-lg font-semibold">Admin Panel</h3>
+            <h3 class="mb-3 text-lg font-semibold">{t('settings.adminPanel')}</h3>
             <TruncationSettings
               currency={payment.currency}
               context="admin"
@@ -346,7 +346,7 @@
 
           <!-- Storefront Settings -->
           <div>
-            <h3 class="mb-3 text-lg font-semibold">Storefront</h3>
+            <h3 class="mb-3 text-lg font-semibold">{t('settings.storefront')}</h3>
             <TruncationSettings
               currency={payment.currency}
               context="storefront"
@@ -371,7 +371,7 @@
     <hr class="mt-5" />
 
     <div class="mt-5">
-      <h2 class="mb-5">Payment providers</h2>
+      <h2 class="mb-5">{t('settings.paymentProviders')}</h2>
       <div class="flex">
         <div
           class="cursor-pointer rounded p-2 {payments.stripe ? 'bg-green-200' : 'bg-gray-200'}"
