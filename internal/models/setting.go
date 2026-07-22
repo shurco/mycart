@@ -50,9 +50,10 @@ func (v Password) Validate() error {
 
 // Payment is ...
 type Payment struct {
-	Currency     string                 `json:"currency"`
-	Truncation   *TruncationSettings    `json:"truncation,omitempty"`
-	NumberFormat *NumberFormatSettings  `json:"number_format,omitempty"`
+	Currency      string                  `json:"currency"`
+	Truncation    *TruncationSettings     `json:"truncation,omitempty"`
+	NumberFormat  *NumberFormatSettings   `json:"number_format,omitempty"`
+	SymbolDisplay *SymbolDisplaySettings  `json:"symbol_display,omitempty"`
 }
 
 // Validate is ...
@@ -61,6 +62,7 @@ func (v Payment) Validate() error {
 		validation.Field(&v.Currency, is.CurrencyCode),
 		validation.Field(&v.Truncation, validation.By(validateTruncation)),
 		validation.Field(&v.NumberFormat, validation.By(validateNumberFormat)),
+		validation.Field(&v.SymbolDisplay, validation.By(validateSymbolDisplay)),
 	)
 }
 
@@ -123,6 +125,32 @@ func validateNumberFormat(value interface{}) error {
 	return nil
 }
 
+// validateSymbolDisplay validates symbol display settings
+func validateSymbolDisplay(value interface{}) error {
+	if value == nil {
+		return nil // symbol_display is optional
+	}
+
+	sd, ok := value.(*SymbolDisplaySettings)
+	if !ok || sd == nil {
+		return nil
+	}
+
+	validModes := map[string]bool{"currency": true, "language": true}
+
+	if sd.Admin != "" && !validModes[sd.Admin] {
+		return validation.NewError("symbol_display_invalid_mode",
+			"admin symbol_display must be 'currency' or 'language'")
+	}
+
+	if sd.Storefront != "" && !validModes[sd.Storefront] {
+		return validation.NewError("symbol_display_invalid_mode",
+			"storefront symbol_display must be 'currency' or 'language'")
+	}
+
+	return nil
+}
+
 // CurrencyTruncationSettings defines truncation mode for a currency
 type CurrencyTruncationSettings struct {
 	Mode      string `json:"mode"`       // "none", "fixed", or "flexible"
@@ -133,6 +161,12 @@ type CurrencyTruncationSettings struct {
 type NumberFormatSettings struct {
 	DecimalPrecision  int  `json:"decimal_precision"`    // 0, 1, or 2
 	ShowTrailingZeros bool `json:"show_trailing_zeros"`  // true or false
+}
+
+// SymbolDisplaySettings defines currency display mode per context
+type SymbolDisplaySettings struct {
+	Admin      string `json:"admin"`      // "currency" or "language"
+	Storefront string `json:"storefront"` // "currency" or "language"
 }
 
 // TruncationSettings holds admin and storefront truncation configs
