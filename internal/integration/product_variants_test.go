@@ -28,6 +28,27 @@ func TestIntegration_ProductWithVariants_FullLifecycle(t *testing.T) {
 	app.Get("/api/_/products/:product_id", handlers.Product)
 
 	// Step 1: Create product with variants
+	productID := createTestProductWithVariants(t, app, cookie)
+
+	// Step 2: Retrieve product with variants
+	getResp := testutil.DoRequest(t, app, http.MethodGet, "/api/_/products/"+productID, "", cookie)
+
+	var getResult struct {
+		Result models.Product `json:"result"`
+	}
+	if err := json.NewDecoder(getResp.Body).Decode(&getResult); err != nil {
+		t.Fatalf("Failed to parse get response: %v", err)
+	}
+	getResp.Body.Close()
+
+	testutil.AssertStatus(t, getResp, http.StatusOK)
+
+	// Step 3: Verify product data
+	verifyProductVariantData(t, getResult.Result)
+}
+
+// createTestProductWithVariants creates a test product with variants and returns its ID
+func createTestProductWithVariants(t *testing.T, app *fiber.App, cookie string) string {
 	createPayload := `{
 		"name": "Integration Test T-Shirt",
 		"slug": "integration-test-tshirt",
@@ -64,7 +85,6 @@ func TestIntegration_ProductWithVariants_FullLifecycle(t *testing.T) {
 
 	createResp := testutil.DoRequest(t, app, http.MethodPost, "/api/_/products", createPayload, cookie)
 
-	// Parse response to get product ID
 	var createResult struct {
 		Result models.Product `json:"result"`
 	}
@@ -80,22 +100,11 @@ func TestIntegration_ProductWithVariants_FullLifecycle(t *testing.T) {
 		t.Fatal("Product ID is empty")
 	}
 
-	// Step 2: Retrieve product with variants
-	getResp := testutil.DoRequest(t, app, http.MethodGet, "/api/_/products/"+productID, "", cookie)
+	return productID
+}
 
-	var getResult struct {
-		Result models.Product `json:"result"`
-	}
-	if err := json.NewDecoder(getResp.Body).Decode(&getResult); err != nil {
-		t.Fatalf("Failed to parse get response: %v", err)
-	}
-	getResp.Body.Close()
-
-	testutil.AssertStatus(t, getResp, http.StatusOK)
-
-	product := getResult.Result
-
-	// Step 3: Verify product data
+// verifyProductVariantData verifies product variant structure and data
+func verifyProductVariantData(t *testing.T, product models.Product) {
 	if product.Name != "Integration Test T-Shirt" {
 		t.Errorf("Expected name 'Integration Test T-Shirt', got %s", product.Name)
 	}
