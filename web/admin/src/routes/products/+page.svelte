@@ -16,7 +16,7 @@
   import SvgIcon from '$lib/components/SvgIcon.svelte'
   import Pagination from '$lib/components/Pagination.svelte'
   import { loadData, saveData, deleteData, toggleActive as toggleActiveApi } from '$lib/utils/apiHelpers'
-  import { costFormat, formatPrice, formatDate, confirmDelete, showMessage } from '$lib/utils'
+  import { costFormat, formatPrice, formatDate, sortByDate, confirmDelete, showMessage } from '$lib/utils'
   import { apiDelete, apiUpdate } from '$lib/utils/api'
   import { validators, validateFields } from '$lib/utils/validation'
   import { MIN_NAME_LENGTH, MIN_SLUG_LENGTH, ERROR_MESSAGES } from '$lib/constants/validation'
@@ -164,33 +164,7 @@
     console.log('[loadProducts] API response:', result)
 
     if (result) {
-      const newProducts = result.products || []
-      console.log('[loadProducts] New products from API:', newProducts.length)
-
-      // DEBUG: Check for duplicate IDs in API response
-      const apiIds = newProducts.map(p => p.id)
-      const apiUniqueIds = new Set(apiIds)
-      console.log(`[loadProducts] API returned ${newProducts.length} products, ${apiUniqueIds.size} unique IDs`)
-      if (apiIds.length !== apiUniqueIds.size) {
-        console.error('[API RESPONSE] DUPLICATE KEYS IN API RESPONSE!')
-        console.error('All IDs:', apiIds)
-        console.error('Duplicate IDs:', apiIds.filter((id, index) => apiIds.indexOf(id) !== index))
-      }
-
-      products = newProducts
-      console.log('[loadProducts] Set products array to:', products.length, 'items')
-
-      // DEBUG: Check again after assignment
-      const ids = products.map(p => p.id)
-      const uniqueIds = new Set(ids)
-      console.log(`[loadProducts] After assignment: ${products.length} products, ${uniqueIds.size} unique IDs`)
-      if (ids.length !== uniqueIds.size) {
-        console.error('[AFTER ASSIGNMENT] DUPLICATE KEYS DETECTED!')
-        console.error('All IDs:', ids)
-        console.error('Duplicate IDs:', ids.filter((id, index) => ids.indexOf(id) !== index))
-        console.error('Products:', products)
-      }
-
+      products = sortByDate(result.products || [])
       currency = result.currency || ''
       total = result.total || 0
     }
