@@ -19,6 +19,16 @@
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
   import type { PaymentSettings, TruncationSettings as TruncationSettingsType, CurrencyTruncationSettings } from '$lib/types/models'
 
+  // Settings version key for cache invalidation
+  const SETTINGS_VERSION_KEY = 'settings_version'
+
+  // Increment settings version to invalidate storefront cache
+  function incrementSettingsVersion() {
+    if (typeof sessionStorage === 'undefined') return
+    const currentVersion = parseInt(sessionStorage.getItem(SETTINGS_VERSION_KEY) || '1', 10)
+    sessionStorage.setItem(SETTINGS_VERSION_KEY, (currentVersion + 1).toString())
+  }
+
   // Reactive translation function
   let t = $derived($translate)
 
@@ -120,6 +130,7 @@
     }
 
     await saveSettings('payment', payment, 'Currency saved')
+    incrementSettingsVersion()
   }
 
   function handleTruncationChange(
@@ -144,6 +155,7 @@
     console.log('Payment object:', JSON.stringify(payment, null, 2))
     console.log('Truncation:', JSON.stringify(payment.truncation, null, 2))
     await saveSettings('payment', payment, 'Truncation settings saved')
+    incrementSettingsVersion()
   }
 
   function formatPreview(value: number): string {
@@ -161,6 +173,7 @@
     }
     await saveSettings('payment', payment, 'Number formatting saved')
     paymentSettingsStore.set(payment)
+    incrementSettingsVersion()
   }
 
   function openDrawer(mode: 'stripe' | 'paypal' | 'spectrocoin' | 'coinbase') {
