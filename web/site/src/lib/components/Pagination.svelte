@@ -28,7 +28,7 @@
     }
 
     if (currentPage - delta > 2) {
-      rangeWithDots.push(1, -1) // -1 represents ellipsis
+      rangeWithDots.push(1, -1) // -1 represents leading ellipsis
     } else {
       rangeWithDots.push(1)
     }
@@ -36,7 +36,7 @@
     rangeWithDots.push(...range)
 
     if (currentPage + delta < totalPages - 1) {
-      rangeWithDots.push(-1, totalPages) // -1 represents ellipsis
+      rangeWithDots.push(-2, totalPages) // -2 represents trailing ellipsis (different from -1)
     } else if (totalPages > 1) {
       rangeWithDots.push(totalPages)
     }
@@ -58,7 +58,7 @@
     </button>
 
     {#each getVisiblePages() as page (page)}
-      {#if page === -1}
+      {#if page === -1 || page === -2}
         <span class="px-2 font-bold">...</span>
       {:else}
         <button
