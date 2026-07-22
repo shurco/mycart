@@ -424,17 +424,8 @@ func (q *ProductQueries) AddProduct(ctx context.Context, product *models.Product
 
 // UpdateProduct updates an existing product in the database with new values.
 func (q *ProductQueries) UpdateProduct(ctx context.Context, product *models.Product) error {
-	metadata, err := json.Marshal(product.Metadata)
-	if err != nil {
-		return err
-	}
-
-	attributes, err := json.Marshal(product.Attributes)
-	if err != nil {
-		return err
-	}
-
-	seo, err := json.Marshal(product.Seo)
+	// Marshal JSON fields
+	metadata, attributes, seo, err := q.marshalProductJSON(product)
 	if err != nil {
 		return err
 	}
@@ -450,25 +441,59 @@ func (q *ProductQueries) UpdateProduct(ctx context.Context, product *models.Prod
 		}
 	}()
 
-	// Update main product fields including variant-related columns
-	stmt, err := tx.PrepareContext(ctx, `
-			UPDATE product SET
-				name = ?,
-				brief = ?,
-				desc = ?,
-				slug = ?,
-				amount = ?,
-				quantity = ?,
-				sku = ?,
-				has_variants = ?,
-				metadata = ?,
-				attribute = ?,
-				seo = ?,
-				updated = datetime('now')
-			WHERE id = ?
-		`)
-	if err != nil {
+	// Update main product fields
+	if err = q.updateProductMainFields(ctx, tx, product, metadata, attributes, seo); err != nil {
 		return err
+	}
+
+	// Sync variant data
+	if err = q.syncProductVariants(ctx, tx, product); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// marshalProductJSON marshals product metadata, attributes, and SEO to JSON
+func (q *ProductQueries) marshalProductJSON(product *models.Product) (metadata, attributes, seo []byte, err error) {
+	metadata, err = json.Marshal(product.Metadata)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("marshal metadata: %w", err)
+	}
+
+	attributes, err = json.Marshal(product.Attributes)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("marshal attributes: %w", err)
+	}
+
+	seo, err = json.Marshal(product.Seo)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("marshal seo: %w", err)
+	}
+
+	return metadata, attributes, seo, nil
+}
+
+// updateProductMainFields executes the UPDATE statement for main product fields
+func (q *ProductQueries) updateProductMainFields(ctx context.Context, tx *sql.Tx, product *models.Product, metadata, attributes, seo []byte) error {
+	stmt, err := tx.PrepareContext(ctx, `
+		UPDATE product SET
+			name = ?,
+			brief = ?,
+			desc = ?,
+			slug = ?,
+			amount = ?,
+			quantity = ?,
+			sku = ?,
+			has_variants = ?,
+			metadata = ?,
+			attribute = ?,
+			seo = ?,
+			updated = datetime('now')
+		WHERE id = ?
+	`)
+	if err != nil {
+		return fmt.Errorf("prepare update statement: %w", err)
 	}
 	defer func() { _ = stmt.Close() }()
 
@@ -493,21 +518,25 @@ func (q *ProductQueries) UpdateProduct(ctx context.Context, product *models.Prod
 		product.ID,
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("execute update: %w", err)
 	}
 
-	// Handle variant data if product has variants
+	return nil
+}
+
+// syncProductVariants handles all variant-related CRUD operations
+func (q *ProductQueries) syncProductVariants(ctx context.Context, tx *sql.Tx, product *models.Product) error {
 	if product.HasVariants {
 		// Delete existing options (cascades to option values)
-		_, err = tx.ExecContext(ctx, `DELETE FROM product_option WHERE product_id = ?`, product.ID)
+		_, err := tx.ExecContext(ctx, `DELETE FROM product_option WHERE product_id = ?`, product.ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("delete options: %w", err)
 		}
 
 		// Delete existing variants
 		_, err = tx.ExecContext(ctx, `DELETE FROM product_variant WHERE product_id = ?`, product.ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("delete variants: %w", err)
 		}
 
 		// Insert new options and their values
@@ -519,7 +548,7 @@ func (q *ProductQueries) UpdateProduct(ctx context.Context, product *models.Prod
 				optionID, product.ID, option.Name, option.Position,
 			)
 			if err != nil {
-				return err
+				return fmt.Errorf("insert option: %w", err)
 			}
 
 			// Insert option values
@@ -530,7 +559,7 @@ func (q *ProductQueries) UpdateProduct(ctx context.Context, product *models.Prod
 					valueID, optionID, value.Value, value.Position,
 				)
 				if err != nil {
-					return err
+					return fmt.Errorf("insert option value: %w", err)
 				}
 			}
 		}
@@ -542,7 +571,7 @@ func (q *ProductQueries) UpdateProduct(ctx context.Context, product *models.Prod
 			// Marshal option_values map to JSON
 			optionValuesJSON, err := json.Marshal(variant.OptionValues)
 			if err != nil {
-				return err
+				return fmt.Errorf("marshal option values: %w", err)
 			}
 
 			// Handle empty SKU as NULL to avoid unique constraint violations
@@ -556,22 +585,22 @@ func (q *ProductQueries) UpdateProduct(ctx context.Context, product *models.Prod
 				variantID, product.ID, skuValue, variant.PriceSurcharge, variant.Quantity, string(optionValuesJSON), variant.Active,
 			)
 			if err != nil {
-				return err
+				return fmt.Errorf("insert variant: %w", err)
 			}
 		}
 	} else {
 		// If has_variants is false, clean up any existing variant data
-		_, err = tx.ExecContext(ctx, `DELETE FROM product_option WHERE product_id = ?`, product.ID)
+		_, err := tx.ExecContext(ctx, `DELETE FROM product_option WHERE product_id = ?`, product.ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("cleanup options: %w", err)
 		}
 		_, err = tx.ExecContext(ctx, `DELETE FROM product_variant WHERE product_id = ?`, product.ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("cleanup variants: %w", err)
 		}
 	}
 
-	return tx.Commit()
+	return nil
 }
 
 // DeleteProduct removes a product from the database based on its ID.
