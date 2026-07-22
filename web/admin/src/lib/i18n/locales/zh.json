@@ -219,7 +219,8 @@
       "supportedCurrencies": "支持的货币",
       "supportedCurrenciesDesc": "此支付提供商接受的货币。只有当商店货币匹配时，PortOne 才会显示。",
       "currencyWarning": "货币不匹配警告",
-      "currencyWarningDesc": "商店默认货币为 {{currency}}，但 PortOne 仅支持 KRW。请在支付设置中更新商店货币。"
+      "currencyWarningDesc": "商店默认货币为 {{currency}}，但 PortOne 仅支持 KRW。请在支付设置中更新商店货币。",
+      "pgSupportInfo": "目前，PortOne PG 仅支持 Kakao Easypay。"
     },
     "spectrocoin": "Spectrocoin",
     "secretKey": "密钥",

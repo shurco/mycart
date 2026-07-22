@@ -219,7 +219,8 @@
       "supportedCurrencies": "Supported Currencies",
       "supportedCurrenciesDesc": "Currencies this provider accepts. PortOne will only appear when store currency matches.",
       "currencyWarning": "Currency Mismatch Warning",
-      "currencyWarningDesc": "Store default currency is {{currency}}, but PortOne only supports KRW. Please update the store currency in payment settings."
+      "currencyWarningDesc": "Store default currency is {{currency}}, but PortOne only supports KRW. Please update the store currency in payment settings.",
+      "pgSupportInfo": "At the moment, PortOne PG supports only Kakao Easypay."
     },
     "spectrocoin": "Spectrocoin",
     "secretKey": "Secret Key",

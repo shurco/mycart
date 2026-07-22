@@ -140,6 +140,12 @@
         />
       </dl>
 
+      <div class="mx-auto mt-5 p-3 bg-blue-50 border border-blue-200 rounded text-blue-800">
+        <p class="text-xs">
+          ℹ️ {t('payment.portone.pgSupportInfo')}
+        </p>
+      </div>
+
       <dl class="mx-auto -my-3 mt-5 mb-0 space-y-4 text-sm">
         <FormInput
           id="api_secret"

@@ -53,7 +53,6 @@
   // Calculate total cart amount in cents
   let cartTotal = $derived(cart.reduce((sum, item) => sum + item.amount, 0))
   let isFree = $derived(cartTotal === 0)
-  let totalCartAmount = $derived(formatCurrency(cartTotal, currency))
 
   // Handle payment provider based on cart state
   $effect(() => {
@@ -127,6 +126,7 @@
   })
 
   let showPayments = $derived(!isFree && hasPaymentProviders(payments))
+  let totalCartAmount = $derived(formatCurrency(cartTotal, currency))
 
   async function checkOut(e: Event) {
     e.preventDefault()

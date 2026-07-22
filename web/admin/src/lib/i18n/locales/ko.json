@@ -102,7 +102,8 @@
       "supportedCurrencies": "지원 통화",
       "supportedCurrenciesDesc": "이 결제 수단이 지원하는 통화입니다. 상점 통화가 일치할 때만 PortOne이 표시됩니다.",
       "currencyWarning": "통화 불일치 경고",
-      "currencyWarningDesc": "상점 기본 통화가 {{currency}}이지만, PortOne은 KRW만 지원합니다. 결제 설정에서 상점 통화를 업데이트하세요."
+      "currencyWarningDesc": "상점 기본 통화가 {{currency}}이지만, PortOne은 KRW만 지원합니다. 결제 설정에서 상점 통화를 업데이트하세요.",
+      "pgSupportInfo": "현재 PortOne PG는 카카오페이 간편결제만 지원합니다."
     }
   },
   "digital": {
