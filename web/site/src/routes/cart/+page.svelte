@@ -27,6 +27,7 @@
   let currency = $derived($settingsStore?.main.currency || '')
   let truncationSettings = $derived($settingsStore?.payment?.truncation)
   let numberFormat = $derived($settingsStore?.payment?.number_format)
+  let symbolMode = $derived($settingsStore?.payment?.symbol_display?.storefront)
   let currentLocale = $derived($locale)
 
   // Calculate total cart amount in cents
@@ -100,7 +101,7 @@
   let totalCartAmount = $derived(
     cartTotal === 0
       ? t('product.free')
-      : formatCurrencyWithTruncation(cartTotal, currency, 'storefront', truncationSettings, currentLocale, numberFormat)
+      : formatCurrencyWithTruncation(cartTotal, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)
   )
 
   async function checkOut(e: Event) {
@@ -200,7 +201,7 @@
                       >
                         {item.amount === 0
                           ? t('product.free')
-                          : formatCurrencyWithTruncation(item.amount, currency, 'storefront', truncationSettings, currentLocale, numberFormat)}
+                          : formatCurrencyWithTruncation(item.amount, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)}
                       </span>
                       <button
                         type="button"
