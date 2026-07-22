@@ -152,50 +152,44 @@
     </form>
     <hr class="mt-5" />
 
-    <div class="mt-5">
-      <h2 class="mb-5">Price Display Settings</h2>
+    {#if payment.currency}
+      <div class="mt-5">
+        <h2 class="mb-5">Price Display Settings</h2>
 
-      <div class="max-w-4xl space-y-6">
-        <!-- Admin Panel Settings -->
-        <div>
-          <h3 class="mb-3 text-lg font-semibold">Admin Panel</h3>
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {#each CURRENCIES as curr}
-              <TruncationSettings
-                currency={curr.code}
-                context="admin"
-                value={payment.truncation?.admin[curr.code] || { mode: 'none' }}
-                onChange={(settings) => handleTruncationChange('admin', curr.code, settings)}
-              />
-            {/each}
+        <div class="max-w-4xl space-y-6">
+          <!-- Admin Panel Settings -->
+          <div>
+            <h3 class="mb-3 text-lg font-semibold">Admin Panel</h3>
+            <TruncationSettings
+              currency={payment.currency}
+              context="admin"
+              value={payment.truncation?.admin[payment.currency] || { mode: 'none' }}
+              onChange={(settings) => handleTruncationChange('admin', payment.currency, settings)}
+            />
           </div>
-        </div>
 
-        <!-- Storefront Settings -->
-        <div>
-          <h3 class="mb-3 text-lg font-semibold">Storefront</h3>
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {#each CURRENCIES as curr}
-              <TruncationSettings
-                currency={curr.code}
-                context="storefront"
-                value={payment.truncation?.storefront[curr.code] || { mode: 'none' }}
-                onChange={(settings) => handleTruncationChange('storefront', curr.code, settings)}
-              />
-            {/each}
+          <!-- Storefront Settings -->
+          <div>
+            <h3 class="mb-3 text-lg font-semibold">Storefront</h3>
+            <TruncationSettings
+              currency={payment.currency}
+              context="storefront"
+              value={payment.truncation?.storefront[payment.currency] || { mode: 'none' }}
+              onChange={(settings) => handleTruncationChange('storefront', payment.currency, settings)}
+            />
           </div>
-        </div>
 
-        <div class="pt-4">
-          <FormButton
-            type="button"
-            name={t('common.save')}
-            color="green"
-            onclick={handleTruncationSubmit}
-          />
+          <div class="pt-4">
+            <FormButton
+              type="button"
+              name={t('common.save')}
+              color="green"
+              onclick={handleTruncationSubmit}
+            />
+          </div>
         </div>
       </div>
-    </div>
+    {/if}
 
     <hr class="mt-5" />
 
