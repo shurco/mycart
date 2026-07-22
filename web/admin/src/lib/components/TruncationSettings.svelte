@@ -1,7 +1,7 @@
 <script lang="ts">
   import FormSelect from './form/Select.svelte'
   import { getCurrencyPattern, getUnitLabel } from '$lib/config/currencyUnits'
-  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
+  import { formatCurrency, formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { locale } from '$lib/i18n'
   import type { CurrencyTruncationSettings, TruncationSettings } from '$lib/types/models'
 
@@ -16,6 +16,9 @@
 
   let currentLocale = $derived($locale)
   let pattern = $derived(getCurrencyPattern(currency))
+
+  // Local state for the selected option string
+  let selectedOptionValue = $state('')
 
   // Generate combined options: none, fixed-K, fixed-M, fixed-B, flexible
   let combinedOptions = $derived(() => {
@@ -41,20 +44,49 @@
     return 'none'
   })
 
+  // Initialize selectedOptionValue from value prop
+  // Only runs when selectedOption() changes (not when selectedOptionValue changes)
+  $effect(() => {
+    selectedOptionValue = selectedOption()
+  })
+
+  // Debug: Log whenever selectedOptionValue changes
+  $effect(() => {
+    console.log('[DEBUG] selectedOptionValue is now:', selectedOptionValue)
+  })
+
+  // Watch for changes to selectedOptionValue and call onChange
+  $effect(() => {
+    console.log('[WATCH EFFECT] selectedOptionValue:', selectedOptionValue, 'selectedOption():', selectedOption())
+    // Skip if unchanged or empty
+    if (!selectedOptionValue || selectedOptionValue === selectedOption()) {
+      console.log('[WATCH EFFECT] Skipping - unchanged or empty')
+      return
+    }
+
+    console.log('TruncationSettings: selectedOptionValue changed to:', selectedOptionValue)
+    handleChange(selectedOptionValue)
+  })
+
   // Parse combined option and update settings
   function handleChange(option: string) {
+    console.log('TruncationSettings.handleChange called with:', option)
     if (option === 'none') {
+      console.log('Calling onChange with mode: none')
       onChange({ mode: 'none' })
     } else if (option === 'flexible') {
+      console.log('Calling onChange with mode: flexible')
       onChange({ mode: 'flexible' })
     } else if (option.startsWith('fixed-')) {
       const unit = option.substring(6) // Remove "fixed-" prefix
+      console.log('Calling onChange with mode: fixed, unit:', unit)
       onChange({ mode: 'fixed', fixed_unit: unit })
     }
   }
 
   // Preview: show how 13520 would be formatted
-  let previewAmount = $derived(() => {
+  let previewBefore = $derived(formatCurrency(13520, currency))
+  let previewAfter = $derived(() => {
     const tempSettings: TruncationSettings = {
       admin: context === 'admin' ? { [currency]: value } : {},
       storefront: context === 'storefront' ? { [currency]: value } : {}
@@ -63,22 +95,17 @@
   })
 </script>
 
-<div class="mb-4 rounded border border-gray-300 p-4">
-  <div class="mb-2 font-semibold text-gray-700">{currency}</div>
+<div class="mb-4">
+  <FormSelect
+    id="{context}-{currency}-mode"
+    title="Price Display"
+    options={combinedOptions()}
+    bind:value={selectedOptionValue}
+  />
 
-  <div class="space-y-3">
-    <FormSelect
-      id="{context}-{currency}-mode"
-      title="Price Display"
-      options={combinedOptions()}
-      value={selectedOption()}
-      onchange={(e) => handleChange(e.currentTarget.value)}
-    />
-
-    {#if value.mode !== 'none'}
-      <div class="text-sm text-gray-600">
-        Preview: $13,520 → {previewAmount()}
-      </div>
-    {/if}
-  </div>
+  {#if value.mode !== 'none'}
+    <div class="mt-2 text-sm text-gray-600">
+      Preview: {previewBefore} → {previewAfter()}
+    </div>
+  {/if}
 </div>
