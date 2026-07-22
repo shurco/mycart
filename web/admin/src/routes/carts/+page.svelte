@@ -7,14 +7,17 @@
   import Pagination from '$lib/components/Pagination.svelte'
   import { loadData, handleApiCall } from '$lib/utils/apiHelpers'
   import { apiPost } from '$lib/utils'
-  import { formatCurrency } from '$lib/utils/currency'
+  import { formatCurrency, formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { costFormat, formatDate } from '$lib/utils'
   import { STRIPE_DASHBOARD_URL } from '$lib/utils/constants'
   import type { Cart } from '$lib/types/models'
-  import { translate } from '$lib/i18n'
+  import { paymentSettingsStore } from '$lib/stores/payment'
+  import { translate, locale } from '$lib/i18n'
 
   // Reactive translation function
   let t = $derived($translate)
+  let currentLocale = $derived($locale)
+  let paymentSettings = $derived($paymentSettingsStore)
 
   interface DrawerCart {
     cart: Cart
@@ -115,7 +118,13 @@
           >
             <td>{cart.email || '-'}</td>
             <td>
-              {formatCurrency(cart.amount_total / 100, cart.currency || 'USD')}
+              {formatCurrencyWithTruncation(
+                cart.amount_total,
+                cart.currency || 'USD',
+                'admin',
+                paymentSettings?.truncation,
+                currentLocale
+              )}
             </td>
             <td
               class={cart.payment_status === 'paid'

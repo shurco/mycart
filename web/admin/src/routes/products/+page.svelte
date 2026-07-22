@@ -15,6 +15,7 @@
   import Pagination from '$lib/components/Pagination.svelte'
   import { loadData, saveData, deleteData, toggleActive as toggleActiveApi } from '$lib/utils/apiHelpers'
   import { costFormat, formatPrice, formatDate, sortByDate, confirmDelete, showMessage } from '$lib/utils'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { apiDelete, apiUpdate } from '$lib/utils/api'
   import { validators, validateFields } from '$lib/utils/validation'
   import { MIN_NAME_LENGTH, MIN_SLUG_LENGTH, ERROR_MESSAGES } from '$lib/constants/validation'
@@ -22,10 +23,13 @@
   import { DEFAULT_PAGE_SIZE } from '$lib/constants/pagination'
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
   import type { Product } from '$lib/types/models'
-  import { translate } from '$lib/i18n'
+  import { paymentSettingsStore } from '$lib/stores/payment'
+  import { translate, locale } from '$lib/i18n'
 
   // Reactive translation function
   let t = $derived($translate)
+  let currentLocale = $derived($locale)
+  let paymentSettings = $derived($paymentSettingsStore)
 
   interface ProductsResponse {
     products: Product[]
@@ -485,8 +489,13 @@
               {#if !product.amount || parseFloat(String(product.amount)) === 0}
                 <span class="font-bold text-green-600">free</span>
               {:else}
-                {costFormat(product.amount)}
-                {currency}
+                {formatCurrencyWithTruncation(
+                  product.amount,
+                  currency || 'USD',
+                  'admin',
+                  paymentSettings?.truncation,
+                  currentLocale
+                )}
               {/if}
             </td>
             <td class="px-4 py-2">
