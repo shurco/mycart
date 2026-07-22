@@ -50,14 +50,68 @@ func (v Password) Validate() error {
 
 // Payment is ...
 type Payment struct {
-	Currency string `json:"currency"`
+	Currency   string              `json:"currency"`
+	Truncation *TruncationSettings `json:"truncation,omitempty"`
 }
 
 // Validate is ...
 func (v Payment) Validate() error {
 	return validation.ValidateStruct(&v,
 		validation.Field(&v.Currency, is.CurrencyCode),
+		validation.Field(&v.Truncation, validation.By(validateTruncation)),
 	)
+}
+
+// validateTruncation validates truncation settings
+func validateTruncation(value interface{}) error {
+	if value == nil {
+		return nil // truncation is optional
+	}
+
+	truncation, ok := value.(*TruncationSettings)
+	if !ok {
+		return nil
+	}
+
+	validModes := map[string]bool{"none": true, "fixed": true, "flexible": true}
+
+	// Validate admin settings
+	for currency, settings := range truncation.Admin {
+		if !validModes[settings.Mode] {
+			return validation.NewError("truncation_invalid_mode",
+				"mode must be 'none', 'fixed', or 'flexible' for "+currency)
+		}
+		if settings.Mode == "fixed" && settings.FixedUnit == "" {
+			return validation.NewError("truncation_missing_unit",
+				"fixed_unit required when mode is 'fixed' for "+currency)
+		}
+	}
+
+	// Validate storefront settings
+	for currency, settings := range truncation.Storefront {
+		if !validModes[settings.Mode] {
+			return validation.NewError("truncation_invalid_mode",
+				"mode must be 'none', 'fixed', or 'flexible' for "+currency)
+		}
+		if settings.Mode == "fixed" && settings.FixedUnit == "" {
+			return validation.NewError("truncation_missing_unit",
+				"fixed_unit required when mode is 'fixed' for "+currency)
+		}
+	}
+
+	return nil
+}
+
+// CurrencyTruncationSettings defines truncation mode for a currency
+type CurrencyTruncationSettings struct {
+	Mode      string `json:"mode"`       // "none", "fixed", or "flexible"
+	FixedUnit string `json:"fixed_unit,omitempty"` // e.g., "K", "M", "만", "천"
+}
+
+// TruncationSettings holds admin and storefront truncation configs
+type TruncationSettings struct {
+	Admin      map[string]CurrencyTruncationSettings `json:"admin"`
+	Storefront map[string]CurrencyTruncationSettings `json:"storefront"`
 }
 
 // Stripe is ...
