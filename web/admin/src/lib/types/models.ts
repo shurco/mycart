@@ -78,6 +78,11 @@ export interface CurrencyTruncationSettings {
   fixed_unit?: string  // e.g., 'K', 'M', '만', '천'
 }
 
+export interface NumberFormatSettings {
+  decimal_precision: 0 | 1 | 2
+  show_trailing_zeros: boolean
+}
+
 export interface TruncationSettings {
   admin: Record<string, CurrencyTruncationSettings>
   storefront: Record<string, CurrencyTruncationSettings>
@@ -86,6 +91,7 @@ export interface TruncationSettings {
 export interface PaymentSettings {
   currency: string
   truncation?: TruncationSettings
+  number_format?: NumberFormatSettings
 }
 
 export interface StripeSettings {
