@@ -52,3 +52,18 @@ export interface PaymentMethods {
   spectrocoin?: boolean
   coinbase?: boolean
 }
+
+export interface CurrencyTruncationSettings {
+  mode: 'none' | 'fixed' | 'flexible'
+  fixed_unit?: string  // e.g., 'K', 'M', '만', '천'
+}
+
+export interface TruncationSettings {
+  admin: Record<string, CurrencyTruncationSettings>
+  storefront: Record<string, CurrencyTruncationSettings>
+}
+
+export interface PaymentSettings {
+  currency: string
+  truncation?: TruncationSettings
+}
