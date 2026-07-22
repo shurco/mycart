@@ -1170,7 +1170,7 @@ func (q *ProductQueries) GetProductWithVariants(ctx context.Context, productID s
 
 // loadProductOptions loads options, option values, and variants for a product
 func (q *ProductQueries) loadProductOptions(ctx context.Context, product *models.Product) (*models.Product, error) {
-	// 3. Get options
+	// Get options
 	optionRows, err := q.DB.QueryContext(ctx, `
 		SELECT id, name, position
 		FROM product_option
@@ -1182,54 +1182,72 @@ func (q *ProductQueries) loadProductOptions(ctx context.Context, product *models
 	}
 	defer optionRows.Close()
 
-	optionMap := make(map[string]*models.ProductOption)
-
 	for optionRows.Next() {
 		option := models.ProductOption{ProductID: product.ID}
 		if err := optionRows.Scan(&option.ID, &option.Name, &option.Position); err != nil {
 			return nil, fmt.Errorf("scan option: %w", err)
 		}
-		optionMap[option.ID] = &option
 		product.Options = append(product.Options, option)
 	}
 
-	// 4. Get option values
-	for i := range product.Options {
+	// Load option values
+	if err = q.loadOptionValues(ctx, &product.Options); err != nil {
+		return nil, err
+	}
+
+	// Load variants with their data
+	variants, err := q.loadProductVariants(ctx, product.ID)
+	if err != nil {
+		return nil, err
+	}
+	product.Variants = variants
+
+	return product, nil
+}
+
+// loadOptionValues loads values for all product options
+func (q *ProductQueries) loadOptionValues(ctx context.Context, options *[]models.ProductOption) error {
+	for i := range *options {
 		valueRows, err := q.DB.QueryContext(ctx, `
 			SELECT id, value, position
 			FROM product_option_value
 			WHERE option_id = ?
 			ORDER BY position
-		`, product.Options[i].ID)
+		`, (*options)[i].ID)
 		if err != nil {
-			return nil, fmt.Errorf("query option values: %w", err)
+			return fmt.Errorf("query option values: %w", err)
 		}
 
 		for valueRows.Next() {
-			value := models.ProductOptionValue{OptionID: product.Options[i].ID}
+			value := models.ProductOptionValue{OptionID: (*options)[i].ID}
 			if err := valueRows.Scan(&value.ID, &value.Value, &value.Position); err != nil {
 				valueRows.Close()
-				return nil, fmt.Errorf("scan option value: %w", err)
+				return fmt.Errorf("scan option value: %w", err)
 			}
-			product.Options[i].Values = append(product.Options[i].Values, value)
+			(*options)[i].Values = append((*options)[i].Values, value)
 		}
 		valueRows.Close()
 	}
+	return nil
+}
 
-	// 5. Get variants
+// loadProductVariants loads all variants with their option values and images
+func (q *ProductQueries) loadProductVariants(ctx context.Context, productID string) ([]models.ProductVariant, error) {
 	variantRows, err := q.DB.QueryContext(ctx, `
 		SELECT id, sku, price_surcharge, quantity, active
 		FROM product_variant
 		WHERE product_id = ?
-	`, product.ID)
+	`, productID)
 	if err != nil {
 		return nil, fmt.Errorf("query variants: %w", err)
 	}
 	defer variantRows.Close()
 
+	var variants []models.ProductVariant
+
 	for variantRows.Next() {
 		variant := models.ProductVariant{
-			ProductID:    product.ID,
+			ProductID:    productID,
 			OptionValues: make(map[string]string),
 		}
 
@@ -1284,10 +1302,10 @@ func (q *ProductQueries) loadProductOptions(ctx context.Context, product *models
 		}
 		imgRows.Close()
 
-		product.Variants = append(product.Variants, variant)
+		variants = append(variants, variant)
 	}
 
-	return product, nil
+	return variants, nil
 }
 
 // GenerateUniqueSlug generates a unique URL-friendly slug from product name
