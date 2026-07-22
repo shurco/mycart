@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	stderrors "errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -119,10 +118,53 @@ func GetSettingByGroup[T any](ctx context.Context, db *Base) (*T, error) {
 	return setting.(*T), nil
 }
 
+// unmarshalJSONToPointer unmarshals JSON value into a pointer of type T
+func unmarshalJSONToPointer[T any](value string, ptr **T) error {
+	if value == "" {
+		return nil
+	}
+	var t T
+	if err := json.Unmarshal([]byte(value), &t); err != nil {
+		return err
+	}
+	*ptr = &t
+	return nil
+}
+
+// parseSettingValue parses a string value into the appropriate type
+func parseSettingValue(value string, fieldPtr any) error {
+	switch ptr := fieldPtr.(type) {
+	case *string:
+		*ptr = value
+	case *bool:
+		bValue, err := strconv.ParseBool(value)
+		if err != nil {
+			return err
+		}
+		*ptr = bValue
+	case *int:
+		if value == "" {
+			*ptr = 0
+		} else {
+			iValue, err := strconv.Atoi(value)
+			if err != nil {
+				return err
+			}
+			*ptr = iValue
+		}
+	case **models.TruncationSettings:
+		return unmarshalJSONToPointer(value, ptr)
+	case **models.NumberFormatSettings:
+		return unmarshalJSONToPointer(value, ptr)
+	case **models.SymbolDisplaySettings:
+		return unmarshalJSONToPointer(value, ptr)
+	}
+	return nil
+}
+
 // GetSettingByGroup retrieves settings based on the provided `settings` struct, populating it with values from the database.
 func (q *SettingQueries) GetSettingByGroup(ctx context.Context, settings any) (any, error) {
 	fieldMap := q.GroupFieldMap(settings)
-
 	if fieldMap == nil {
 		return nil, errors.ErrSettingNotFound
 	}
@@ -141,60 +183,53 @@ func (q *SettingQueries) GetSettingByGroup(ctx context.Context, settings any) (a
 
 	for rows.Next() {
 		var key, value string
-		err := rows.Scan(&key, &value)
-		if err != nil {
+		if err := rows.Scan(&key, &value); err != nil {
 			return nil, err
 		}
 
 		if fieldPtr, ok := fieldMap[key]; ok {
-			switch ptr := fieldPtr.(type) {
-			case *string:
-				*ptr = value
-			case *bool:
-				bValue, err := strconv.ParseBool(value)
-				if err != nil {
-					return nil, err
-				}
-				*ptr = bValue
-			case *int:
-				if value == "" {
-					*ptr = 0
-				} else {
-					iValue, err := strconv.Atoi(value)
-					if err != nil {
-						return nil, err
-					}
-					*ptr = iValue
-				}
-			case **models.TruncationSettings:
-				if value != "" {
-					var ts models.TruncationSettings
-					if err := json.Unmarshal([]byte(value), &ts); err != nil {
-						return nil, err
-					}
-					*ptr = &ts
-				}
-			case **models.NumberFormatSettings:
-				if value != "" {
-					var nf models.NumberFormatSettings
-					if err := json.Unmarshal([]byte(value), &nf); err != nil {
-						return nil, err
-					}
-					*ptr = &nf
-				}
-			case **models.SymbolDisplaySettings:
-				if value != "" {
-					var sd models.SymbolDisplaySettings
-					if err := json.Unmarshal([]byte(value), &sd); err != nil {
-						return nil, err
-					}
-					*ptr = &sd
-				}
+			if err := parseSettingValue(value, fieldPtr); err != nil {
+				return nil, err
 			}
 		}
 	}
 
 	return settings, nil
+}
+
+// marshalJSONFromPointer marshals a pointer of type T to JSON string
+func marshalJSONFromPointer[T any](ptr *T) (string, error) {
+	if ptr == nil {
+		return "", nil
+	}
+	jsonBytes, err := json.Marshal(ptr)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonBytes), nil
+}
+
+// serializeSettingValue converts a field pointer to its string representation
+func serializeSettingValue(valuePtr any) (string, bool, error) {
+	switch v := valuePtr.(type) {
+	case *string:
+		return *v, true, nil
+	case *bool:
+		return strconv.FormatBool(*v), true, nil
+	case *int:
+		return strconv.Itoa(*v), true, nil
+	case **models.TruncationSettings:
+		value, err := marshalJSONFromPointer(*v)
+		return value, true, err
+	case **models.NumberFormatSettings:
+		value, err := marshalJSONFromPointer(*v)
+		return value, true, err
+	case **models.SymbolDisplaySettings:
+		value, err := marshalJSONFromPointer(*v)
+		return value, true, err
+	default:
+		return "", false, nil
+	}
 }
 
 // UpdateSettingByGroup updates the settings in the database using a transaction.
@@ -209,77 +244,27 @@ func (q *SettingQueries) UpdateSettingByGroup(ctx context.Context, settings any)
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	updateStmt, err := tx.PrepareContext(ctx, `UPDATE setting SET value = ? WHERE key = ?`)
+	upsertStmt, err := tx.PrepareContext(ctx, `
+		INSERT INTO setting (id, key, value) VALUES (?, ?, ?)
+		ON CONFLICT(key) DO UPDATE SET value = excluded.value
+	`)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = updateStmt.Close() }()
-
-	insertStmt, err := tx.PrepareContext(ctx, `INSERT INTO setting (id, key, value) VALUES (?, ?, ?)`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = insertStmt.Close() }()
-
-	checkStmt, err := tx.PrepareContext(ctx, `SELECT id FROM setting WHERE key = ?`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = checkStmt.Close() }()
+	defer func() { _ = upsertStmt.Close() }()
 
 	for key, valuePtr := range fieldMap {
-		var value string
-		switch v := valuePtr.(type) {
-		case *string:
-			value = *v
-		case *bool:
-			value = strconv.FormatBool(*v)
-		case *int:
-			value = strconv.Itoa(*v)
-		case **models.TruncationSettings:
-			if *v != nil {
-				jsonBytes, err := json.Marshal(*v)
-				if err != nil {
-					return err
-				}
-				value = string(jsonBytes)
-			}
-		case **models.NumberFormatSettings:
-			if *v != nil {
-				jsonBytes, err := json.Marshal(*v)
-				if err != nil {
-					return err
-				}
-				value = string(jsonBytes)
-			}
-		case **models.SymbolDisplaySettings:
-			if *v != nil {
-				jsonBytes, err := json.Marshal(*v)
-				if err != nil {
-					return err
-				}
-				value = string(jsonBytes)
-			}
-		default:
+		value, ok, err := serializeSettingValue(valuePtr)
+		if err != nil {
+			return err
+		}
+		if !ok {
 			continue
 		}
 
-		// Check if setting exists
-		var existingID string
-		err := checkStmt.QueryRowContext(ctx, key).Scan(&existingID)
-		if stderrors.Is(err, sql.ErrNoRows) {
-			// Setting doesn't exist, insert new one
-			newID := security.RandomString()
-			if _, err = insertStmt.ExecContext(ctx, newID, key, value); err != nil {
-				return err
-			}
-		} else if err != nil {
+		newID := security.RandomString()
+		if _, err = upsertStmt.ExecContext(ctx, newID, key, value); err != nil {
 			return err
-		} else {
-			// Setting exists, update it
-			if _, err = updateStmt.ExecContext(ctx, value, key); err != nil {
-				return err
-			}
 		}
 	}
 

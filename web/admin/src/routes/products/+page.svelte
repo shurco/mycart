@@ -248,7 +248,7 @@
     }
   }
 
-  async function handleSubmit() {
+  function validateProductForm(): number | null {
     formErrors = validateFields(formData, [
       { field: 'name', ...validators.minLength(MIN_NAME_LENGTH, ERROR_MESSAGES.NAME_TOO_SHORT) },
       { field: 'slug', ...validators.minLength(MIN_SLUG_LENGTH, ERROR_MESSAGES.SLUG_TOO_SHORT) }
@@ -257,41 +257,46 @@
     const amountValue = typeof formData.amount === 'string' ? parseFloat(formData.amount) : formData.amount
     if (isNaN(amountValue) || amountValue < 0) {
       formErrors.amount = ERROR_MESSAGES.AMOUNT_INVALID
+      return null
     }
 
     if (drawerMode === 'add' && (!formData.digital?.type || formData.digital.type.trim() === '')) {
       formErrors.digital_type = ERROR_MESSAGES.DIGITAL_TYPE_REQUIRED
     }
 
-    if (Object.keys(formErrors).length > 0) {
-      return
-    }
+    return Object.keys(formErrors).length > 0 ? null : amountValue
+  }
 
-    const isUpdate = drawerMode === 'edit' && drawerProduct !== null
-    const url = isUpdate ? `/api/_/products/${drawerProduct!.product.id}` : '/api/_/products'
-    const amountInCents = Math.round((amountValue || 0) * CENTS_PER_UNIT)
-    const submitData: Partial<Product> = {
+  function prepareSubmitData(amountValue: number): Partial<Product> {
+    const amountInCents = Math.round(amountValue * CENTS_PER_UNIT)
+    return {
       ...formData,
       amount: amountInCents
     }
+  }
+
+  async function handleSaveResult(result: Product | null, isUpdate: boolean) {
+    if (!result) return
+
+    if (isUpdate) {
+      updateProductInList(result)
+    } else {
+      products = [result, ...products]
+      total++
+    }
+    closeDrawer()
+  }
+
+  async function handleSubmit() {
+    const amountValue = validateProductForm()
+    if (amountValue === null) return
+
+    const isUpdate = drawerMode === 'edit' && drawerProduct !== null
+    const url = isUpdate ? `/api/_/products/${drawerProduct!.product.id}` : '/api/_/products'
+    const submitData = prepareSubmitData(amountValue)
 
     const result = await saveData<Product>(url, submitData, isUpdate, t('products.failedToSave'), t('products.failedToSave'))
-    if (result) {
-      if (isUpdate) {
-        updateProductInList(result)
-      } else {
-        await loadProducts()
-      }
-      closeDrawer()
-    } else if (isUpdate && drawerProduct) {
-      const updatedProduct = await loadData<Product>(
-        `/api/_/products/${drawerProduct.product.id}`,
-        'Failed to load product'
-      )
-      if (updatedProduct) {
-        updateProductInList(updatedProduct)
-      }
-    }
+    await handleSaveResult(result, isUpdate)
   }
 
   async function handleDeleteProduct() {
