@@ -980,24 +980,50 @@ func (q *ProductQueries) AddProductWithVariants(ctx context.Context, product *mo
 	}
 
 	// 2. Insert product images
-	for i, img := range product.Images {
-		_, err = tx.ExecContext(ctx, `
-			INSERT INTO product_image (id, product_id, name, ext, orig_name, position)
-			VALUES (?, ?, ?, ?, ?, ?)
-		`, img.ID, product.ID, img.Name, img.Ext, img.OrigName, i)
-		if err != nil {
-			return nil, fmt.Errorf("insert product image: %w", err)
-		}
+	if err = q.insertProductImages(ctx, tx, product.ID, product.Images); err != nil {
+		return nil, err
 	}
 
 	// 3. Insert options and option values
-	for _, option := range product.Options {
-		_, err = tx.ExecContext(ctx, `
+	if err = q.insertProductOptions(ctx, tx, product.ID, product.Options); err != nil {
+		return nil, err
+	}
+
+	// 4. Insert variants with relationships and images
+	if err = q.insertProductVariants(ctx, tx, product); err != nil {
+		return nil, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return product, nil
+}
+
+// insertProductImages inserts all product images within a transaction
+func (q *ProductQueries) insertProductImages(ctx context.Context, tx *sql.Tx, productID string, images []models.File) error {
+	for i, img := range images {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO product_image (id, product_id, name, ext, orig_name, position)
+			VALUES (?, ?, ?, ?, ?, ?)
+		`, img.ID, productID, img.Name, img.Ext, img.OrigName, i)
+		if err != nil {
+			return fmt.Errorf("insert image %d: %w", i, err)
+		}
+	}
+	return nil
+}
+
+// insertProductOptions inserts options and their values within a transaction
+func (q *ProductQueries) insertProductOptions(ctx context.Context, tx *sql.Tx, productID string, options []models.ProductOption) error {
+	for _, option := range options {
+		_, err := tx.ExecContext(ctx, `
 			INSERT INTO product_option (id, product_id, name, position)
 			VALUES (?, ?, ?, ?)
-		`, option.ID, product.ID, option.Name, option.Position)
+		`, option.ID, productID, option.Name, option.Position)
 		if err != nil {
-			return nil, fmt.Errorf("insert option: %w", err)
+			return fmt.Errorf("insert option %s: %w", option.Name, err)
 		}
 
 		for _, value := range option.Values {
@@ -1006,17 +1032,20 @@ func (q *ProductQueries) AddProductWithVariants(ctx context.Context, product *mo
 				VALUES (?, ?, ?, ?)
 			`, value.ID, option.ID, value.Value, value.Position)
 			if err != nil {
-				return nil, fmt.Errorf("insert option value: %w", err)
+				return fmt.Errorf("insert option value %s: %w", value.Value, err)
 			}
 		}
 	}
+	return nil
+}
 
-	// 4. Insert variants
+// insertProductVariants inserts variants with relationships and images within a transaction
+func (q *ProductQueries) insertProductVariants(ctx context.Context, tx *sql.Tx, product *models.Product) error {
 	for _, variant := range product.Variants {
 		// Marshal option values to JSON
 		optionValuesJSON, err := json.Marshal(variant.OptionValues)
 		if err != nil {
-			return nil, fmt.Errorf("marshal option values: %w", err)
+			return fmt.Errorf("marshal option values: %w", err)
 		}
 
 		_, err = tx.ExecContext(ctx, `
@@ -1025,7 +1054,7 @@ func (q *ProductQueries) AddProductWithVariants(ctx context.Context, product *mo
 			) VALUES (?, ?, ?, ?, ?, ?, ?)
 		`, variant.ID, product.ID, variant.SKU, variant.PriceSurcharge, variant.Quantity, string(optionValuesJSON), variant.Active)
 		if err != nil {
-			return nil, fmt.Errorf("insert variant: %w", err)
+			return fmt.Errorf("insert variant %s: %w", variant.SKU, err)
 		}
 
 		// Insert variant-option relationships
@@ -1039,7 +1068,7 @@ func (q *ProductQueries) AddProductWithVariants(ctx context.Context, product *mo
 				WHERE po.product_id = ? AND po.name = ? AND pov.value = ?
 			`, product.ID, optionName, optionValue).Scan(&optionValueID)
 			if err != nil {
-				return nil, fmt.Errorf("find option value ID: %w", err)
+				return fmt.Errorf("find option value ID for %s=%s: %w", optionName, optionValue, err)
 			}
 
 			_, err = tx.ExecContext(ctx, `
@@ -1047,7 +1076,7 @@ func (q *ProductQueries) AddProductWithVariants(ctx context.Context, product *mo
 				VALUES (?, ?)
 			`, variant.ID, optionValueID)
 			if err != nil {
-				return nil, fmt.Errorf("insert variant-option relationship: %w", err)
+				return fmt.Errorf("insert variant-option relationship: %w", err)
 			}
 		}
 
@@ -1058,16 +1087,11 @@ func (q *ProductQueries) AddProductWithVariants(ctx context.Context, product *mo
 				VALUES (?, ?, ?, ?, ?, ?)
 			`, img.ID, variant.ID, img.Name, img.Ext, img.OrigName, i)
 			if err != nil {
-				return nil, fmt.Errorf("insert variant image: %w", err)
+				return fmt.Errorf("insert variant image %d: %w", i, err)
 			}
 		}
 	}
-
-	if err = tx.Commit(); err != nil {
-		return nil, fmt.Errorf("commit transaction: %w", err)
-	}
-
-	return product, nil
+	return nil
 }
 
 // GetProductWithVariants retrieves a product with all its options and variants
