@@ -2,14 +2,16 @@
   import type { Product } from '$lib/types/models'
   import { cartStore } from '$lib/stores/cart'
   import { costFormat } from '$lib/utils/costFormat'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { settingsStore } from '$lib/stores/settings'
   import { getFirstImageUrl } from '$lib/utils/imageUrl'
   import { toggleCartItem } from '$lib/utils/cart'
   import { handleNavigation } from '$lib/utils/navigation'
-  import { translate } from '$lib/i18n'
+  import { translate, locale } from '$lib/i18n'
 
   // Reactive translation function
   let t = $derived($translate)
+  let currentLocale = $derived($locale)
 
   interface Props {
     product: Product
@@ -65,11 +67,16 @@
     <div class="mt-auto flex items-center justify-between gap-4">
       <div class="flex items-baseline gap-2">
         <span class="text-3xl font-black tracking-tight text-black">
-          {costFormat(product.amount) === 'free' ? t('product.free') : costFormat(product.amount)}
+          {costFormat(product.amount) === 'free'
+            ? t('product.free')
+            : formatCurrencyWithTruncation(
+                product.amount,
+                currency || 'USD',
+                'storefront',
+                undefined, // TODO: Load truncation settings from backend
+                currentLocale
+              )}
         </span>
-        {#if product.amount !== 0 && product.amount}
-          <span class="text-lg font-bold text-gray-600 uppercase">{currency}</span>
-        {/if}
       </div>
 
       <button
