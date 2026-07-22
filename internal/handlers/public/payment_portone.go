@@ -72,6 +72,40 @@ func callPortoneAPI(endpoint string, apiSecret string) (*http.Response, error) {
 	return resp, nil
 }
 
+// validatePaymentAmount verifies payment amount matches cart total
+func validatePaymentAmount(paymentTotal int, cartTotal float64, log *logging.Logger) error {
+	expectedAmount := int(cartTotal * 100)
+	if paymentTotal != expectedAmount {
+		log.Error().Msgf("Amount mismatch: expected %d, got %d", expectedAmount, paymentTotal)
+		return fmt.Errorf("amount mismatch")
+	}
+	return nil
+}
+
+// validatePaymentCurrency verifies payment currency matches cart currency
+func validatePaymentCurrency(paymentCurrency, cartCurrency string, log *logging.Logger) error {
+	if paymentCurrency != cartCurrency {
+		log.Error().Msgf("Currency mismatch: expected %s, got %s", cartCurrency, paymentCurrency)
+		return fmt.Errorf("currency mismatch")
+	}
+	return nil
+}
+
+// validateCartID verifies cart_id in payment custom data
+func validateCartID(customDataJSON, expectedCartID string, log *logging.Logger) error {
+	var customData struct {
+		CartID string `json:"cart_id"`
+	}
+	if err := json.Unmarshal([]byte(customDataJSON), &customData); err != nil {
+		return fmt.Errorf("failed to parse custom data: %w", err)
+	}
+	if customData.CartID != expectedCartID {
+		log.Error().Msgf("Cart ID mismatch: expected %s, got %s", expectedCartID, customData.CartID)
+		return fmt.Errorf("cart ID mismatch")
+	}
+	return nil
+}
+
 // CompletePortonePayment verifies payment after browser completes PortOne payment flow
 //
 // @Summary      Complete PortOne payment
@@ -115,7 +149,7 @@ func CompletePortonePayment(c fiber.Ctx) error {
 		return webutil.StatusInternalServerError(c)
 	}
 
-	// Call PortOne API
+	// Call PortOne API and parse response
 	resp, err := callPortoneAPI("/payments/"+request.PaymentID, settings.ApiSecret)
 	if err != nil {
 		log.ErrorStack(err)
@@ -132,7 +166,6 @@ func CompletePortonePayment(c fiber.Ctx) error {
 		return webutil.StatusInternalServerError(c)
 	}
 
-	// Parse response
 	var payment struct {
 		ID     string `json:"id"`
 		Status string `json:"status"`
@@ -152,29 +185,18 @@ func CompletePortonePayment(c fiber.Ctx) error {
 		return webutil.StatusBadRequest(c, fmt.Sprintf("Payment not completed: %s", payment.Status))
 	}
 
-	// Verify amount (PortOne uses smallest currency unit, e.g. cents)
-	if payment.Amount.Total != int(cart.AmountTotal*100) {
-		log.Error().Msgf("Amount mismatch: expected %d, got %d", int(cart.AmountTotal*100), payment.Amount.Total)
-		return webutil.StatusBadRequest(c, "Amount mismatch")
+	// Validate payment details
+	if err := validatePaymentAmount(payment.Amount.Total, cart.AmountTotal, log); err != nil {
+		return webutil.StatusBadRequest(c, err.Error())
 	}
 
-	// Verify currency
-	if payment.Amount.Currency != cart.Currency {
-		log.Error().Msgf("Currency mismatch: expected %s, got %s", cart.Currency, payment.Amount.Currency)
-		return webutil.StatusBadRequest(c, "Currency mismatch")
+	if err := validatePaymentCurrency(payment.Amount.Currency, cart.Currency, log); err != nil {
+		return webutil.StatusBadRequest(c, err.Error())
 	}
 
-	// Verify cart_id in customData
-	var customData struct {
-		CartID string `json:"cart_id"`
-	}
-	if err := json.Unmarshal([]byte(payment.CustomData), &customData); err != nil {
+	if err := validateCartID(payment.CustomData, request.CartID, log); err != nil {
 		log.ErrorStack(err)
-		return webutil.StatusBadRequest(c, "Failed to parse custom data")
-	}
-	if customData.CartID != request.CartID {
-		log.Error().Msgf("Cart ID mismatch: expected %s, got %s", request.CartID, customData.CartID)
-		return webutil.StatusBadRequest(c, "Cart ID mismatch")
+		return webutil.StatusBadRequest(c, err.Error())
 	}
 
 	// Update cart status

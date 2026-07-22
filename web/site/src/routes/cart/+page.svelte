@@ -47,6 +47,102 @@
     }
   }
 
+  // Create cart record and return cart_id
+  async function createCartRecord(email: string, cart: any[]): Promise<string> {
+    debugLog('Creating cart record...')
+    const cartCreateRes = await apiPost<{ cart_id: string; amount_total: number; currency: string }>('/api/cart/create', {
+      email: email,
+      provider: 'portone',
+      products: cart.map((item) => ({ id: item.id, quantity: 1 }))
+    })
+    debugLog('Cart create response:', cartCreateRes)
+
+    if (!cartCreateRes.success || !cartCreateRes.result?.cart_id) {
+      throw new Error('Failed to create cart: ' + (cartCreateRes.message || 'Unknown error'))
+    }
+
+    return cartCreateRes.result.cart_id
+  }
+
+  // Verify payment with backend
+  async function verifyPayment(paymentId: string, cartId: string): Promise<boolean> {
+    console.log('Verifying payment with backend...')
+    const verifyRes = await apiPost('/api/payment/portone/complete', {
+      payment_id: paymentId,
+      cart_id: cartId
+    })
+    console.log('Backend verification response:', verifyRes)
+
+    if (!verifyRes.success) {
+      throw new Error('Payment verification failed: ' + (verifyRes.message || 'Unknown error'))
+    }
+
+    return true
+  }
+
+  // Handle PortOne payment flow
+  async function handlePortonePayment(email: string, cart: any[], cartTotal: number, currency: string) {
+    debugLog('=== PORTONE PAYMENT FLOW ===')
+    debugLog('PortOne SDK available?', typeof PortOne !== 'undefined')
+    debugLog('PortOne.requestPayment available?', typeof PortOne?.requestPayment === 'function')
+
+    // Validate PortOne configuration
+    if (!portoneStoreId || !portoneChannelKey) {
+      throw new Error('PortOne configuration not loaded. Please refresh the page.')
+    }
+
+    debugLog('PortOne payment request:', {
+      storeId: portoneStoreId,
+      channelKey: portoneChannelKey,
+      cartTotal: cartTotal,
+      currency: currency,
+      protocol: window.location.protocol,
+      hostname: window.location.hostname
+    })
+
+    // Generate unique payment ID
+    const paymentId = `payment-${generateUUID()}`
+    debugLog('Generated payment ID:', paymentId)
+
+    // Create cart and get cart_id
+    const cartId = await createCartRecord(email, cart)
+    debugLog('Cart created with ID:', cartId)
+
+    // Prepare and execute payment request
+    const paymentRequest = {
+      storeId: portoneStoreId,
+      channelKey: portoneChannelKey,
+      paymentId: paymentId,
+      orderName: `Order ${cart.length} items`,
+      totalAmount: cartTotal,
+      currency: "KRW",
+      payMethod: "EASY_PAY",
+      customData: { cart_id: cartId }
+    }
+    console.log('Payment request object:', paymentRequest)
+
+    // Call PortOne SDK
+    console.log('Calling PortOne.requestPayment...')
+    const response = await PortOne.requestPayment(paymentRequest)
+    console.log('PortOne payment response received:', response)
+
+    // Check for payment errors
+    if (response.code != null) {
+      console.error('PortOne returned error code:', response.code, 'message:', response.message)
+      throw new Error(response.message)
+    }
+
+    // Verify payment with backend
+    await verifyPayment(response.paymentId, cartId)
+    console.log('Payment verified successfully!')
+
+    // Clear cart and redirect to success
+    cartStore.set([])
+    removeLocalStorage('email')
+    removeLocalStorage('provider')
+    goto('/cart/payment/success')
+  }
+
   let cart = $derived($cartStore)
   let currency = $derived($settingsStore?.main.currency || '')
 
@@ -153,97 +249,10 @@
 
     // Handle PortOne payment with browser SDK
     if (provider === 'portone') {
-      debugLog('=== PORTONE PAYMENT FLOW ===')
-      debugLog('PortOne SDK available?', typeof PortOne !== 'undefined')
-      debugLog('PortOne.requestPayment available?', typeof PortOne?.requestPayment === 'function')
-
       showOverlay = true
 
       try {
-        // Validate PortOne configuration is loaded
-        if (!portoneStoreId || !portoneChannelKey) {
-          error = 'PortOne configuration not loaded. Please refresh the page.'
-          showOverlay = true
-          return
-        }
-
-        debugLog('PortOne payment request:', {
-          storeId: portoneStoreId,
-          channelKey: portoneChannelKey,
-          cartTotal: cartTotal,
-          currency: currency,
-          protocol: window.location.protocol,
-          hostname: window.location.hostname
-        })
-
-        // Generate unique payment ID
-        const paymentId = `payment-${generateUUID()}`
-        debugLog('Generated payment ID:', paymentId)
-
-        // Create cart record first and get cart_id
-        debugLog('Creating cart record...')
-        const cartCreateRes = await apiPost<{ cart_id: string; amount_total: number; currency: string }>('/api/cart/create', {
-          email: email,
-          provider: 'portone',
-          products: cart.map((item) => ({ id: item.id, quantity: 1 }))
-        })
-        debugLog('Cart create response:', cartCreateRes)
-
-        if (!cartCreateRes.success || !cartCreateRes.result?.cart_id) {
-          error = 'Failed to create cart: ' + (cartCreateRes.message || 'Unknown error')
-          showOverlay = true
-          return
-        }
-
-        const cartId = cartCreateRes.result.cart_id
-        debugLog('Cart created with ID:', cartId)
-
-        // Prepare payment request
-        const paymentRequest = {
-          storeId: portoneStoreId,
-          channelKey: portoneChannelKey,
-          paymentId: paymentId,
-          orderName: `Order ${cart.length} items`,
-          totalAmount: cartTotal,
-          currency: "KRW",
-          payMethod: "EASY_PAY",
-          customData: { cart_id: cartId }
-        }
-        console.log('Payment request object:', paymentRequest)
-
-        // Call PortOne SDK
-        console.log('Calling PortOne.requestPayment...')
-        const response = await PortOne.requestPayment(paymentRequest)
-        console.log('PortOne payment response received:', response)
-
-        // Check for payment errors
-        if (response.code != null) {
-          console.error('PortOne returned error code:', response.code, 'message:', response.message)
-          error = response.message
-          showOverlay = true
-          return
-        }
-
-        // Verify payment with backend
-        console.log('Verifying payment with backend...')
-        const verifyRes = await apiPost('/api/payment/portone/complete', {
-          payment_id: response.paymentId,
-          cart_id: cartId
-        })
-        console.log('Backend verification response:', verifyRes)
-
-        if (verifyRes.success) {
-          console.log('Payment verified successfully!')
-          // Clear cart and redirect to success
-          cartStore.set([])
-          removeLocalStorage('email')
-          removeLocalStorage('provider')
-          goto('/cart/payment/success')
-        } else {
-          console.error('Payment verification failed:', verifyRes.message)
-          error = 'Payment verification failed: ' + (verifyRes.message || 'Unknown error')
-          showOverlay = true
-        }
+        await handlePortonePayment(email, cart, cartTotal, currency)
       } catch (err) {
         console.error('PortOne payment error (caught exception):', err)
         console.error('Error type:', typeof err)
