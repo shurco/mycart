@@ -73,8 +73,8 @@ func callPortoneAPI(endpoint string, apiSecret string) (*http.Response, error) {
 }
 
 // validatePaymentAmount verifies payment amount matches cart total
-func validatePaymentAmount(paymentTotal int, cartTotal float64, log *logging.Logger) error {
-	expectedAmount := int(cartTotal * 100)
+func validatePaymentAmount(paymentTotal int, cartTotal int, log *logging.Log) error {
+	expectedAmount := cartTotal * 100
 	if paymentTotal != expectedAmount {
 		log.Error().Msgf("Amount mismatch: expected %d, got %d", expectedAmount, paymentTotal)
 		return fmt.Errorf("amount mismatch")
@@ -83,7 +83,7 @@ func validatePaymentAmount(paymentTotal int, cartTotal float64, log *logging.Log
 }
 
 // validatePaymentCurrency verifies payment currency matches cart currency
-func validatePaymentCurrency(paymentCurrency, cartCurrency string, log *logging.Logger) error {
+func validatePaymentCurrency(paymentCurrency, cartCurrency string, log *logging.Log) error {
 	if paymentCurrency != cartCurrency {
 		log.Error().Msgf("Currency mismatch: expected %s, got %s", cartCurrency, paymentCurrency)
 		return fmt.Errorf("currency mismatch")
@@ -92,7 +92,7 @@ func validatePaymentCurrency(paymentCurrency, cartCurrency string, log *logging.
 }
 
 // validateCartID verifies cart_id in payment custom data
-func validateCartID(customDataJSON, expectedCartID string, log *logging.Logger) error {
+func validateCartID(customDataJSON, expectedCartID string, log *logging.Log) error {
 	var customData struct {
 		CartID string `json:"cart_id"`
 	}
