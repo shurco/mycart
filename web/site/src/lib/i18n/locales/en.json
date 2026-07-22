@@ -1,7 +1,8 @@
 {
   "common": {
     "loading": "LOADING...",
-    "poweredBy": "Powered by myCart"
+    "poweredBy": "Powered by myCart",
+    "backToHome": "BACK TO HOME"
   },
   "languages": {
     "en": "English",

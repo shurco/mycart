@@ -1,7 +1,8 @@
 {
   "common": {
     "loading": "로딩 중...",
-    "poweredBy": "myCart 제공"
+    "poweredBy": "myCart 제공",
+    "backToHome": "홈으로 돌아가기"
   },
   "languages": {
     "en": "English",

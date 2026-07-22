@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { cartStore } from '$lib/stores/cart'
   import { settingsStore } from '$lib/stores/settings'
   import { apiGet, apiPost } from '$lib/utils/api'
@@ -96,6 +96,20 @@
       })
     }
     // Don't auto-set provider for free carts on mount to prevent accidental checkout
+
+    // Handle browser back/forward cache (bfcache) - reload cart when page restored from cache
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        // Page was restored from bfcache, reload cart from storage
+        cartStore.reload()
+      }
+    }
+
+    window.addEventListener('pageshow', handlePageShow)
+
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow)
+    }
   })
 
   let showPayments = $derived(!isFree && hasPaymentProviders(payments))
@@ -122,7 +136,11 @@
     const cartData = {
       email,
       provider: finalProvider,
-      products: cart.map((item) => ({ id: item.id, quantity: 1 }))
+      products: cart.map((item) => ({
+        id: item.id,
+        variant_id: item.variant_id || undefined,
+        quantity: item.quantity
+      }))
     }
 
     const res = await apiPost<{ url?: string }>('/cart/payment', cartData)

@@ -1,7 +1,8 @@
 {
   "common": {
     "loading": "加载中...",
-    "poweredBy": "由 myCart 提供支持"
+    "poweredBy": "由 myCart 提供支持",
+    "backToHome": "返回首页"
   },
   "languages": {
     "en": "English",

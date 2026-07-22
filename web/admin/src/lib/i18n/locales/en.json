@@ -227,6 +227,7 @@
     "items": "Items",
     "noItems": "No items",
     "slug": "Slug:",
+    "variant": "Variant:",
     "price": "Price:",
     "quantity": "Quantity:",
     "subtotal": "Subtotal:",

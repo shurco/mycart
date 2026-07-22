@@ -125,6 +125,9 @@ function createCartStore() {
     clear: () => {
       set([])
       saveToStorage([])
+    },
+    reload: () => {
+      set(loadFromStorage())
     }
   }
 }

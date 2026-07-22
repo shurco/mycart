@@ -46,7 +46,7 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 				EXISTS(SELECT 1 FROM digital_data WHERE digital_data.product_id = product.id AND digital_data.cart_id IS NULL) OR
 				EXISTS(SELECT 1 FROM digital_file WHERE digital_file.product_id = product.id) AS digital_filled,
 				(SELECT json_group_array(json_object('id', product_image.id, 'name', product_image.name, 'ext', product_image.ext)) as images FROM product_image WHERE product_id = product.id GROUP BY id LIMIT 1) as image,
-				(SELECT json_group_array(json_object('id', product_variant.id)) FROM product_variant WHERE product_id = product.id AND active = 1) as variants,
+				(SELECT json_group_array(json_object('id', product_variant.id, 'sku', product_variant.sku, 'option_values', json(product_variant.option_values))) FROM product_variant WHERE product_id = product.id AND active = 1) as variants,
 				strftime('%s', created)
 			FROM product
 		`

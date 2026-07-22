@@ -230,6 +230,26 @@ func BuildCartItems(cart *models.Cart, products *models.Products) []map[string]a
 			item["image"] = product.Images[0]
 		}
 
+		// Include variant information if present
+		if cartItem.VariantID != nil && *cartItem.VariantID != "" {
+			item["variant_id"] = *cartItem.VariantID
+
+			// Find the matching variant details
+			for _, variant := range product.Variants {
+				if variant.ID == *cartItem.VariantID {
+					// Include variant option values (e.g. {"Size": "Medium", "Color": "Black"})
+					if len(variant.OptionValues) > 0 {
+						item["variant_options"] = variant.OptionValues
+					}
+					// Include SKU if available
+					if variant.SKU != "" {
+						item["variant_sku"] = variant.SKU
+					}
+					break
+				}
+			}
+		}
+
 		cartItems = append(cartItems, item)
 	}
 

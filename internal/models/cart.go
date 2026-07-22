@@ -16,8 +16,9 @@ type Cart struct {
 
 // CartProduct is ...
 type CartProduct struct {
-	ProductID string `json:"id"`
-	Quantity  int    `json:"quantity"`
+	ProductID string  `json:"id"`
+	VariantID *string `json:"variant_id,omitempty"`
+	Quantity  int     `json:"quantity"`
 }
 
 // CartPayment is ...

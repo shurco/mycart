@@ -227,6 +227,7 @@
     "items": "商品",
     "noItems": "无商品",
     "slug": "URL：",
+    "variant": "款式：",
     "price": "价格：",
     "quantity": "数量：",
     "subtotal": "小计：",

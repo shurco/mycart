@@ -99,12 +99,18 @@ func SendPrepaymentLetter(email, amountPayment, paymentURL string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	letter, err := db.CartLetterPayment(ctx, email, amountPayment, paymentURL)
+	mailSetting, err := queries.GetSettingByGroup[models.Mail](ctx, db)
 	if err != nil {
 		return err
 	}
 
-	mailSetting, err := queries.GetSettingByGroup[models.Mail](ctx, db)
+	// Check if SMTP is configured - if not, skip email gracefully
+	if mailSetting.SMTP.Host == "" || mailSetting.SMTP.Port <= 0 || mailSetting.SMTP.Username == "" || mailSetting.SMTP.Password == "" {
+		// SMTP not configured, skip email sending (useful for dev/test environments)
+		return nil
+	}
+
+	letter, err := db.CartLetterPayment(ctx, email, amountPayment, paymentURL)
 	if err != nil {
 		return err
 	}
@@ -128,12 +134,18 @@ func SendCartLetter(cartID string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	letter, err := db.CartLetterPurchase(ctx, cartID)
+	mailSetting, err := queries.GetSettingByGroup[models.Mail](ctx, db)
 	if err != nil {
 		return err
 	}
 
-	mailSetting, err := queries.GetSettingByGroup[models.Mail](ctx, db)
+	// Check if SMTP is configured - if not, skip email gracefully
+	if mailSetting.SMTP.Host == "" || mailSetting.SMTP.Port <= 0 || mailSetting.SMTP.Username == "" || mailSetting.SMTP.Password == "" {
+		// SMTP not configured, skip email sending (useful for dev/test environments)
+		return nil
+	}
+
+	letter, err := db.CartLetterPurchase(ctx, cartID)
 	if err != nil {
 		return err
 	}

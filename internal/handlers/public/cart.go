@@ -150,11 +150,14 @@ func Payment(c fiber.Ctx) error {
 		return webutil.StatusInternalServerError(c)
 	}
 
+	// Use request scheme (http/https) for URLs
+	protocol := c.Scheme()
+
 	items := make([]litepay.Item, len(products.Products))
 	for i, product := range products.Products {
 		images := []string{}
 		for _, image := range product.Images {
-			path := fmt.Sprintf("https://%s/uploads/%s_md.%s", domain, image.Name, image.Ext)
+			path := fmt.Sprintf("%s://%s/uploads/%s_md.%s", protocol, domain, image.Name, image.Ext)
 			images = append(images, path)
 		}
 
@@ -200,12 +203,12 @@ func Payment(c fiber.Ctx) error {
 		return webutil.StatusBadRequest(c, "Dummy payment provider can only be used for free items")
 	}
 
-	callbackURL := fmt.Sprintf("https://%s/cart/payment/callback", domain)
-	successURL := fmt.Sprintf("https://%s/cart/payment/success", domain)
-	cancelURL := fmt.Sprintf("https://%s/cart/payment/cancel", domain)
+	callbackURL := fmt.Sprintf("%s://%s/cart/payment/callback", protocol, domain)
+	successURL := fmt.Sprintf("%s://%s/cart/payment/success", protocol, domain)
+	cancelURL := fmt.Sprintf("%s://%s/cart/payment/cancel", protocol, domain)
 	pay := litepay.New(callbackURL, successURL, cancelURL)
 
-	paymentURL := fmt.Sprintf("https://%s/cart", domain)
+	paymentURL := fmt.Sprintf("%s://%s/cart", protocol, domain)
 	switch paymentSystem {
 	case litepay.STRIPE:
 		setting, err := queries.GetSettingByGroup[models.Stripe](c.Context(), db)
