@@ -132,6 +132,66 @@
     }
   }
 
+  // Validates product form fields and returns error object
+  function validateProductForm(formData: ProductFormData, drawerMode: string): Record<string, string> {
+    const errors = validateFields(formData, [
+      { field: 'name', ...validators.minLength(MIN_NAME_LENGTH, ERROR_MESSAGES.NAME_TOO_SHORT) },
+      { field: 'slug', ...validators.minLength(MIN_SLUG_LENGTH, ERROR_MESSAGES.SLUG_TOO_SHORT) }
+    ])
+
+    const amountValue = typeof formData.amount === 'string' ? parseFloat(formData.amount) : formData.amount
+    if (isNaN(amountValue) || amountValue < 0) {
+      errors.amount = ERROR_MESSAGES.AMOUNT_INVALID
+    }
+
+    if (drawerMode === 'add' && (!formData.digital?.type || formData.digital.type.trim() === '')) {
+      errors.digital_type = ERROR_MESSAGES.DIGITAL_TYPE_REQUIRED
+    }
+
+    return errors
+  }
+
+  // Prepares form data for API submission with conversions
+  function prepareSubmitData(formData: ProductFormData): Partial<Product> {
+    const amountValue = typeof formData.amount === 'string' ? parseFloat(formData.amount) : formData.amount
+    const amountInCents = Math.round((amountValue || 0) * CENTS_PER_UNIT)
+
+    // Convert Svelte 5 $state proxies to plain objects for JSON serialization
+    return {
+      ...formData,
+      amount: amountInCents,
+      options: formData.options ? JSON.parse(JSON.stringify(formData.options)) : [],
+      variants: formData.variants ? JSON.parse(JSON.stringify(formData.variants)) : []
+    }
+  }
+
+  // Handles the response after form submission
+  async function handleSubmitResponse(
+    result: Product | null,
+    isUpdate: boolean,
+    drawerProduct: DrawerProduct | null,
+    updateProductInList: (product: Product) => void,
+    loadProducts: () => Promise<void>,
+    closeDrawer: () => void
+  ): Promise<void> {
+    if (result) {
+      if (isUpdate) {
+        updateProductInList(result)
+      } else {
+        await loadProducts()
+      }
+      closeDrawer()
+    } else if (isUpdate && drawerProduct) {
+      const updatedProduct = await loadData<Product>(
+        `/api/_/products/${drawerProduct.product.id}`,
+        'Failed to load product'
+      )
+      if (updatedProduct) {
+        updateProductInList(updatedProduct)
+      }
+    }
+  }
+
   function handleAmountInput(event: Event) {
     const target = event.target as HTMLInputElement
     let value = target.value
@@ -316,35 +376,18 @@
   }
 
   async function handleSubmit() {
-    formErrors = validateFields(formData, [
-      { field: 'name', ...validators.minLength(MIN_NAME_LENGTH, ERROR_MESSAGES.NAME_TOO_SHORT) },
-      { field: 'slug', ...validators.minLength(MIN_SLUG_LENGTH, ERROR_MESSAGES.SLUG_TOO_SHORT) }
-    ])
-
-    const amountValue = typeof formData.amount === 'string' ? parseFloat(formData.amount) : formData.amount
-    if (isNaN(amountValue) || amountValue < 0) {
-      formErrors.amount = ERROR_MESSAGES.AMOUNT_INVALID
-    }
-
-    if (drawerMode === 'add' && (!formData.digital?.type || formData.digital.type.trim() === '')) {
-      formErrors.digital_type = ERROR_MESSAGES.DIGITAL_TYPE_REQUIRED
-    }
-
+    // Validate form
+    formErrors = validateProductForm(formData, drawerMode)
     if (Object.keys(formErrors).length > 0) {
       return
     }
 
+    // Determine mode and URL
     const isUpdate = drawerMode === 'edit' && drawerProduct !== null
     const url = isUpdate ? `/api/_/products/${drawerProduct!.product.id}` : '/api/_/products'
-    const amountInCents = Math.round((amountValue || 0) * CENTS_PER_UNIT)
 
-    // Convert Svelte 5 $state proxies to plain objects for JSON serialization
-    const submitData: Partial<Product> = {
-      ...formData,
-      amount: amountInCents,
-      options: formData.options ? JSON.parse(JSON.stringify(formData.options)) : [],
-      variants: formData.variants ? JSON.parse(JSON.stringify(formData.variants)) : []
-    }
+    // Prepare data for submission
+    const submitData = prepareSubmitData(formData)
 
     console.log('=== PRODUCT SAVE DEBUG ===')
     console.log('has_variants:', submitData.has_variants)
@@ -352,6 +395,7 @@
     console.log('variants:', JSON.stringify(submitData.variants, null, 2))
     console.log('Full submitData:', submitData)
 
+    // Submit to API
     const result = await saveData<Product>(
       url,
       submitData,
@@ -364,22 +408,9 @@
     console.log('Result has_variants:', result?.has_variants)
     console.log('Result options:', result?.options)
     console.log('Result variants:', result?.variants)
-    if (result) {
-      if (isUpdate) {
-        updateProductInList(result)
-      } else {
-        await loadProducts()
-      }
-      closeDrawer()
-    } else if (isUpdate && drawerProduct) {
-      const updatedProduct = await loadData<Product>(
-        `/api/_/products/${drawerProduct.product.id}`,
-        'Failed to load product'
-      )
-      if (updatedProduct) {
-        updateProductInList(updatedProduct)
-      }
-    }
+
+    // Handle response
+    await handleSubmitResponse(result, isUpdate, drawerProduct, updateProductInList, loadProducts, closeDrawer)
   }
 
   async function handleDeleteProduct() {
