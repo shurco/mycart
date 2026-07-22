@@ -69,7 +69,7 @@ func validateTruncation(value interface{}) error {
 	}
 
 	truncation, ok := value.(*TruncationSettings)
-	if !ok {
+	if !ok || truncation == nil {
 		return nil
 	}
 
