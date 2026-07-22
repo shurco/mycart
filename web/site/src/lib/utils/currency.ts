@@ -24,11 +24,16 @@ function applyDecimalPrecision(
   return rounded
 }
 
-export function formatCurrency(amount: number, currencyCode: string, numberFormat?: NumberFormatSettings): string {
+export function formatCurrency(
+  amount: number,
+  currencyCode: string,
+  numberFormat?: NumberFormatSettings,
+  symbolMode?: 'currency' | 'language',
+  locale?: string
+): string {
   const currency = CURRENCIES.find(c => c.code === currencyCode)
 
   if (!currency) {
-    // Fallback for unknown currencies
     return `${amount} ${currencyCode}`
   }
 
@@ -40,6 +45,12 @@ export function formatCurrency(amount: number, currencyCode: string, numberForma
     maximumFractionDigits: precision
   })
 
+  if (symbolMode === 'language') {
+    const currentLocale = locale || 'en'
+    const currencyName = currency.names?.[currentLocale] || currency.names?.en || currency.name
+    return `${formatted} ${currencyName}`
+  }
+
   return `${currency.symbol}${formatted}`
 }
 
@@ -49,16 +60,17 @@ export function formatCurrencyWithTruncation(
   context: 'admin' | 'storefront',
   truncationSettings?: TruncationSettings,
   locale?: string,
-  numberFormat?: NumberFormatSettings
+  numberFormat?: NumberFormatSettings,
+  symbolMode?: 'currency' | 'language'
 ): string {
   // Default to 'none' mode if settings missing
   if (!truncationSettings || !truncationSettings[context]) {
-    return formatCurrency(amount / 100, currencyCode, numberFormat)
+    return formatCurrency(amount / 100, currencyCode, numberFormat, symbolMode, locale)
   }
 
   const settings = truncationSettings[context][currencyCode]
   if (!settings || settings.mode === 'none') {
-    return formatCurrency(amount / 100, currencyCode, numberFormat)
+    return formatCurrency(amount / 100, currencyCode, numberFormat, symbolMode, locale)
   }
 
   const currency = CURRENCIES.find(c => c.code === currencyCode)
@@ -69,9 +81,16 @@ export function formatCurrencyWithTruncation(
   const pattern = getCurrencyPattern(currencyCode)
   const currentLocale = locale || 'en'
 
+  // Get currency name for language mode
+  const getCurrencyName = () => {
+    if (symbolMode === 'language') {
+      return currency.names?.[currentLocale] || currency.names?.en || currency.name
+    }
+    return null
+  }
+
   // Fixed mode: use specified unit
   if (settings.mode === 'fixed' && settings.fixed_unit) {
-    // Find unit by matching localized labels
     const unit = pattern.units.find(u => {
       const label = getUnitLabel(u.value, currencyCode, currentLocale)
       return label === settings.fixed_unit ||
@@ -82,11 +101,15 @@ export function formatCurrencyWithTruncation(
       const divided = (amount / 100) / unit.value
       const formatted = applyDecimalPrecision(divided, numberFormat)
       const unitLabel = getUnitLabel(unit.value, currencyCode, currentLocale)
+
+      const currencyName = getCurrencyName()
+      if (currencyName) {
+        return `${formatted}${unitLabel} ${currencyName}`
+      }
       return `${currency.symbol}${formatted}${unitLabel}`
     }
 
-    // Amount below unit threshold - show full amount
-    return formatCurrency(amount / 100, currencyCode, numberFormat)
+    return formatCurrency(amount / 100, currencyCode, numberFormat, symbolMode, locale)
   }
 
   // Flexible mode: auto-select best unit
@@ -97,13 +120,16 @@ export function formatCurrencyWithTruncation(
       const divided = (amount / 100) / unit.value
       const formatted = applyDecimalPrecision(divided, numberFormat)
       const unitLabel = getUnitLabel(unit.value, currencyCode, currentLocale)
+
+      const currencyName = getCurrencyName()
+      if (currencyName) {
+        return `${formatted}${unitLabel} ${currencyName}`
+      }
       return `${currency.symbol}${formatted}${unitLabel}`
     }
 
-    // No unit found - show full amount
-    return formatCurrency(amount / 100, currencyCode, numberFormat)
+    return formatCurrency(amount / 100, currencyCode, numberFormat, symbolMode, locale)
   }
 
-  // Fallback to full formatting
-  return formatCurrency(amount / 100, currencyCode, numberFormat)
+  return formatCurrency(amount / 100, currencyCode, numberFormat, symbolMode, locale)
 }
