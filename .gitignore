@@ -55,3 +55,6 @@ web/*/build/
 .shared/
 docker/docker-compose_private.yml
 /graphify-out/
+
+# Temporary files
+tmp/
