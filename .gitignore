@@ -65,3 +65,5 @@ web/site/package-lock.json
 tmp/
 mycart-linux
 mycart-test
+
+CLAUDE.md
