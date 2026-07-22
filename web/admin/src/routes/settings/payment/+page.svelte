@@ -4,6 +4,7 @@
   import Drawer from '$lib/components/Drawer.svelte'
   import Stripe from '$lib/components/payment/Stripe.svelte'
   import Paypal from '$lib/components/payment/Paypal.svelte'
+  import Portone from '$lib/components/payment/Portone.svelte'
   import Spectrocoin from '$lib/components/payment/Spectrocoin.svelte'
   import Coinbase from '$lib/components/payment/Coinbase.svelte'
   import FormButton from '$lib/components/form/Button.svelte'
@@ -20,7 +21,7 @@
   let t = $derived($translate)
 
   let drawerOpen = $state(false)
-  let drawerMode = $state<'stripe' | 'paypal' | 'spectrocoin' | 'coinbase' | null>(null)
+  let drawerMode = $state<'stripe' | 'paypal' | 'portone' | 'spectrocoin' | 'coinbase' | null>(null)
   let payments = $state<Record<string, boolean>>({})
   let payment = $state<PaymentSettings>({
     currency: ''
@@ -79,7 +80,7 @@
     await saveSettings('payment', payment, 'Currency saved')
   }
 
-  function openDrawer(mode: 'stripe' | 'paypal' | 'spectrocoin' | 'coinbase') {
+  function openDrawer(mode: 'stripe' | 'paypal' | 'portone' | 'spectrocoin' | 'coinbase') {
     drawerMode = mode
     drawerOpen = true
   }
@@ -145,6 +146,20 @@
           Paypal
         </div>
         <div
+          class="ml-5 cursor-pointer rounded p-2 {payments.portone ? 'bg-green-200' : 'bg-gray-200'}"
+          onclick={() => openDrawer('portone')}
+          role="button"
+          tabindex="0"
+          onkeydown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              openDrawer('portone')
+            }
+          }}
+        >
+          PortOne
+        </div>
+        <div
           class="ml-5 cursor-pointer rounded p-2 {payments.spectrocoin ? 'bg-green-200' : 'bg-gray-200'}"
           onclick={() => openDrawer('spectrocoin')}
           role="button"
@@ -183,6 +198,8 @@
       <Stripe onclose={closeDrawer} />
     {:else if drawerMode === 'paypal'}
       <Paypal onclose={closeDrawer} />
+    {:else if drawerMode === 'portone'}
+      <Portone onclose={closeDrawer} />
     {:else if drawerMode === 'spectrocoin'}
       <Spectrocoin onclose={closeDrawer} />
     {:else if drawerMode === 'coinbase'}

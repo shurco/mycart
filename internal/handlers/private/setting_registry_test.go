@@ -22,6 +22,7 @@ func TestSettingModelFor_KnownKeys(t *testing.T) {
 		{"payment", &models.Payment{}},
 		{"stripe", &models.Stripe{}},
 		{"paypal", &models.Paypal{}},
+		{"portone", &models.Portone{}},
 		{"spectrocoin", &models.Spectrocoin{}},
 		{"coinbase", &models.Coinbase{}},
 		{"dummy", &models.Dummy{}},

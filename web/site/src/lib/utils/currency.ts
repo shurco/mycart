@@ -1,17 +1,25 @@
-// web/site/src/lib/utils/currency.ts
-import { CURRENCIES } from '$lib/config/currencies'
+import { get } from 'svelte/store'
+import { locale } from '$lib/i18n'
 
-export function formatCurrency(amount: number, currencyCode: string): string {
-  const currency = CURRENCIES.find(c => c.code === currencyCode)
-  
-  if (!currency) {
-    // Fallback for unknown currencies
-    return `${amount} ${currencyCode}`
+export function formatCurrency(amount: number, currency: string): string {
+  if (!amount || amount === 0) return 'free'
+
+  const value = amount / 100 // Convert from cents
+
+  // KRW specific formatting
+  if (currency === 'KRW') {
+    const currentLocale = get(locale)
+    const rounded = Math.round(value) // No decimals for KRW
+    const formatted = rounded.toLocaleString()
+
+    // Korean UI: "3,000원"
+    if (currentLocale === 'ko') {
+      return `${formatted}원`
+    }
+    // English UI: "₩3,000"
+    return `₩${formatted}`
   }
 
-  const formatted = currency.decimals === 0
-    ? Math.round(amount).toLocaleString()
-    : amount.toFixed(currency.decimals)
-
-  return `${currency.symbol}${formatted}`
+  // Default formatting for other currencies
+  return `${value.toFixed(2)} ${currency}`
 }

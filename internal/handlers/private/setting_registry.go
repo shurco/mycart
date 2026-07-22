@@ -26,6 +26,7 @@ var settingRegistry = map[string]settingFactory{
 	"payment":     func() any { return &models.Payment{} },
 	"stripe":      func() any { return &models.Stripe{} },
 	"paypal":      func() any { return &models.Paypal{} },
+	"portone":     func() any { return &models.Portone{} },
 	"spectrocoin": func() any { return &models.Spectrocoin{} },
 	"coinbase":    func() any { return &models.Coinbase{} },
 	"dummy":       func() any { return &models.Dummy{} },
