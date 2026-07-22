@@ -9,24 +9,22 @@ export interface CurrencyPattern {
   units: UnitDefinition[]            // sorted largest to smallest
 }
 
-// USD pattern: K (1000), M (1000000)
+// USD pattern: K (1000), M (1000000), B (1000000000)
 // Used by: USD, GBP, EUR, CAD, AUD, CHF, CNY, SEK
 export const USD_PATTERN: CurrencyPattern = {
   type: 'usd',
   units: [
+    { value: 1000000000, keys: { en: 'B' } },
     { value: 1000000, keys: { en: 'M' } },
     { value: 1000, keys: { en: 'K' } }
   ]
 }
 
-// KRW pattern: 천, 만, 십만, 백만, 천만, 억, 십억, 백억
+// KRW pattern: 천, 만, 십만, 백만, 천만
 // Used by: KRW, JPY
 export const KRW_PATTERN: CurrencyPattern = {
   type: 'krw',
   units: [
-    { value: 10000000000, keys: { en: '10B', ko: '백억' } },
-    { value: 1000000000, keys: { en: '1B', ko: '십억' } },
-    { value: 100000000, keys: { en: '100M', ko: '억' } },
     { value: 10000000, keys: { en: '10M', ko: '천만' } },
     { value: 1000000, keys: { en: '1M', ko: '백만' } },
     { value: 100000, keys: { en: '100K', ko: '십만' } },
