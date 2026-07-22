@@ -21,6 +21,8 @@
   let { product, index = 0 }: Props = $props()
 
   let currency = $derived($settingsStore?.main.currency || '')
+  let truncationSettings = $derived($settingsStore?.payment?.truncation)
+  let numberFormat = $derived($settingsStore?.payment?.number_format)
   let cart = $derived($cartStore)
   let inCart = $derived(cart.some((item) => item.id === product.id))
 
@@ -73,8 +75,9 @@
                 product.amount,
                 currency || 'USD',
                 'storefront',
-                undefined, // TODO: Load truncation settings from backend
-                currentLocale
+                truncationSettings,
+                currentLocale,
+                numberFormat
               )}
         </span>
       </div>

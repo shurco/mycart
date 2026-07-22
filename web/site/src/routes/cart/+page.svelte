@@ -3,8 +3,7 @@
   import { cartStore } from '$lib/stores/cart'
   import { settingsStore } from '$lib/stores/settings'
   import { apiGet, apiPost } from '$lib/utils/api'
-  import { formatCurrency } from '$lib/utils/currency'
-  import { costFormat } from '$lib/utils/costFormat'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { getProductImageUrl } from '$lib/utils/imageUrl'
   import { hasPaymentProviders } from '$lib/utils/payment'
   import { getLocalStorage, setLocalStorage, removeLocalStorage } from '$lib/utils/browser'
@@ -12,7 +11,7 @@
   import { goto } from '$app/navigation'
   import Overlay from '$lib/components/Overlay.svelte'
   import { handleNavigation } from '$lib/utils/navigation'
-  import { translate } from '$lib/i18n'
+  import { translate, locale } from '$lib/i18n'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -26,6 +25,9 @@
 
   let cart = $derived($cartStore)
   let currency = $derived($settingsStore?.main.currency || '')
+  let truncationSettings = $derived($settingsStore?.payment?.truncation)
+  let numberFormat = $derived($settingsStore?.payment?.number_format)
+  let currentLocale = $derived($locale)
 
   // Calculate total cart amount in cents
   let cartTotal = $derived(cart.reduce((sum, item) => sum + item.amount, 0))
@@ -95,7 +97,11 @@
   let showPayments = $derived(!isFree && hasPaymentProviders(payments))
 
   // Computed value instead of function
-  let totalCartAmount = $derived(cartTotal === 0 ? t('product.free') : formatCurrency(cartTotal / 100, currency))
+  let totalCartAmount = $derived(
+    cartTotal === 0
+      ? t('product.free')
+      : formatCurrencyWithTruncation(cartTotal, currency, 'storefront', truncationSettings, currentLocale, numberFormat)
+  )
 
   async function checkOut(e: Event) {
     e.preventDefault()
@@ -192,7 +198,9 @@
                           ? 'text-green-500'
                           : 'text-black'}"
                       >
-                        {item.amount === 0 ? t('product.free') : formatCurrency(item.amount / 100, currency)}
+                        {item.amount === 0
+                          ? t('product.free')
+                          : formatCurrencyWithTruncation(item.amount, currency, 'storefront', truncationSettings, currentLocale, numberFormat)}
                       </span>
                       <button
                         type="button"
