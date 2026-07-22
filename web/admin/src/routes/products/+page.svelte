@@ -142,9 +142,8 @@
   })
 
   async function loadProducts(page = currentPage) {
-    // Set page BEFORE loading to prevent race condition with Pagination component
-    currentPage = page
     loading = true
+    currentPage = page
     products = [] // Clear products before loading to prevent duplicate keys during transition
     const result = await loadData<ProductsResponse>(
       `/api/_/products?page=${page}&limit=${limit}`,
