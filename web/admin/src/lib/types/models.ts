@@ -83,6 +83,11 @@ export interface NumberFormatSettings {
   show_trailing_zeros: boolean
 }
 
+export interface SymbolDisplaySettings {
+  admin: 'currency' | 'language'
+  storefront: 'currency' | 'language'
+}
+
 export interface TruncationSettings {
   admin: Record<string, CurrencyTruncationSettings>
   storefront: Record<string, CurrencyTruncationSettings>
@@ -92,6 +97,7 @@ export interface PaymentSettings {
   currency: string
   truncation?: TruncationSettings
   number_format?: NumberFormatSettings
+  symbol_display?: SymbolDisplaySettings
 }
 
 export interface StripeSettings {
