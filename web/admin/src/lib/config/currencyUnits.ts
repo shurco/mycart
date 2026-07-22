@@ -20,8 +20,8 @@ export const USD_PATTERN: CurrencyPattern = {
   ]
 }
 
-// KRW pattern: 천, 만, 십만, 백만, 천만
-// Used by: KRW, JPY
+// KRW pattern: 천, 만, 십만, 백만, 천만 (Korean)
+// Used by: KRW
 export const KRW_PATTERN: CurrencyPattern = {
   type: 'krw',
   units: [
@@ -30,6 +30,19 @@ export const KRW_PATTERN: CurrencyPattern = {
     { value: 100000, keys: { en: '100K', ko: '십만' } },
     { value: 10000, keys: { en: '10K', ko: '만' } },
     { value: 1000, keys: { en: '1K', ko: '천' } }
+  ]
+}
+
+// JPY pattern: 千, 万, 十万, 百万, 千万 (Japanese)
+// Used by: JPY
+export const JPY_PATTERN: CurrencyPattern = {
+  type: 'krw',
+  units: [
+    { value: 10000000, keys: { en: '10M', ja: '千万' } },
+    { value: 1000000, keys: { en: '1M', ja: '百万' } },
+    { value: 100000, keys: { en: '100K', ja: '十万' } },
+    { value: 10000, keys: { en: '10K', ja: '万' } },
+    { value: 1000, keys: { en: '1K', ja: '千' } }
   ]
 }
 
@@ -44,7 +57,7 @@ export const CURRENCY_PATTERNS: Record<string, CurrencyPattern> = {
   'CNY': USD_PATTERN,
   'SEK': USD_PATTERN,
   'KRW': KRW_PATTERN,
-  'JPY': KRW_PATTERN
+  'JPY': JPY_PATTERN
 }
 
 // Get pattern for a currency (fallback to USD pattern if not found)
