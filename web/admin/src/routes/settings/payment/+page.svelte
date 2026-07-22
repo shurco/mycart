@@ -8,10 +8,13 @@
   import Coinbase from '$lib/components/payment/Coinbase.svelte'
   import FormButton from '$lib/components/form/Button.svelte'
   import FormSelect from '$lib/components/form/Select.svelte'
+  import FormCheckbox from '$lib/components/form/Checkbox.svelte'
   import TruncationSettings from '$lib/components/TruncationSettings.svelte'
   import { systemStore } from '$lib/stores/system'
+  import { paymentSettingsStore } from '$lib/stores/payment'
   import { loadSettings as loadSettingsHelper, saveSettings } from '$lib/utils/settingsHelpers'
   import { loadData } from '$lib/utils/apiHelpers'
+  import { formatCurrency } from '$lib/utils/currency'
   import { translate } from '$lib/i18n'
   import { CURRENCIES } from '$lib/config/currencies'
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
@@ -27,6 +30,8 @@
     currency: ''
   })
   let formErrors = $state<Record<string, string>>({})
+  let decimalPrecision = $state('2')
+  let showTrailingZeros = $state(true)
 
   const currencyOptions = CURRENCIES.map(c => c.code)
 
@@ -83,8 +88,23 @@
     }
 
     const paymentSettings = await loadSettingsHelper<PaymentSettings>('payment', payment)
+    console.log('=== LOADED PAYMENT SETTINGS ===')
+    console.log('Loaded settings:', JSON.stringify(paymentSettings, null, 2))
     payment.currency = paymentSettings.currency
     payment.truncation = ensureDefaults(paymentSettings.truncation)
+    console.log('After ensureDefaults:', JSON.stringify(payment.truncation, null, 2))
+
+    // Load number format settings
+    const nf = paymentSettings.number_format || {
+      decimal_precision: 2,
+      show_trailing_zeros: true
+    }
+    decimalPrecision = String(nf.decimal_precision)
+    showTrailingZeros = nf.show_trailing_zeros
+    payment.number_format = nf
+
+    // Update global store for other admin pages to access
+    paymentSettingsStore.set(payment)
   }
 
   async function handleCurrencySubmit() {
@@ -108,14 +128,40 @@
     currency: string,
     settings: CurrencyTruncationSettings
   ) {
+    console.log('=== TRUNCATION CHANGE ===')
+    console.log('Context:', context, 'Currency:', currency)
+    console.log('New settings:', JSON.stringify(settings, null, 2))
     if (!payment.truncation) {
       payment.truncation = defaultTruncation()
     }
     payment.truncation[context][currency] = settings
+    // Force reactivity by reassigning the object
+    payment = { ...payment, truncation: { ...payment.truncation } }
+    console.log('Updated payment.truncation:', JSON.stringify(payment.truncation, null, 2))
   }
 
   async function handleTruncationSubmit() {
+    console.log('=== SAVING PAYMENT SETTINGS ===')
+    console.log('Payment object:', JSON.stringify(payment, null, 2))
+    console.log('Truncation:', JSON.stringify(payment.truncation, null, 2))
     await saveSettings('payment', payment, 'Truncation settings saved')
+  }
+
+  function formatPreview(value: number): string {
+    const nf = {
+      decimal_precision: parseInt(decimalPrecision) as 0 | 1 | 2,
+      show_trailing_zeros: showTrailingZeros
+    }
+    return formatCurrency(value, payment.currency || 'USD', nf)
+  }
+
+  async function handleNumberFormatSubmit() {
+    payment.number_format = {
+      decimal_precision: parseInt(decimalPrecision) as 0 | 1 | 2,
+      show_trailing_zeros: showTrailingZeros
+    }
+    await saveSettings('payment', payment, 'Number formatting saved')
+    paymentSettingsStore.set(payment)
   }
 
   function openDrawer(mode: 'stripe' | 'paypal' | 'spectrocoin' | 'coinbase') {
@@ -150,6 +196,38 @@
         <FormButton type="submit" name={t('common.save')} color="green" />
       </div>
     </form>
+    <hr class="mt-5" />
+
+    <div class="mt-5 max-w-2xl">
+      <h2 class="mb-5">Number Formatting</h2>
+
+      <FormSelect
+        id="decimal-precision"
+        title="Decimal Precision"
+        options={['0', '1', '2']}
+        bind:value={decimalPrecision}
+        ico="hash"
+      />
+
+      <FormCheckbox
+        id="trailing-zeros"
+        title="Show Trailing Zeros"
+        description="Display 1.00 instead of 1"
+        bind:value={showTrailingZeros}
+      />
+
+      <div class="mt-3 text-sm text-gray-600">
+        <div>Preview: 1.00 → {formatPreview(1.00)}</div>
+        <div>Preview: 1.23 → {formatPreview(1.23)}</div>
+      </div>
+
+      <div class="pt-5">
+        <FormButton onclick={handleNumberFormatSubmit} color="green">
+          {t('common.save')}
+        </FormButton>
+      </div>
+    </div>
+
     <hr class="mt-5" />
 
     {#if payment.currency}
