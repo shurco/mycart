@@ -97,11 +97,8 @@
     }
 
     const paymentSettings = await loadSettingsHelper<PaymentSettings>('payment', payment)
-    console.log('=== LOADED PAYMENT SETTINGS ===')
-    console.log('Loaded settings:', JSON.stringify(paymentSettings, null, 2))
     payment.currency = paymentSettings.currency
     payment.truncation = ensureDefaults(paymentSettings.truncation)
-    console.log('After ensureDefaults:', JSON.stringify(payment.truncation, null, 2))
 
     // Load number format settings
     const nf = paymentSettings.number_format || {
@@ -138,22 +135,15 @@
     currency: string,
     settings: CurrencyTruncationSettings
   ) {
-    console.log('=== TRUNCATION CHANGE ===')
-    console.log('Context:', context, 'Currency:', currency)
-    console.log('New settings:', JSON.stringify(settings, null, 2))
     if (!payment.truncation) {
       payment.truncation = defaultTruncation()
     }
     payment.truncation[context][currency] = settings
     // Force reactivity by reassigning the object
     payment = { ...payment, truncation: { ...payment.truncation } }
-    console.log('Updated payment.truncation:', JSON.stringify(payment.truncation, null, 2))
   }
 
   async function handleTruncationSubmit() {
-    console.log('=== SAVING PAYMENT SETTINGS ===')
-    console.log('Payment object:', JSON.stringify(payment, null, 2))
-    console.log('Truncation:', JSON.stringify(payment.truncation, null, 2))
     await saveSettings('payment', payment, 'Truncation settings saved')
     incrementSettingsVersion()
   }

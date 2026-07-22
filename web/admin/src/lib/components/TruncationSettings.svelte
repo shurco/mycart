@@ -51,36 +51,24 @@
     selectedOptionValue = selectedOption()
   })
 
-  // Debug: Log whenever selectedOptionValue changes
-  $effect(() => {
-    console.log('[DEBUG] selectedOptionValue is now:', selectedOptionValue)
-  })
-
   // Watch for changes to selectedOptionValue and call onChange
   $effect(() => {
-    console.log('[WATCH EFFECT] selectedOptionValue:', selectedOptionValue, 'selectedOption():', selectedOption())
     // Skip if unchanged or empty
     if (!selectedOptionValue || selectedOptionValue === selectedOption()) {
-      console.log('[WATCH EFFECT] Skipping - unchanged or empty')
       return
     }
 
-    console.log('TruncationSettings: selectedOptionValue changed to:', selectedOptionValue)
     handleChange(selectedOptionValue)
   })
 
   // Parse combined option and update settings
   function handleChange(option: string) {
-    console.log('TruncationSettings.handleChange called with:', option)
     if (option === 'none') {
-      console.log('Calling onChange with mode: none')
       onChange({ mode: 'none' })
     } else if (option === 'flexible') {
-      console.log('Calling onChange with mode: flexible')
       onChange({ mode: 'flexible' })
     } else if (option.startsWith('fixed-')) {
       const unit = option.substring(6) // Remove "fixed-" prefix
-      console.log('Calling onChange with mode: fixed, unit:', unit)
       onChange({ mode: 'fixed', fixed_unit: unit })
     }
   }
