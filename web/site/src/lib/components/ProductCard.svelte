@@ -23,6 +23,7 @@
   let currency = $derived($settingsStore?.main.currency || '')
   let truncationSettings = $derived($settingsStore?.payment?.truncation)
   let numberFormat = $derived($settingsStore?.payment?.number_format)
+  let symbolMode = $derived($settingsStore?.payment?.symbol_display?.storefront)
   let cart = $derived($cartStore)
   let inCart = $derived(cart.some((item) => item.id === product.id))
 
@@ -77,7 +78,8 @@
                 'storefront',
                 truncationSettings,
                 currentLocale,
-                numberFormat
+                numberFormat,
+                symbolMode
               )}
         </span>
       </div>
