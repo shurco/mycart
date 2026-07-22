@@ -50,8 +50,9 @@ func (v Password) Validate() error {
 
 // Payment is ...
 type Payment struct {
-	Currency   string              `json:"currency"`
-	Truncation *TruncationSettings `json:"truncation,omitempty"`
+	Currency     string                 `json:"currency"`
+	Truncation   *TruncationSettings    `json:"truncation,omitempty"`
+	NumberFormat *NumberFormatSettings  `json:"number_format,omitempty"`
 }
 
 // Validate is ...
@@ -59,6 +60,7 @@ func (v Payment) Validate() error {
 	return validation.ValidateStruct(&v,
 		validation.Field(&v.Currency, is.CurrencyCode),
 		validation.Field(&v.Truncation, validation.By(validateTruncation)),
+		validation.Field(&v.NumberFormat, validation.By(validateNumberFormat)),
 	)
 }
 
@@ -102,10 +104,35 @@ func validateTruncation(value interface{}) error {
 	return nil
 }
 
+// validateNumberFormat validates number format settings
+func validateNumberFormat(value interface{}) error {
+	if value == nil {
+		return nil // number_format is optional
+	}
+
+	nf, ok := value.(*NumberFormatSettings)
+	if !ok || nf == nil {
+		return nil
+	}
+
+	if nf.DecimalPrecision < 0 || nf.DecimalPrecision > 2 {
+		return validation.NewError("number_format_invalid_precision",
+			"decimal_precision must be 0, 1, or 2")
+	}
+
+	return nil
+}
+
 // CurrencyTruncationSettings defines truncation mode for a currency
 type CurrencyTruncationSettings struct {
 	Mode      string `json:"mode"`       // "none", "fixed", or "flexible"
 	FixedUnit string `json:"fixed_unit,omitempty"` // e.g., "K", "M", "만", "천"
+}
+
+// NumberFormatSettings defines global number formatting options
+type NumberFormatSettings struct {
+	DecimalPrecision  int  `json:"decimal_precision"`    // 0, 1, or 2
+	ShowTrailingZeros bool `json:"show_trailing_zeros"`  // true or false
 }
 
 // TruncationSettings holds admin and storefront truncation configs

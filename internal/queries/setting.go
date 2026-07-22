@@ -3,6 +3,7 @@ package queries
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	stderrors "errors"
 	"fmt"
 	"strconv"
@@ -49,7 +50,9 @@ func (q *SettingQueries) GroupFieldMap(settings any) map[string]any {
 		}
 	case *models.Payment:
 		return map[string]any{
-			"currency": &s.Currency,
+			"currency":      &s.Currency,
+			"truncation":    &s.Truncation,
+			"number_format": &s.NumberFormat,
 		}
 	case *models.Stripe:
 		return map[string]any{
@@ -155,6 +158,22 @@ func (q *SettingQueries) GetSettingByGroup(ctx context.Context, settings any) (a
 					}
 					*ptr = iValue
 				}
+			case **models.TruncationSettings:
+				if value != "" {
+					var ts models.TruncationSettings
+					if err := json.Unmarshal([]byte(value), &ts); err != nil {
+						return nil, err
+					}
+					*ptr = &ts
+				}
+			case **models.NumberFormatSettings:
+				if value != "" {
+					var nf models.NumberFormatSettings
+					if err := json.Unmarshal([]byte(value), &nf); err != nil {
+						return nil, err
+					}
+					*ptr = &nf
+				}
 			}
 		}
 	}
@@ -201,6 +220,22 @@ func (q *SettingQueries) UpdateSettingByGroup(ctx context.Context, settings any)
 			value = strconv.FormatBool(*v)
 		case *int:
 			value = strconv.Itoa(*v)
+		case **models.TruncationSettings:
+			if *v != nil {
+				jsonBytes, err := json.Marshal(*v)
+				if err != nil {
+					return err
+				}
+				value = string(jsonBytes)
+			}
+		case **models.NumberFormatSettings:
+			if *v != nil {
+				jsonBytes, err := json.Marshal(*v)
+				if err != nil {
+					return err
+				}
+				value = string(jsonBytes)
+			}
 		default:
 			continue
 		}
