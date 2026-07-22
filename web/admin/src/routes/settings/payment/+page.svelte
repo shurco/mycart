@@ -17,7 +17,7 @@
   import { translate } from '$lib/i18n'
   import { CURRENCIES } from '$lib/config/currencies'
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
-  import type { PaymentSettings, TruncationSettings as TruncationSettingsType, CurrencyTruncationSettings } from '$lib/types/models'
+  import type { PaymentSettings, TruncationSettings as TruncationSettingsType, CurrencyTruncationSettings, SymbolDisplaySettings } from '$lib/types/models'
 
   // Settings version key for cache invalidation (localStorage is shared across tabs)
   const SETTINGS_VERSION_KEY = 'settings_version'
@@ -41,6 +41,10 @@
   let formErrors = $state<Record<string, string>>({})
   let decimalPrecision = $state('2')
   let showTrailingZeros = $state(true)
+  let symbolDisplay = $state<SymbolDisplaySettings>({
+    admin: 'currency',
+    storefront: 'currency'
+  })
 
   const currencyOptions = CURRENCIES.map(c => c.code)
 
@@ -109,6 +113,15 @@
     showTrailingZeros = nf.show_trailing_zeros
     payment.number_format = nf
 
+    // Load symbol display settings
+    const sd = paymentSettings.symbol_display || {
+      admin: 'currency',
+      storefront: 'currency'
+    }
+    symbolDisplay.admin = sd.admin
+    symbolDisplay.storefront = sd.storefront
+    payment.symbol_display = sd
+
     // Update global store for other admin pages to access
     paymentSettingsStore.set(payment)
   }
@@ -162,6 +175,16 @@
       show_trailing_zeros: showTrailingZeros
     }
     await saveSettings('payment', payment, 'Number formatting saved')
+    paymentSettingsStore.set(payment)
+    incrementSettingsVersion()
+  }
+
+  async function handleSymbolDisplaySubmit() {
+    payment.symbol_display = {
+      admin: symbolDisplay.admin,
+      storefront: symbolDisplay.storefront
+    }
+    await saveSettings('payment', payment, 'Symbol display saved')
     paymentSettingsStore.set(payment)
     incrementSettingsVersion()
   }
@@ -244,6 +267,60 @@
 
       <div class="pt-5">
         <FormButton onclick={handleNumberFormatSubmit} name="Save" color="green" />
+      </div>
+    </div>
+
+    <hr class="mt-5" />
+
+    <div class="mt-5 max-w-2xl">
+      <h2 class="mb-5">Currency Display</h2>
+
+      <div class="mb-4">
+        <h3 class="mb-2 text-sm font-medium text-gray-700">Admin Panel Display</h3>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            class="flex-1 rounded border px-4 py-2 text-sm font-medium transition-colors {symbolDisplay.admin === 'currency' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
+            onclick={() => symbolDisplay.admin = 'currency'}
+          >
+            Currency Symbol
+            <span class="block text-xs text-gray-500 mt-1">$130</span>
+          </button>
+          <button
+            type="button"
+            class="flex-1 rounded border px-4 py-2 text-sm font-medium transition-colors {symbolDisplay.admin === 'language' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
+            onclick={() => symbolDisplay.admin = 'language'}
+          >
+            Language Symbol
+            <span class="block text-xs text-gray-500 mt-1">130 Dollar</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <h3 class="mb-2 text-sm font-medium text-gray-700">Storefront Display</h3>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            class="flex-1 rounded border px-4 py-2 text-sm font-medium transition-colors {symbolDisplay.storefront === 'currency' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
+            onclick={() => symbolDisplay.storefront = 'currency'}
+          >
+            Currency Symbol
+            <span class="block text-xs text-gray-500 mt-1">$130</span>
+          </button>
+          <button
+            type="button"
+            class="flex-1 rounded border px-4 py-2 text-sm font-medium transition-colors {symbolDisplay.storefront === 'language' ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
+            onclick={() => symbolDisplay.storefront = 'language'}
+          >
+            Language Symbol
+            <span class="block text-xs text-gray-500 mt-1">130 Dollar</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="pt-5">
+        <FormButton onclick={handleSymbolDisplaySubmit} name="Save" color="green" />
       </div>
     </div>
 
