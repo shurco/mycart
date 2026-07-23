@@ -4,17 +4,19 @@
   import type { Product } from '$lib/types/models'
   import { cartStore } from '$lib/stores/cart'
   import { costFormat } from '$lib/utils/costFormat'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { settingsStore } from '$lib/stores/settings'
   import { getProductImageUrl } from '$lib/utils/imageUrl'
   import { toggleCartItem } from '$lib/utils/cart'
   import { updateSEOTags } from '$lib/utils/seo'
   import { isBrowser } from '$lib/utils/browser'
   import NotFoundPage from '$lib/components/NotFoundPage.svelte'
-  import { translate } from '$lib/i18n'
+  import { translate, locale } from '$lib/i18n'
   import { sanitizeHTML } from '$lib/utils/sanitize'
 
   // Reactive translation function
   let t = $derived($translate)
+  let currentLocale = $derived($locale)
 
   let product = $state<Product | null>(null)
   let load = $state(false)
@@ -23,6 +25,9 @@
   let currentSlide = $state(0)
 
   let currency = $derived($settingsStore?.main.currency || '')
+  let truncationSettings = $derived($settingsStore?.payment?.truncation)
+  let numberFormat = $derived($settingsStore?.payment?.number_format)
+  let symbolMode = $derived($settingsStore?.payment?.symbol_display?.storefront)
   let cart = $derived($cartStore)
   let inCart = $derived(product ? cart.some((item) => item.id === product.id) : false)
 
@@ -155,11 +160,18 @@
 
             <div class="mb-6 flex items-baseline gap-3">
               <span class="text-5xl font-black tracking-tight text-black">
-                {costFormat(product.amount) === 'free' ? t('product.free') : costFormat(product.amount)}
+                {costFormat(product.amount) === 'free'
+                  ? t('product.free')
+                  : formatCurrencyWithTruncation(
+                      product.amount,
+                      currency || 'USD',
+                      'storefront',
+                      truncationSettings,
+                      currentLocale,
+                      numberFormat,
+                      symbolMode
+                    )}
               </span>
-              {#if product.amount !== 0 && product.amount}
-                <span class="text-2xl font-bold text-gray-700 uppercase">{currency}</span>
-              {/if}
             </div>
 
             <button

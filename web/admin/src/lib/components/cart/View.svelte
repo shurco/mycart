@@ -4,12 +4,16 @@
   import DetailList from '../DetailList.svelte'
   import SvgIcon from '../SvgIcon.svelte'
   import { costFormat, formatDate, STRIPE_DASHBOARD_URL } from '$lib/utils'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { loadData } from '$lib/utils/apiHelpers'
   import type { CartDetail } from '$lib/types/models'
-  import { translate } from '$lib/i18n'
+  import { paymentSettingsStore } from '$lib/stores/payment'
+  import { translate, locale } from '$lib/i18n'
 
   // Reactive translation function
   let t = $derived($translate)
+  let currentLocale = $derived($locale)
+  let paymentSettings = $derived($paymentSettingsStore)
 
   interface DrawerCart {
     cart: {
@@ -110,10 +114,22 @@
               target="_blank"
               class="text-blue-600 hover:underline"
             >
-              {costFormat(cart.amount_total)} {cart.currency || ''}
+              {formatCurrencyWithTruncation(
+                cart.amount_total,
+                cart.currency || 'USD',
+                'admin',
+                paymentSettings?.truncation,
+                currentLocale
+              )}
             </a>
           {:else}
-            {costFormat(cart.amount_total)} {cart.currency || ''}
+            {formatCurrencyWithTruncation(
+              cart.amount_total,
+              cart.currency || 'USD',
+              'admin',
+              paymentSettings?.truncation,
+              currentLocale
+            )}
           {/if}
         </DetailList>
 
@@ -172,13 +188,27 @@
                     <div class="font-medium text-gray-900">{item.name}</div>
                     <div class="text-sm text-gray-500">{t('carts.slug')} {item.slug}</div>
                     <div class="mt-1 text-sm text-gray-700">
-                      <span class="font-medium">{t('carts.price')}</span> {costFormat(item.amount)} {cart.currency || ''}
+                      <span class="font-medium">{t('carts.price')}</span>
+                      {formatCurrencyWithTruncation(
+                        item.amount,
+                        cart.currency || 'USD',
+                        'admin',
+                        paymentSettings?.truncation,
+                        currentLocale
+                      )}
                     </div>
                     <div class="mt-1 text-sm text-gray-700">
                       <span class="font-medium">{t('carts.quantity')}</span> {item.quantity}
                     </div>
                     <div class="mt-1 text-sm text-gray-700">
-                      <span class="font-medium">{t('carts.subtotal')}</span> {costFormat(item.amount * item.quantity)} {cart.currency || ''}
+                      <span class="font-medium">{t('carts.subtotal')}</span>
+                      {formatCurrencyWithTruncation(
+                        item.amount * item.quantity,
+                        cart.currency || 'USD',
+                        'admin',
+                        paymentSettings?.truncation,
+                        currentLocale
+                      )}
                     </div>
                   </div>
                 </div>

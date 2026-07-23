@@ -3,8 +3,8 @@
   import { cartStore } from '$lib/stores/cart'
   import { settingsStore } from '$lib/stores/settings'
   import { apiGet, apiPost } from '$lib/utils/api'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { costFormat } from '$lib/utils/costFormat'
-  import { formatCurrency } from '$lib/utils/currency'
   import { getProductImageUrl } from '$lib/utils/imageUrl'
   import { hasPaymentProviders } from '$lib/utils/payment'
   import { getLocalStorage, setLocalStorage, removeLocalStorage } from '$lib/utils/browser'
@@ -12,7 +12,7 @@
   import { goto } from '$app/navigation'
   import Overlay from '$lib/components/Overlay.svelte'
   import { handleNavigation } from '$lib/utils/navigation'
-  import { translate } from '$lib/i18n'
+  import { translate, locale } from '$lib/i18n'
   import * as PortOne from '@portone/browser-sdk/v2'
 
   // UUID generator with fallback for non-secure contexts (HTTP)
@@ -145,6 +145,10 @@
 
   let cart = $derived($cartStore)
   let currency = $derived($settingsStore?.main.currency || '')
+  let truncationSettings = $derived($settingsStore?.payment?.truncation)
+  let numberFormat = $derived($settingsStore?.payment?.number_format)
+  let symbolMode = $derived($settingsStore?.payment?.symbol_display?.storefront)
+  let currentLocale = $derived($locale)
 
   // Calculate total cart amount in cents
   let cartTotal = $derived(cart.reduce((sum, item) => sum + item.amount, 0))
@@ -222,7 +226,13 @@
   })
 
   let showPayments = $derived(!isFree && hasPaymentProviders(payments))
-  let totalCartAmount = $derived(formatCurrency(cartTotal, currency))
+
+  // Computed value instead of function
+  let totalCartAmount = $derived(
+    cartTotal === 0
+      ? t('product.free')
+      : formatCurrencyWithTruncation(cartTotal, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)
+  )
 
   async function checkOut(e: Event) {
     e.preventDefault()
@@ -343,14 +353,13 @@
                     </div>
                     <div class="flex items-center gap-4">
                       <span
-                        class="text-2xl font-black {costFormat(item.amount) === 'free'
+                        class="text-2xl font-black {item.amount === 0
                           ? 'text-green-500'
                           : 'text-black'}"
                       >
-                        {costFormat(item.amount) === 'free' ? t('product.free') : costFormat(item.amount)}
-                        {#if item.amount !== 0 && item.amount}
-                          {currency}
-                        {/if}
+                        {item.amount === 0
+                          ? t('product.free')
+                          : formatCurrencyWithTruncation(item.amount, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)}
                       </span>
                       <button
                         type="button"
