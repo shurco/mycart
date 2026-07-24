@@ -33,7 +33,15 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 		Currency: currency["currency"].Value.(string),
 	}
 
-	query := `
+	// Build variants subquery based on private mode
+	// For private mode (e.g., validation), include all variants
+	// For public mode (e.g., storefront), only show active variants
+	variantsFilter := ""
+	if !private {
+		variantsFilter = " AND active = 1"
+	}
+
+	query := fmt.Sprintf(`
 			SELECT DISTINCT
 			  product.id,
 				product.name,
@@ -47,10 +55,10 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 				EXISTS(SELECT 1 FROM digital_data WHERE digital_data.product_id = product.id AND digital_data.cart_id IS NULL) OR
 				EXISTS(SELECT 1 FROM digital_file WHERE digital_file.product_id = product.id) AS digital_filled,
 				(SELECT json_group_array(json_object('id', product_image.id, 'name', product_image.name, 'ext', product_image.ext)) as images FROM product_image WHERE product_id = product.id GROUP BY id LIMIT 1) as image,
-				(SELECT json_group_array(json_object('id', product_variant.id, 'sku', product_variant.sku, 'quantity', product_variant.quantity, 'price_surcharge', product_variant.price_surcharge, 'option_values', json(product_variant.option_values))) FROM product_variant WHERE product_id = product.id AND active = 1) as variants,
-				strftime('%s', created)
+				(SELECT json_group_array(json_object('id', product_variant.id, 'sku', product_variant.sku, 'quantity', product_variant.quantity, 'price_surcharge', product_variant.price_surcharge, 'option_values', json(product_variant.option_values), 'active', CASE WHEN product_variant.active = 1 THEN json('true') ELSE json('false') END)) FROM product_variant WHERE product_id = product.id%s) as variants,
+				strftime('%%s', created)
 			FROM product
-		`
+		`, variantsFilter)
 
 	var queryPublic string
 	var params []any
@@ -59,6 +67,9 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 	if !private {
 		queryPublic, params = publicProductFilter(cartID)
 		countParams = append(countParams, params...)
+	} else {
+		// For private mode, add basic WHERE clause to filter deleted products
+		queryPublic = " WHERE product.deleted = 0 "
 	}
 
 	var queryAddon string
@@ -71,9 +82,7 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 		queryAddon = fmt.Sprintf("AND product.id IN (%s)", strings.Repeat("?, ", len(idList)-1)+"?")
 	}
 
-	if !private {
-		query += queryPublic
-	}
+	query += queryPublic
 
 	// Add pagination
 	if limit > 0 {
@@ -148,9 +157,7 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 
 	// Count total records (without pagination params)
 	countQuery := `SELECT COUNT(DISTINCT product.id) FROM product`
-	if !private {
-		countQuery += queryPublic
-	}
+	countQuery += queryPublic
 	err = q.DB.QueryRowContext(ctx, countQuery+queryAddon, countParams...).Scan(&products.Total)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err

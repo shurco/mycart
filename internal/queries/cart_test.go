@@ -299,3 +299,241 @@ func TestValidateCartItems_ProductNotFound(t *testing.T) {
 		t.Errorf("Expected error type 'product_not_found', got: %s", result.Errors[0].ErrorType)
 	}
 }
+
+func TestValidateCartItems_VariantWithInactiveParent(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	variantID1 := "var1-small"
+	variantID2 := "var2-medium"
+	variantID3 := "var3-large"
+
+	// Create product with variants - parent product INACTIVE, but variants ACTIVE
+	product := &models.Product{
+		Core:        models.Core{ID: "test-var-prod"},
+		Name:        "T-Shirt with Sizes",
+		Brief:       "A shirt",
+		Description: "A nice shirt with size options",
+		Slug:        "t-shirt-sizes",
+		Amount:      10000, // Base price: $100.00
+		Quantity:    0,     // Parent has no quantity (variants have the stock)
+		Active:      false, // PARENT IS INACTIVE
+		HasVariants: true,
+		Digital:     models.Digital{Type: "file"},
+		Options: []models.ProductOption{
+			{
+				ID:        "opt-size",
+				ProductID: "test-var-prod",
+				Name:      "Size",
+				Position:  0,
+				Values: []models.ProductOptionValue{
+					{ID: "val-small", Value: "Small", Position: 0},
+					{ID: "val-medium", Value: "Medium", Position: 1},
+					{ID: "val-large", Value: "Large", Position: 2},
+				},
+			},
+		},
+		Variants: []models.ProductVariant{
+			{
+				ID:             variantID1,
+				ProductID:      "test-var-prod",
+				SKU:            "SHIRT-S",
+				OptionValues:   map[string]string{"Size": "Small"},
+				PriceSurcharge: 2000, // +$20
+				Quantity:       5,
+				Active:         true, // VARIANT IS ACTIVE
+			},
+			{
+				ID:             variantID2,
+				ProductID:      "test-var-prod",
+				SKU:            "SHIRT-M",
+				OptionValues:   map[string]string{"Size": "Medium"},
+				PriceSurcharge: 22000, // +$220
+				Quantity:       3,
+				Active:         true, // VARIANT IS ACTIVE
+			},
+			{
+				ID:             variantID3,
+				ProductID:      "test-var-prod",
+				SKU:            "SHIRT-L",
+				OptionValues:   map[string]string{"Size": "Large"},
+				PriceSurcharge: 42000, // +$420
+				Quantity:       2,
+				Active:         true, // VARIANT IS ACTIVE
+			},
+		},
+	}
+
+	// Add product with variants
+	if _, err := db.AddProductWithVariants(ctx, product); err != nil {
+		t.Fatalf("AddProductWithVariants failed: %v", err)
+	}
+
+	// Validate cart with variant items
+	cartProducts := []models.CartProduct{
+		{ProductID: "test-var-prod", VariantID: &variantID1, Quantity: 2},
+		{ProductID: "test-var-prod", VariantID: &variantID2, Quantity: 1},
+		{ProductID: "test-var-prod", VariantID: &variantID3, Quantity: 1},
+	}
+
+	result, err := ValidateCartItems(ctx, db, cartProducts, "USD")
+	if err != nil {
+		t.Fatalf("ValidateCartItems error: %v", err)
+	}
+
+	// SHOULD BE VALID: Variants are active even though parent is inactive
+	if !result.Valid {
+		t.Errorf("Expected valid result for active variants with inactive parent, got errors: %v", result.Errors)
+	}
+
+	if len(result.Errors) != 0 {
+		t.Errorf("Expected 0 errors, got %d: %v", len(result.Errors), result.Errors)
+	}
+
+	// Check corrected items have correct prices
+	expectedPrices := []int{12000, 32000, 52000} // base + surcharge
+	for i, item := range result.CorrectedItems {
+		if item.UnitPrice != expectedPrices[i] {
+			t.Errorf("Item %d: expected price %d, got %d", i, expectedPrices[i], item.UnitPrice)
+		}
+		if !item.Available {
+			t.Errorf("Item %d: expected available=true, got false", i)
+		}
+	}
+}
+
+func TestValidateCartItems_VariantRequired(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	variantID := "var-small"
+
+	// Create product with variants
+	product := &models.Product{
+		Core:        models.Core{ID: "test-var-req"},
+		Name:        "Product With Variants",
+		Brief:       "Test",
+		Description: "Test product",
+		Slug:        "product-variants",
+		Amount:      10000,
+		Quantity:    0,
+		Active:      true,
+		HasVariants: true, // Product HAS variants
+		Digital:     models.Digital{Type: "file"},
+		Options: []models.ProductOption{
+			{
+				ID:        "opt-size",
+				ProductID: "test-var-req",
+				Name:      "Size",
+				Position:  0,
+				Values: []models.ProductOptionValue{
+					{ID: "val-small", Value: "Small", Position: 0},
+				},
+			},
+		},
+		Variants: []models.ProductVariant{
+			{
+				ID:             variantID,
+				ProductID:      "test-var-req",
+				SKU:            "VAR-S",
+				OptionValues:   map[string]string{"Size": "Small"},
+				PriceSurcharge: 1000,
+				Quantity:       5,
+				Active:         true,
+			},
+		},
+	}
+
+	if _, err := db.AddProductWithVariants(ctx, product); err != nil {
+		t.Fatalf("AddProductWithVariants failed: %v", err)
+	}
+
+	// Try to add product to cart WITHOUT variant_id
+	cartProducts := []models.CartProduct{
+		{ProductID: "test-var-req", Quantity: 1}, // No variant_id!
+	}
+
+	result, err := ValidateCartItems(ctx, db, cartProducts, "USD")
+	if err != nil {
+		t.Fatalf("ValidateCartItems error: %v", err)
+	}
+
+	// Should FAIL with variant_required error
+	if result.Valid {
+		t.Error("Expected invalid result for product requiring variant without variant_id")
+	}
+
+	if len(result.Errors) != 1 {
+		t.Fatalf("Expected 1 error, got %d", len(result.Errors))
+	}
+
+	if result.Errors[0].ErrorType != "variant_required" {
+		t.Errorf("Expected error type 'variant_required', got: %s", result.Errors[0].ErrorType)
+	}
+}
+
+func TestValidateCartItems_PriceChanged(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	// Create product
+	product := &models.Product{
+		Name:     "Test Product",
+		Amount:   5000, // Current price: 5000
+		Quantity: 10,
+		Active:   true,
+		Slug:     "test-price-slug",
+		Digital:  models.Digital{Type: "file"},
+	}
+
+	createdProduct, err := db.AddProduct(ctx, product)
+	if err != nil {
+		t.Fatalf("AddProduct failed: %v", err)
+	}
+
+	// Activate product and set quantity
+	if err := db.UpdateActive(ctx, createdProduct.ID); err != nil {
+		t.Fatalf("UpdateActive failed: %v", err)
+	}
+	if _, err := db.ProductQueries.DB.ExecContext(ctx, "UPDATE product SET quantity = ? WHERE id = ?", 10, createdProduct.ID); err != nil {
+		t.Fatalf("Update quantity failed: %v", err)
+	}
+
+	// Verify product is queryable
+	testList, err := db.ListProducts(ctx, true, 0, 0, "", models.CartProduct{ProductID: createdProduct.ID, Quantity: 1})
+	if err != nil {
+		t.Fatalf("ListProducts verification failed: %v", err)
+	}
+	if len(testList.Products) == 0 {
+		t.Fatalf("Product not found in listing after creation")
+	}
+
+	// Request with WRONG unit_price (client thinks it's 3000)
+	cartProducts := []models.CartProduct{
+		{ProductID: createdProduct.ID, Quantity: 2, UnitPrice: 3000}, // Wrong price!
+	}
+
+	result, err := ValidateCartItems(ctx, db, cartProducts, "USD")
+	if err != nil {
+		t.Fatalf("ValidateCartItems error: %v", err)
+	}
+
+	// Should FAIL with price_changed error
+	if result.Valid {
+		t.Error("Expected invalid result for price mismatch")
+	}
+
+	if len(result.Errors) != 1 {
+		t.Fatalf("Expected 1 error, got %d", len(result.Errors))
+	}
+
+	if result.Errors[0].ErrorType != "price_changed" {
+		t.Errorf("Expected error type 'price_changed', got: %s", result.Errors[0].ErrorType)
+	}
+
+	// Check that correct prices are returned
+	if result.Errors[0].RequestedUnitPrice != 3000 {
+		t.Errorf("Expected requested price 3000, got %d", result.Errors[0].RequestedUnitPrice)
+	}
+
+	if result.Errors[0].CurrentUnitPrice != 5000 {
+		t.Errorf("Expected current price 5000, got %d", result.Errors[0].CurrentUnitPrice)
+	}
+}

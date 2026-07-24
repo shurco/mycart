@@ -19,6 +19,7 @@ type CartProduct struct {
 	ProductID string  `json:"id"`
 	VariantID *string `json:"variant_id,omitempty"`
 	Quantity  int     `json:"quantity"`
+	UnitPrice int     `json:"unit_price,omitempty"` // Expected price from client for validation
 }
 
 // CartPayment is ...

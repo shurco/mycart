@@ -289,7 +289,8 @@ func ValidateCartItems(
 	}
 
 	// Fetch current product data
-	products, err := db.ListProducts(ctx, false, 0, 0, "", productIDs...)
+	// Use private=true to include inactive parent products (variant active status is checked separately)
+	products, err := db.ListProducts(ctx, true, 0, 0, "", productIDs...)
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +346,35 @@ func validateCartItem(
 		}
 	}
 
-	// Check if product is active
+	// Handle variant validation
+	// For variant products, the variant's active status is checked, not the parent's
+	if requested.VariantID != nil && *requested.VariantID != "" {
+		return validateVariantItem(index, requested, product)
+	}
+
+	// Check if product requires a variant but none was provided
+	if product.HasVariants {
+		return &models.CartValidationError{
+			ItemIndex:          index,
+			ProductID:          requested.ProductID,
+			VariantID:          nil,
+			ErrorType:          "variant_required",
+			RequestedQty:       requested.Quantity,
+			AvailableQty:       0,
+			RequestedUnitPrice: requested.UnitPrice,
+			CurrentUnitPrice:   product.Amount,
+			RequestedTotal:     0,
+			CurrentTotal:       0,
+		}, models.CorrectedCartItem{
+			ProductID: requested.ProductID,
+			VariantID: nil,
+			Quantity:  0,
+			UnitPrice: product.Amount,
+			Available: false,
+		}
+	}
+
+	// Check if non-variant product is active
 	if !product.Active {
 		return &models.CartValidationError{
 			ItemIndex:          index,
@@ -365,11 +394,6 @@ func validateCartItem(
 			UnitPrice: product.Amount,
 			Available: false,
 		}
-	}
-
-	// Handle variant validation
-	if requested.VariantID != nil && *requested.VariantID != "" {
-		return validateVariantItem(index, requested, product)
 	}
 
 	// Validate non-variant product
@@ -439,6 +463,28 @@ func validateVariantItem(
 
 	currentUnitPrice := product.Amount + variant.PriceSurcharge
 
+	// Check if unit price changed (when client sends unit_price)
+	if requested.UnitPrice > 0 && requested.UnitPrice != currentUnitPrice {
+		return &models.CartValidationError{
+			ItemIndex:          index,
+			ProductID:          requested.ProductID,
+			VariantID:          requested.VariantID,
+			ErrorType:          "price_changed",
+			RequestedQty:       requested.Quantity,
+			AvailableQty:       variant.Quantity,
+			RequestedUnitPrice: requested.UnitPrice,
+			CurrentUnitPrice:   currentUnitPrice,
+			RequestedTotal:     requested.Quantity * requested.UnitPrice,
+			CurrentTotal:       requested.Quantity * currentUnitPrice,
+		}, models.CorrectedCartItem{
+			ProductID: requested.ProductID,
+			VariantID: requested.VariantID,
+			Quantity:  requested.Quantity,
+			UnitPrice: currentUnitPrice,
+			Available: true,
+		}
+	}
+
 	// Check quantity availability
 	if requested.Quantity > variant.Quantity {
 		return &models.CartValidationError{
@@ -478,6 +524,28 @@ func validateNonVariantItem(
 	product *models.Product,
 ) (*models.CartValidationError, models.CorrectedCartItem) {
 	currentUnitPrice := product.Amount
+
+	// Check if unit price changed (when client sends unit_price)
+	if requested.UnitPrice > 0 && requested.UnitPrice != currentUnitPrice {
+		return &models.CartValidationError{
+			ItemIndex:          index,
+			ProductID:          requested.ProductID,
+			VariantID:          nil,
+			ErrorType:          "price_changed",
+			RequestedQty:       requested.Quantity,
+			AvailableQty:       product.Quantity,
+			RequestedUnitPrice: requested.UnitPrice,
+			CurrentUnitPrice:   currentUnitPrice,
+			RequestedTotal:     requested.Quantity * requested.UnitPrice,
+			CurrentTotal:       requested.Quantity * currentUnitPrice,
+		}, models.CorrectedCartItem{
+			ProductID: requested.ProductID,
+			VariantID: nil,
+			Quantity:  requested.Quantity,
+			UnitPrice: currentUnitPrice,
+			Available: true,
+		}
+	}
 
 	// Check quantity availability
 	if requested.Quantity > product.Quantity {

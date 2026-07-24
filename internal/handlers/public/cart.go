@@ -117,12 +117,6 @@ func CreateCart(c fiber.Ctx) error {
 	}
 	currency := setting["currency"].Value.(string)
 
-	products, err := db.ListProducts(c.Context(), false, 0, 0, "", payment.Products...)
-	if err != nil {
-		log.ErrorStack(err)
-		return webutil.StatusInternalServerError(c)
-	}
-
 	// Validate cart items before processing
 	validationResult, err := queries.ValidateCartItems(c.Context(), db, payment.Products, currency)
 	if err != nil {
@@ -137,16 +131,10 @@ func CreateCart(c fiber.Ctx) error {
 		})
 	}
 
-	// Calculate total amount
+	// Calculate total amount using validated prices (includes variant surcharges)
 	var amountTotal int
-	for _, product := range products.Products {
-		quantity := 1
-		for _, cartProduct := range payment.Products {
-			if cartProduct.ProductID == product.ID {
-				quantity = cartProduct.Quantity
-			}
-		}
-		amountTotal += product.Amount * quantity
+	for _, correctedItem := range validationResult.CorrectedItems {
+		amountTotal += correctedItem.UnitPrice * correctedItem.Quantity
 	}
 
 	// Generate cart ID
@@ -298,47 +286,46 @@ func Payment(c fiber.Ctx) error {
 	// Use request scheme (http/https) for URLs
 	protocol := c.Scheme()
 
-	items := make([]litepay.Item, len(products.Products))
-	for i, product := range products.Products {
+	// Build product map for quick lookup
+	productMap := make(map[string]*models.Product)
+	for i := range products.Products {
+		productMap[products.Products[i].ID] = &products.Products[i]
+	}
+
+	// Build cart items using validated prices
+	items := make([]litepay.Item, 0, len(validationResult.CorrectedItems))
+	var amountTotal int
+	for _, correctedItem := range validationResult.CorrectedItems {
+		product, exists := productMap[correctedItem.ProductID]
+		if !exists {
+			continue
+		}
+
 		images := []string{}
 		for _, image := range product.Images {
 			path := fmt.Sprintf("%s://%s/uploads/%s_md.%s", protocol, domain, image.Name, image.Ext)
 			images = append(images, path)
 		}
 
-		quantity := 1
-		for _, cartProduct := range payment.Products {
-			if cartProduct.ProductID == product.ID {
-				quantity = cartProduct.Quantity
-			}
-		}
-
-		items[i] = litepay.Item{
+		items = append(items, litepay.Item{
 			PriceData: litepay.Price{
-				UnitAmount: product.Amount,
+				UnitAmount: correctedItem.UnitPrice, // Uses validated price with variant surcharge
 				Product: litepay.Product{
-					Name:   product.Name,
-					Images: images,
+					Name:        product.Name,
+					Description: product.Description,
+					Images:      images,
 				},
 			},
-			Quantity: quantity,
-		}
+			Quantity: correctedItem.Quantity,
+		})
 
-		if product.Description != "" {
-			items[i].PriceData.Product.Description = product.Description
-		}
+		amountTotal += correctedItem.UnitPrice * correctedItem.Quantity
 	}
 
 	cart := litepay.Cart{
 		ID:       security.RandomString(),
 		Currency: currency,
 		Items:    items,
-	}
-
-	// Calculate total amount before processing payment
-	var amountTotal int
-	for _, item := range cart.Items {
-		amountTotal += item.PriceData.UnitAmount * item.Quantity
 	}
 
 	// Validate dummy provider usage: only allowed for free carts (amountTotal = 0)
