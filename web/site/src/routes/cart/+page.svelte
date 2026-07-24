@@ -415,7 +415,11 @@
             </h2>
             <div class="space-y-4">
               {#each cart as item (`${item.id}-${item.variant_id || 'no-variant'}`)}
-                <CartItemCard {item} />
+                <CartItemCard
+                  {item}
+                  highlighted={highlightedItems.has(getItemKey(item))}
+                  needsDeletion={item.needsDeletion || false}
+                />
               {/each}
             </div>
           </div>

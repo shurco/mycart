@@ -12,9 +12,11 @@
 
   interface Props {
     item: CartItem
+    highlighted?: boolean
+    needsDeletion?: boolean
   }
 
-  let { item }: Props = $props()
+  let { item, highlighted = false, needsDeletion = false }: Props = $props()
 
   let currency = $derived($settingsStore?.main.currency || '')
   let truncationSettings = $derived($settingsStore?.payment?.truncation)
@@ -43,7 +45,7 @@
   }
 </script>
 
-<div class="flex items-center gap-4 border-4 border-black bg-white p-4">
+<div class="flex items-center gap-4 border-4 border-black bg-white p-4" class:highlighted={highlighted} class:needs-deletion={needsDeletion}>
   <!-- Product Image -->
   <div class="h-20 w-20 flex-shrink-0 border-4 border-black bg-gray-100">
     {#if item.image}
@@ -72,7 +74,7 @@
       </p>
     {/if}
     <div class="flex items-baseline gap-2">
-      <span class="text-xl font-black {item.amount === 0 ? 'text-green-500' : 'text-black'}">
+      <span class="text-xl font-black {item.amount === 0 ? 'text-green-500' : 'text-black'}" class:price-changed={highlighted}>
         {item.amount === 0
           ? t('product.free')
           : formatCurrencyWithTruncation(item.amount, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)}
@@ -87,6 +89,7 @@
       onIncrement={handleIncrement}
       onDecrement={handleDecrement}
       onChange={handleChange}
+      disabled={needsDeletion}
     />
 
     <button
@@ -98,3 +101,40 @@
     </button>
   </div>
 </div>
+
+<style>
+  .highlighted {
+    background-color: #fff9c4;
+    transition: background-color 0.3s ease;
+    border-color: #fdd835;
+  }
+
+  .price-changed {
+    background-color: #ffeb3b;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-weight: bold;
+  }
+
+  .needs-deletion {
+    opacity: 0.6;
+    position: relative;
+  }
+
+  .needs-deletion::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(255, 0, 0, 0.05) 10px,
+      rgba(255, 0, 0, 0.05) 20px
+    );
+    pointer-events: none;
+  }
+</style>
