@@ -192,6 +192,8 @@
     "totalPrice": "Total Price",
     "quantity": "Quantity",
     "tooManyVariants": "Warning: Maximum 100 variants allowed",
+    "created": "Product created successfully",
+    "updated": "Product updated successfully",
     "csv": {
       "exportProducts": "Export Products",
       "exportDescription": "Download all products as CSV file",
@@ -250,6 +252,10 @@
     "priceColumn": "Price",
     "statusColumn": "Status",
     "paymentColumn": "Payment",
+    "productName": "Product Name",
+    "variantColumn": "Variant",
+    "quantityColumn": "Qty",
+    "subtotalColumn": "Subtotal",
     "mailSentSuccessfully": "Mail sent successfully",
     "failedToSendMailMessage": "Failed to send mail"
   },

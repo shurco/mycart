@@ -1,10 +1,10 @@
 <script lang="ts">
   import type { CartItem } from '$lib/types/models'
   import { cartStore } from '$lib/stores/cart'
-  import { costFormat } from '$lib/utils/costFormat'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { settingsStore } from '$lib/stores/settings'
   import { getProductImageUrl } from '$lib/utils/imageUrl'
-  import { translate } from '$lib/i18n'
+  import { translate, locale } from '$lib/i18n'
   import QuantityInput from './QuantityInput.svelte'
 
   // Reactive translation function
@@ -17,6 +17,10 @@
   let { item }: Props = $props()
 
   let currency = $derived($settingsStore?.main.currency || '')
+  let truncationSettings = $derived($settingsStore?.payment?.truncation)
+  let numberFormat = $derived($settingsStore?.payment?.number_format)
+  let symbolMode = $derived($settingsStore?.payment?.symbol_display?.storefront)
+  let currentLocale = $derived($locale)
 
   function handleIncrement() {
     cartStore.incrementQuantity(item.id, item.variant_id)
@@ -68,12 +72,11 @@
       </p>
     {/if}
     <div class="flex items-baseline gap-2">
-      <span class="text-xl font-black text-black">
-        {costFormat(item.amount) === 'free' ? t('product.free') : costFormat(item.amount)}
+      <span class="text-xl font-black {item.amount === 0 ? 'text-green-500' : 'text-black'}">
+        {item.amount === 0
+          ? t('product.free')
+          : formatCurrencyWithTruncation(item.amount, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)}
       </span>
-      {#if item.amount !== 0 && item.amount}
-        <span class="text-sm font-bold uppercase text-gray-600">{currency}</span>
-      {/if}
     </div>
   </div>
 

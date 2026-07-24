@@ -6,7 +6,8 @@
     "test:e2e:nobuild": "patchright test",
     "test:e2e:ui": "patchright test --ui",
     "test:e2e:debug": "patchright test --debug",
-    "test:e2e:report": "patchright show-report"
+    "test:e2e:report": "patchright show-report",
+    "devrun": "cd web/admin && npx vite build && cd ../site && npx vite build && cd ../.. && go run ./cmd serve"
   },
   "dependencies": {
     "patchright": "^1.61.1"

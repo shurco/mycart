@@ -5,6 +5,7 @@
  * Patches @tailwindcss/oxide and lightningcss to support OpenBSD/FreeBSD
  * by adding platform detection and copying pre-built native binaries.
  *
+ * read docs/development-on-bsd.md first.
  * Run after: npm install
  * Auto-run: Add "postinstall": "node scripts/postinstall-openbsd-natives.js" to package.json
  */

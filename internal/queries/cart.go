@@ -218,8 +218,14 @@ func BuildCartItems(cart *models.Cart, products *models.Products) []map[string]a
 			continue
 		}
 
+		// Generate unique ID: use product_id + variant_id when variant exists
+		itemID := product.ID
+		if cartItem.VariantID != nil && *cartItem.VariantID != "" {
+			itemID = product.ID + "_" + *cartItem.VariantID
+		}
+
 		item := map[string]any{
-			"id":       product.ID,
+			"id":       itemID,
 			"name":     product.Name,
 			"slug":     product.Slug,
 			"amount":   product.Amount,
@@ -245,6 +251,8 @@ func BuildCartItems(cart *models.Cart, products *models.Products) []map[string]a
 					if variant.SKU != "" {
 						item["variant_sku"] = variant.SKU
 					}
+					// Include price surcharge for accurate unit price calculation
+					item["variant_price_surcharge"] = variant.PriceSurcharge
 					break
 				}
 			}

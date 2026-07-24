@@ -3,7 +3,7 @@
   import { cartStore } from '$lib/stores/cart'
   import { settingsStore } from '$lib/stores/settings'
   import { apiGet, apiPost } from '$lib/utils/api'
-  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
+  import { formatCurrency } from '$lib/utils/currency'
   import { costFormat } from '$lib/utils/costFormat'
   import { getProductImageUrl } from '$lib/utils/imageUrl'
   import { hasPaymentProviders } from '$lib/utils/payment'
@@ -55,7 +55,11 @@
     const cartCreateRes = await apiPost<{ cart_id: string; amount_total: number; currency: string }>('/api/cart/create', {
       email: email,
       provider: 'portone',
-      products: cart.map((item) => ({ id: item.id, quantity: 1 }))
+      products: cart.map((item) => ({
+        id: item.id,
+        variant_id: item.variant_id || undefined,
+        quantity: item.quantity
+      }))
     })
     debugLog('Cart create response:', cartCreateRes)
 
@@ -144,7 +148,6 @@
     removeLocalStorage('provider')
     goto('/cart/payment/success')
   }
->>>>>>> main
 
   let cart = $derived($cartStore)
   let currency = $derived($settingsStore?.main.currency || '')
@@ -248,11 +251,11 @@
 
   let showPayments = $derived(!isFree && hasPaymentProviders(payments))
 
-  // Computed value instead of function
+  // Computed value instead of function - using formatCurrency (no truncation) for exact totals
   let totalCartAmount = $derived(
     cartTotal === 0
       ? t('product.free')
-      : formatCurrencyWithTruncation(cartTotal, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)
+      : formatCurrency(cartTotal / 100, currency, numberFormat, symbolMode, currentLocale)
   )
 
   async function checkOut(e: Event) {
@@ -360,52 +363,9 @@
             <h2 class="mb-6 text-3xl font-black tracking-tighter text-black uppercase">
               {t('cart.itemsCount', { count: cart.length })}
             </h2>
-<<<<<<< HEAD
             <div class="space-y-4">
               {#each cart as item (`${item.id}-${item.variant_id || 'no-variant'}`)}
                 <CartItemCard {item} />
-=======
-            <ul class="list-none space-y-4">
-              {#each cart as item (item.id)}
-                <li class="border-4 border-black bg-white p-4" data-testid="cart-item">
-                  <div class="flex items-center gap-4">
-                    <div class="overflow-hidden border-4 border-black">
-                      <img src={getProductImageUrl(item.image, 'sm')} alt={item.name} class="h-20 w-20 object-cover" />
-                    </div>
-                    <div class="flex-1">
-                      <a
-                        href="/products/{item.slug}"
-                        target="_blank"
-                        class="cursor-pointer text-xl font-black tracking-tight text-black uppercase decoration-yellow-300 decoration-4 underline-offset-4 hover:underline"
-                        data-testid="item-name"
-                      >
-                        {item.name}
-                      </a>
-                    </div>
-                    <div class="flex items-center gap-4">
-                      <span
-                        class="text-2xl font-black {item.amount === 0
-                          ? 'text-green-500'
-                          : 'text-black'}"
-                      >
-                        {item.amount === 0
-                          ? t('product.free')
-                          : formatCurrencyWithTruncation(item.amount, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)}
-                      </span>
-                      <button
-                        type="button"
-                        class="cursor-pointer border-4 border-black bg-red-500 p-2 text-sm font-black text-white uppercase transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
-                        onclick={() => cartStore.remove(item.id)}
-                        aria-label={t('cart.removeItem')}
-                      >
-                        <svg class="h-5 w-5">
-                          <use href="/assets/img/sprite.svg#trash" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </li>
->>>>>>> main
               {/each}
             </div>
           </div>
@@ -416,9 +376,6 @@
               <span class="text-3xl font-black tracking-tighter text-black uppercase"> {t('cart.total')} </span>
               <span class="text-4xl font-black {cartTotal === 0 ? 'text-green-500' : 'text-black'}" data-testid="cart-total">
                 {totalCartAmount}
-                {#if cart.length > 0 && cartTotal !== 0}
-                  {currency}
-                {/if}
               </span>
             </div>
           </div>

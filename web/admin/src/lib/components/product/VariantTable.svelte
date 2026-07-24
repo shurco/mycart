@@ -3,10 +3,13 @@
   import FormButton from '../form/Button.svelte'
   import SvgIcon from '../SvgIcon.svelte'
   import type { ProductVariant, ProductOption } from '$lib/types/models'
-  import { translate } from '$lib/i18n'
-  import { formatPrice } from '$lib/utils'
+  import { translate, locale } from '$lib/i18n'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
+  import { paymentSettingsStore } from '$lib/stores/payment'
 
   let t = $derived($translate)
+  let currentLocale = $derived($locale)
+  let paymentSettings = $derived($paymentSettingsStore)
 
   interface Props {
     variants: ProductVariant[]
@@ -136,7 +139,19 @@
             />
           </td>
           <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-            {formatPrice(getTotalPrice(variant), currency)}
+            {#if getTotalPrice(variant) === 0}
+              <span class="font-bold text-green-600">free</span>
+            {:else}
+              {formatCurrencyWithTruncation(
+                getTotalPrice(variant),
+                currency || 'USD',
+                'admin',
+                paymentSettings?.truncation,
+                currentLocale,
+                paymentSettings?.number_format,
+                paymentSettings?.symbol_display?.admin
+              )}
+            {/if}
           </td>
           <td class="whitespace-nowrap px-4 py-3 text-sm">
             <FormInput

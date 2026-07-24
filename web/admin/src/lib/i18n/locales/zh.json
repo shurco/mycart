@@ -192,6 +192,8 @@
     "totalPrice": "总价",
     "quantity": "数量",
     "tooManyVariants": "警告：最多允许 100 个变体",
+    "created": "产品创建成功",
+    "updated": "产品更新成功",
     "csv": {
       "exportProducts": "导出商品",
       "exportDescription": "将所有商品下载为 CSV 文件",
@@ -250,6 +252,10 @@
     "priceColumn": "价格",
     "statusColumn": "状态",
     "paymentColumn": "支付",
+    "productName": "产品名称",
+    "variantColumn": "规格",
+    "quantityColumn": "数量",
+    "subtotalColumn": "小计",
     "mailSentSuccessfully": "邮件发送成功",
     "failedToSendMailMessage": "发送邮件失败"
   },

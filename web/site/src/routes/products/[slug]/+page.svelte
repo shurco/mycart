@@ -238,15 +238,21 @@
               </div>
             {/if}
 
-<<<<<<< HEAD
             {#if !product.has_variants}
               <div class="mb-6 flex items-baseline gap-3">
                 <span class="text-5xl font-black tracking-tight text-black">
-                  {costFormat(product.amount) === 'free' ? t('product.free') : costFormat(product.amount)}
+                  {product.amount === 0
+                    ? t('product.free')
+                    : formatCurrencyWithTruncation(
+                        product.amount,
+                        currency || 'USD',
+                        'storefront',
+                        truncationSettings,
+                        currentLocale,
+                        numberFormat,
+                        symbolMode
+                      )}
                 </span>
-                {#if product.amount !== 0 && product.amount}
-                  <span class="text-2xl font-bold text-gray-700 uppercase">{currency}</span>
-                {/if}
               </div>
             {/if}
 
@@ -283,22 +289,6 @@
                   />
                 {/if}
               </div>
-=======
-            <div class="mb-6 flex items-baseline gap-3">
-              <span class="text-5xl font-black tracking-tight text-black">
-                {costFormat(product.amount) === 'free'
-                  ? t('product.free')
-                  : formatCurrencyWithTruncation(
-                      product.amount,
-                      currency || 'USD',
-                      'storefront',
-                      truncationSettings,
-                      currentLocale,
-                      numberFormat,
-                      symbolMode
-                    )}
-              </span>
->>>>>>> main
             </div>
 
             <button

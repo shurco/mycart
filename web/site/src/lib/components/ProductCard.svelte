@@ -131,6 +131,8 @@
 
       <div class="flex flex-col items-end gap-3">
         {#if hasVariants}
+          <!-- Spacer to align with products that have QuantityInput -->
+          <div class="h-[52px]"></div>
           <a
             href="/products/{product.slug}"
             onclick={(e) => handleNavigation(e, `/products/${product.slug}`)}
@@ -146,6 +148,9 @@
               onDecrement={handleQuantityDecrement}
               onChange={handleQuantityChange}
             />
+          {:else}
+            <!-- Spacer to maintain alignment when QuantityInput is hidden -->
+            <div class="h-[52px]"></div>
           {/if}
 
           <button

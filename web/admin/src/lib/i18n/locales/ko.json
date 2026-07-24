@@ -191,6 +191,8 @@
     "totalPrice": "총 가격",
     "quantity": "수량",
     "tooManyVariants": "경고: 최대 100개의 변형까지만 허용됩니다",
+    "created": "상품이 성공적으로 생성되었습니다",
+    "updated": "상품이 성공적으로 업데이트되었습니다",
     "csv": {
       "exportProducts": "상품 내보내기",
       "exportDescription": "모든 상품을 CSV 파일로 다운로드",
@@ -279,6 +281,11 @@
     "viewFullSizeImage": "전체 크기 이미지 보기",
     "statusColumn": "상태",
     "paymentColumn": "결제",
+    "productName": "제품명",
+    "variantColumn": "옵션",
+    "priceColumn": "가격",
+    "quantityColumn": "수량",
+    "subtotalColumn": "소계",
     "mailSentSuccessfully": "메일 전송 성공",
     "failedToSendMailMessage": "메일 전송 실패"
   },

@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { ProductOption, ProductVariant } from '$lib/types/models'
-  import { translate } from '$lib/i18n'
-  import { costFormat } from '$lib/utils/costFormat'
+  import { translate, locale } from '$lib/i18n'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
+  import { settingsStore } from '$lib/stores/settings'
 
   let t = $derived($translate)
+  let currentLocale = $derived($locale)
 
   interface Props {
     options: ProductOption[]
@@ -14,6 +16,10 @@
   }
 
   let { options, variants, basePrice, currency, onVariantChange }: Props = $props()
+
+  let truncationSettings = $derived($settingsStore?.payment?.truncation)
+  let numberFormat = $derived($settingsStore?.payment?.number_format)
+  let symbolMode = $derived($settingsStore?.payment?.symbol_display?.storefront)
 
   let selectedOptions = $state<Record<string, string>>({})
   let selectedVariant = $state<ProductVariant | null>(null)
@@ -123,12 +129,27 @@
         </div>
         <div class="text-right">
           <p class="text-3xl font-black text-black">
-            {costFormat(getVariantPrice())}
-            <span class="text-lg uppercase">{currency}</span>
+            {formatCurrencyWithTruncation(
+              getVariantPrice(),
+              currency || 'USD',
+              'storefront',
+              truncationSettings,
+              currentLocale,
+              numberFormat,
+              symbolMode
+            )}
           </p>
           {#if selectedVariant.price_surcharge !== 0}
             <p class="text-xs text-gray-600">
-              (+{costFormat(selectedVariant.price_surcharge)})
+              (+{formatCurrencyWithTruncation(
+                selectedVariant.price_surcharge,
+                currency || 'USD',
+                'storefront',
+                truncationSettings,
+                currentLocale,
+                numberFormat,
+                symbolMode
+              )})
             </p>
           {/if}
         </div>
