@@ -4,7 +4,7 @@
 
 import type { PaymentMethods } from '$lib/types/models'
 
-const PROVIDER_KEYS = ['stripe', 'paypal', 'spectrocoin', 'coinbase'] as const
+const PROVIDER_KEYS = ['stripe', 'paypal', 'portone', 'spectrocoin', 'coinbase'] as const
 
 export function getAvailableProviders(payments: PaymentMethods): string[] {
   return PROVIDER_KEYS.filter((key) => payments[key])

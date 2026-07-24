@@ -38,6 +38,8 @@
     "stripeDescription": "流行的卡片和其他支付方式系统",
     "paypal": "PayPal",
     "paypalDescription": "用于卡片和 PayPal 账户资金的支付系统",
+    "portone": "PortOne",
+    "portoneDescription": "信用卡、虚拟账户和移动支付",
     "spectrocoin": "Spectrocoin",
     "spectrocoinDescription": "允许使用加密货币支付的支付系统",
     "coinbase": "Coinbase Commerce",

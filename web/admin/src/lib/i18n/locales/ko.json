@@ -83,6 +83,20 @@
     "testLetterSent": "테스트 레터가 전송되었습니다",
     "failedToSendTestLetter": "테스트 레터 전송 실패",
     "currency": "통화",
+    "numberFormatting": "숫자 형식",
+    "decimalPrecision": "소수점 자릿수",
+    "showTrailingZeros": "후행 0 표시",
+    "showTrailingZerosDesc": "1 대신 1.00 표시",
+    "preview": "미리보기",
+    "currencyDisplay": "통화 표시",
+    "adminPanelDisplay": "관리자 패널 표시",
+    "storefrontDisplay": "상점 표시",
+    "currencySymbol": "통화 기호",
+    "languageSymbol": "언어 기호",
+    "priceDisplaySettings": "가격 표시 설정",
+    "adminPanel": "관리자 패널",
+    "storefront": "상점",
+    "priceDisplay": "가격 표시",
     "paymentProviders": "결제 제공업체"
   },
   "payment": {
@@ -95,7 +109,16 @@
     "projectId": "프로젝트 ID",
     "privateKey": "개인 키",
     "failedToLoad": "설정 로드 실패",
-    "failedToSave": "설정 저장 실패"
+    "failedToSave": "설정 저장 실패",
+    "portone": {
+      "debugEnabled": "디버그 모드",
+      "debugEnabledDesc": "브라우저 콘솔에 디버그 로그 표시 (문제 해결용)",
+      "supportedCurrencies": "지원 통화",
+      "supportedCurrenciesDesc": "이 결제 수단이 지원하는 통화입니다. 상점 통화가 일치할 때만 PortOne이 표시됩니다.",
+      "currencyWarning": "통화 불일치 경고",
+      "currencyWarningDesc": "상점 기본 통화가 {{currency}}이지만, PortOne은 KRW만 지원합니다. 결제 설정에서 상점 통화를 업데이트하세요.",
+      "pgSupportInfo": "현재 PortOne PG는 카카오페이 간편결제만 지원합니다."
+    }
   },
   "digital": {
     "addData": "데이터 추가",

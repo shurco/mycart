@@ -80,33 +80,26 @@ function patchOxide(webDir) {
 
 // Copy lightningcss binary
 function patchLightningCSS(webDir) {
-  const sourceBinary = path.join(NATIVE_LIBS_DIR, 'lightningcss.openbsd-x64.node');
+  // Try flattened location first, then nested
+  let lightningPath = path.join(webDir, 'node_modules/lightningcss');
+  if (!fs.existsSync(lightningPath)) {
+    lightningPath = path.join(webDir, 'node_modules/@tailwindcss/node/node_modules/lightningcss');
+  }
+  const binaryPath = path.join(lightningPath, 'lightningcss.openbsd-x64.node');
 
-  if (!fs.existsSync(sourceBinary)) {
-    console.log(`  ⚠️  Binary not found: ${sourceBinary}`);
-    console.log(`     Run: cargo build in lightningcss repo first`);
+  if (!fs.existsSync(lightningPath)) {
+    console.log(`  ⏭️  Skipping ${webDir}/lightningcss - not installed`);
     return;
   }
 
-  // Copy to both possible locations (flattened and nested)
-  const locations = [
-    path.join(webDir, 'node_modules/lightningcss'),
-    path.join(webDir, 'node_modules/@tailwindcss/node/node_modules/lightningcss')
-  ];
-
-  let copied = false;
-  for (const lightningPath of locations) {
-    if (fs.existsSync(lightningPath)) {
-      const binaryPath = path.join(lightningPath, 'lightningcss.openbsd-x64.node');
-      fs.copyFileSync(sourceBinary, binaryPath);
-      console.log(`  ✓ Copied lightningcss binary to ${webDir} (${path.basename(path.dirname(lightningPath))})`);
-      patchCount++;
-      copied = true;
-    }
-  }
-
-  if (!copied) {
-    console.log(`  ⏭️  Skipping ${webDir}/lightningcss - not installed`);
+  const sourceBinary = path.join(NATIVE_LIBS_DIR, 'lightningcss.openbsd-x64.node');
+  if (fs.existsSync(sourceBinary)) {
+    fs.copyFileSync(sourceBinary, binaryPath);
+    console.log(`  ✓ Copied lightningcss binary to ${webDir}`);
+    patchCount++;
+  } else {
+    console.log(`  ⚠️  Binary not found: ${sourceBinary}`);
+    console.log(`     Run: cargo build in lightningcss repo first`);
   }
 }
 

@@ -58,7 +58,23 @@ docker/docker-compose_private.yml
 
 # Runtime directories
 lc_base/
+lc_*/
 tmp/
 
 # Compiled binary
 mycart
+mycart-linux
+mycart-test
+
+# Temporary files
+docker/Dockerfile.dev.bak
+web/admin/package-lock.json
+web/site/package-lock.json
+
+CLAUDE.md
+
+test-output.log
+test-results/
+playwright-report/
+.vitest-attachments/
+__screenshots__/

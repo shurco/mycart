@@ -66,5 +66,6 @@ func Settings(c fiber.Ctx) error {
 		},
 		"socials": settingSocial,
 		"pages":   pages,
+		"payment": settingPayment,
 	})
 }

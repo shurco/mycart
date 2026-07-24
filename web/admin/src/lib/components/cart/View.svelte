@@ -4,12 +4,16 @@
   import DetailList from '../DetailList.svelte'
   import SvgIcon from '../SvgIcon.svelte'
   import { costFormat, formatDate, STRIPE_DASHBOARD_URL } from '$lib/utils'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { loadData } from '$lib/utils/apiHelpers'
   import type { CartDetail } from '$lib/types/models'
-  import { translate } from '$lib/i18n'
+  import { paymentSettingsStore } from '$lib/stores/payment'
+  import { translate, locale } from '$lib/i18n'
 
   // Reactive translation function
   let t = $derived($translate)
+  let currentLocale = $derived($locale)
+  let paymentSettings = $derived($paymentSettingsStore)
 
   interface DrawerCart {
     cart: {
@@ -110,10 +114,22 @@
               target="_blank"
               class="text-blue-600 hover:underline"
             >
-              {costFormat(cart.amount_total)} {cart.currency || ''}
+              {formatCurrencyWithTruncation(
+                cart.amount_total,
+                cart.currency || 'USD',
+                'admin',
+                paymentSettings?.truncation,
+                currentLocale
+              )}
             </a>
           {:else}
-            {costFormat(cart.amount_total)} {cart.currency || ''}
+            {formatCurrencyWithTruncation(
+              cart.amount_total,
+              cart.currency || 'USD',
+              'admin',
+              paymentSettings?.truncation,
+              currentLocale
+            )}
           {/if}
         </DetailList>
 
@@ -148,82 +164,55 @@
         {/if}
 
         {#if cart.items && cart.items.length > 0}
-          <DetailList name={t('carts.items')} fullWidth={true}>
-            <div class="overflow-x-auto">
-              <table class="min-w-full divide-y divide-gray-300">
-                <thead>
-                  <tr>
-                    <th scope="col" class="py-3 pl-4 pr-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Product</th>
-                    <th scope="col" class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Variant</th>
-                    <th scope="col" class="px-3 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Qty</th>
-                    <th scope="col" class="px-3 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Unit Price</th>
-                    <th scope="col" class="py-3 pl-3 pr-4 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200">
-                  {#each cart.items as item (`${item.id}-${item.variant_id || 'no-variant'}`)}
-                    <tr>
-                      <td class="whitespace-nowrap py-4 pl-4 pr-3">
-                        <div class="flex items-center gap-3">
-                          {#if item.image}
-                            <div class="flex-shrink-0">
-                              <a
-                                href="/uploads/{item.image.name}.{item.image.ext}"
-                                target="_blank"
-                                aria-label={t('carts.viewFullSizeImage')}
-                              >
-                                <img
-                                  class="h-12 w-12 rounded object-cover"
-                                  src="/uploads/{item.image.name}_sm.{item.image.ext}"
-                                  alt="{item.name}"
-                                  loading="lazy"
-                                />
-                              </a>
-                            </div>
-                          {/if}
-                          <div>
-                            <div class="font-medium text-gray-900">{item.name}</div>
-                            <div class="text-xs text-gray-500">{item.slug}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-700">
-                        {#if item.variant_options && Object.keys(item.variant_options).length > 0}
-                          <div class="space-y-1">
-                            {#each Object.entries(item.variant_options) as [key, value]}
-                              <div><span class="font-medium">{key}:</span> {value}</div>
-                            {/each}
-                          </div>
-                          {#if item.variant_sku}
-                            <div class="mt-1 text-xs text-gray-500">SKU: {item.variant_sku}</div>
-                          {/if}
-                        {:else}
-                          <span class="text-gray-400">-</span>
-                        {/if}
-                      </td>
-                      <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-700">
-                        {item.quantity}
-                      </td>
-                      <td class="whitespace-nowrap px-3 py-4 text-sm text-gray-700 text-right">
-                        {costFormat(item.amount)} {cart.currency || ''}
-                      </td>
-                      <td class="whitespace-nowrap py-4 pl-3 pr-4 text-sm font-medium text-gray-900 text-right">
-                        {costFormat(item.amount * item.quantity)} {cart.currency || ''}
-                      </td>
-                    </tr>
-                  {/each}
-                </tbody>
-                <tfoot class="border-t-2 border-gray-300">
-                  <tr>
-                    <td colspan="4" class="py-4 pl-4 pr-3 text-right text-sm font-bold text-gray-900 uppercase">
-                      {t('cart.total')}
-                    </td>
-                    <td class="py-4 pl-3 pr-4 text-right text-base font-bold text-gray-900">
-                      {costFormat(cart.amount_total)} {cart.currency || ''}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+          <DetailList name={t('carts.items')} grid={false}>
+            <div class="space-y-4">
+              {#each cart.items as item (item.id)}
+                <div class="flex items-start gap-4 border-b border-gray-200 pb-4 last:border-0">
+                  {#if item.image}
+                    <div class="flex-shrink-0">
+                      <a
+                        href="/uploads/{item.image.name}.{item.image.ext}"
+                        target="_blank"
+                        aria-label={t('carts.viewFullSizeImage')}
+                      >
+                        <img
+                          class="w-20 h-20 object-cover rounded"
+                          src="/uploads/{item.image.name}_sm.{item.image.ext}"
+                          alt="{item.name}"
+                          loading="lazy"
+                        />
+                      </a>
+                    </div>
+                  {/if}
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-gray-900">{item.name}</div>
+                    <div class="text-sm text-gray-500">{t('carts.slug')} {item.slug}</div>
+                    <div class="mt-1 text-sm text-gray-700">
+                      <span class="font-medium">{t('carts.price')}</span>
+                      {formatCurrencyWithTruncation(
+                        item.amount,
+                        cart.currency || 'USD',
+                        'admin',
+                        paymentSettings?.truncation,
+                        currentLocale
+                      )}
+                    </div>
+                    <div class="mt-1 text-sm text-gray-700">
+                      <span class="font-medium">{t('carts.quantity')}</span> {item.quantity}
+                    </div>
+                    <div class="mt-1 text-sm text-gray-700">
+                      <span class="font-medium">{t('carts.subtotal')}</span>
+                      {formatCurrencyWithTruncation(
+                        item.amount * item.quantity,
+                        cart.currency || 'USD',
+                        'admin',
+                        paymentSettings?.truncation,
+                        currentLocale
+                      )}
+                    </div>
+                  </div>
+                </div>
+              {/each}
             </div>
           </DetailList>
         {:else}

@@ -2,15 +2,17 @@
   import type { Product } from '$lib/types/models'
   import { cartStore } from '$lib/stores/cart'
   import { costFormat } from '$lib/utils/costFormat'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { settingsStore } from '$lib/stores/settings'
   import { getFirstImageUrl } from '$lib/utils/imageUrl'
   import { toggleCartItem } from '$lib/utils/cart'
   import { handleNavigation } from '$lib/utils/navigation'
-  import { translate } from '$lib/i18n'
+  import { translate, locale } from '$lib/i18n'
   import QuantityInput from './QuantityInput.svelte'
 
   // Reactive translation function
   let t = $derived($translate)
+  let currentLocale = $derived($locale)
 
   interface Props {
     product: Product
@@ -20,6 +22,9 @@
   let { product, index = 0 }: Props = $props()
 
   let currency = $derived($settingsStore?.main.currency || '')
+  let truncationSettings = $derived($settingsStore?.payment?.truncation)
+  let numberFormat = $derived($settingsStore?.payment?.number_format)
+  let symbolMode = $derived($settingsStore?.payment?.symbol_display?.storefront)
   let cart = $derived($cartStore)
 
   let hasVariants = $derived(product.has_variants)
@@ -68,7 +73,7 @@
   }
 </script>
 
-<li class="flex h-full flex-col">
+<li class="flex h-full flex-col" data-testid="product-card">
   <a
     href="/products/{product.slug}"
     onclick={(e) => handleNavigation(e, `/products/${product.slug}`)}
@@ -110,11 +115,18 @@
     <div class="mt-auto flex flex-col gap-4">
       <div class="flex items-baseline gap-2">
         <span class="text-3xl font-black tracking-tight text-black">
-          {costFormat(product.amount) === 'free' ? t('product.free') : costFormat(product.amount)}
+          {costFormat(product.amount) === 'free'
+            ? t('product.free')
+            : formatCurrencyWithTruncation(
+                product.amount,
+                currency || 'USD',
+                'storefront',
+                truncationSettings,
+                currentLocale,
+                numberFormat,
+                symbolMode
+              )}
         </span>
-        {#if product.amount !== 0 && product.amount}
-          <span class="text-lg font-bold text-gray-600 uppercase">{currency}</span>
-        {/if}
       </div>
 
       <div class="flex flex-col items-end gap-3">

@@ -12,7 +12,16 @@ import (
 
 func Fiber(a *fiber.App, log *gzerolog.Logger) {
 	a.Use(cors.New())
+	
+	// Use helmet with default config
 	a.Use(helmet.New())
+	
+	// Remove COEP header for PortOne iframe compatibility
+	a.Use(func(c fiber.Ctx) error {
+		c.Response().Header.Del("Cross-Origin-Embedder-Policy")
+		return c.Next()
+	})
+	
 	a.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
 	}))

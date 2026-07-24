@@ -109,8 +109,31 @@ export interface CartDetail extends Cart {
   items?: CartItem[]
 }
 
+export interface CurrencyTruncationSettings {
+  mode: 'none' | 'fixed' | 'flexible'
+  fixed_unit?: string  // e.g., 'K', 'M', '만', '천'
+}
+
+export interface NumberFormatSettings {
+  decimal_precision: 0 | 1 | 2
+  show_trailing_zeros: boolean
+}
+
+export interface SymbolDisplaySettings {
+  admin: 'currency' | 'language'
+  storefront: 'currency' | 'language'
+}
+
+export interface TruncationSettings {
+  admin: Record<string, CurrencyTruncationSettings>
+  storefront: Record<string, CurrencyTruncationSettings>
+}
+
 export interface PaymentSettings {
   currency: string
+  truncation?: TruncationSettings
+  number_format?: NumberFormatSettings
+  symbol_display?: SymbolDisplaySettings
 }
 
 export interface StripeSettings {
@@ -134,6 +157,15 @@ export interface SpectrocoinSettings {
 export interface CoinbaseSettings {
   active: boolean
   api_key: string
+}
+
+export interface PortoneSettings {
+  active: boolean
+  store_id: string
+  channel_key: string
+  api_secret: string
+  debug_enabled?: boolean
+  supported_currencies?: string[]
 }
 
 export interface SmtpSettings {

@@ -38,6 +38,8 @@
     "stripeDescription": "Popular payment system for cards and other methods",
     "paypal": "PayPal",
     "paypalDescription": "Payment system for cards and PayPal account funds",
+    "portone": "PortOne",
+    "portoneDescription": "Credit card, virtual account, and mobile payment",
     "spectrocoin": "Spectrocoin",
     "spectrocoinDescription": "Payment system allowing payments with cryptocurrency",
     "coinbase": "Coinbase Commerce",

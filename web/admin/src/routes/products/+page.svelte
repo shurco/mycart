@@ -17,6 +17,7 @@
   import Pagination from '$lib/components/Pagination.svelte'
   import { loadData, saveData, deleteData, toggleActive as toggleActiveApi } from '$lib/utils/apiHelpers'
   import { costFormat, formatPrice, formatDate, sortByDate, confirmDelete, showMessage } from '$lib/utils'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { apiDelete, apiUpdate } from '$lib/utils/api'
   import { validators, validateFields } from '$lib/utils/validation'
   import { MIN_NAME_LENGTH, MIN_SLUG_LENGTH, ERROR_MESSAGES } from '$lib/constants/validation'
@@ -24,11 +25,14 @@
   import { DEFAULT_PAGE_SIZE } from '$lib/constants/pagination'
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
   import type { Product, ProductOption, ProductVariant } from '$lib/types/models'
-  import { translate } from '$lib/i18n'
+  import { paymentSettingsStore } from '$lib/stores/payment'
+  import { translate, locale } from '$lib/i18n'
   import { generateSlug } from '$lib/utils/slugGenerator'
 
   // Reactive translation function
   let t = $derived($translate)
+  let currentLocale = $derived($locale)
+  let paymentSettings = $derived($paymentSettingsStore)
 
   interface ProductsResponse {
     products: Product[]
@@ -375,6 +379,45 @@
     }
   }
 
+  function validateProductForm(): number | null {
+    formErrors = validateFields(formData, [
+      { field: 'name', ...validators.minLength(MIN_NAME_LENGTH, ERROR_MESSAGES.NAME_TOO_SHORT) },
+      { field: 'slug', ...validators.minLength(MIN_SLUG_LENGTH, ERROR_MESSAGES.SLUG_TOO_SHORT) }
+    ])
+
+    const amountValue = typeof formData.amount === 'string' ? parseFloat(formData.amount) : formData.amount
+    if (isNaN(amountValue) || amountValue < 0) {
+      formErrors.amount = ERROR_MESSAGES.AMOUNT_INVALID
+      return null
+    }
+
+    if (drawerMode === 'add' && (!formData.digital?.type || formData.digital.type.trim() === '')) {
+      formErrors.digital_type = ERROR_MESSAGES.DIGITAL_TYPE_REQUIRED
+    }
+
+    return Object.keys(formErrors).length > 0 ? null : amountValue
+  }
+
+  function prepareSubmitData(amountValue: number): Partial<Product> {
+    const amountInCents = Math.round(amountValue * CENTS_PER_UNIT)
+    return {
+      ...formData,
+      amount: amountInCents
+    }
+  }
+
+  async function handleSaveResult(result: Product | null, isUpdate: boolean) {
+    if (!result) return
+
+    if (isUpdate) {
+      updateProductInList(result)
+    } else {
+      products = [result, ...products]
+      total++
+    }
+    closeDrawer()
+  }
+
   async function handleSubmit() {
     // Validate form
     formErrors = validateProductForm(formData, drawerMode)
@@ -412,7 +455,7 @@
     // Handle response
     await handleSubmitResponse(result, isUpdate, drawerProduct, updateProductInList, loadProducts, closeDrawer)
   }
-
+  
   async function handleDeleteProduct() {
     if (!fullProductData || !confirmDelete('product', fullProductData.name)) {
       return
@@ -585,7 +628,7 @@
       </thead>
       <tbody>
         {#each products as product, index (product.id)}
-          <tr class:opacity-30={!product.active}>
+          <tr class:opacity-30={!product.active} data-testid="product-row">
             <td>
               {#if product.images && product.images.length > 0}
                 <a href="/uploads/{product.images[0].name}.{product.images[0].ext}" target="_blank">
@@ -617,8 +660,13 @@
               {#if !product.amount || parseFloat(String(product.amount)) === 0}
                 <span class="font-bold text-green-600">free</span>
               {:else}
-                {costFormat(product.amount)}
-                {currency}
+                {formatCurrencyWithTruncation(
+                  product.amount,
+                  currency || 'USD',
+                  'admin',
+                  paymentSettings?.truncation,
+                  currentLocale
+                )}
               {/if}
             </td>
             <td class="px-4 py-2">

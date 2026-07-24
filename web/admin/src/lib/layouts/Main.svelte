@@ -4,9 +4,11 @@
   import { goto } from '$app/navigation'
   import { base } from '$app/paths'
   import { systemStore } from '$lib/stores/system'
+  import { paymentSettingsStore } from '$lib/stores/payment'
   import { apiGet, apiPost } from '$lib/utils/api'
   import SvgIcon from '$lib/components/SvgIcon.svelte'
   import { translate } from '$lib/i18n'
+  import type { PaymentSettings } from '$lib/types/models'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -31,8 +33,16 @@
     }
   }
 
+  const loadPaymentSettings = async () => {
+    const res = await apiGet<PaymentSettings>(`/api/_/settings/payment`)
+    if (res.success && res.result) {
+      paymentSettingsStore.set(res.result)
+    }
+  }
+
   onMount(() => {
     loadVersionInfo()
+    loadPaymentSettings()
     const unsubscribe = systemStore.subscribe((store) => {
       version = store.version
     })

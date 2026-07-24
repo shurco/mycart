@@ -1,0 +1,75 @@
+# If you prefer the allow list template instead of the deny list, see community template:
+# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
+#
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+.DS_Store
+dist
+dist-ssr
+coverage
+*.local
+
+# Go workspace file
+go.work
+
+cmd/__debug_bin*
+cmd/main
+cmd/cmd
+cmd/lc_*/
+cmd/site
+fixtures/migration/*_private.sql
+.DS_Store
+
+# Database files
+*.db
+mycart.db
+
+.cursor/
+.playwright-mcp/
+.svelte-kit/
+web/*/build/
+.shared/
+docker/docker-compose_private.yml
+/graphify-out/
+
+# Temporary files
+docker/Dockerfile.dev.bak
+lc_*/
+mycart
+web/admin/package-lock.json
+web/site/package-lock.json
+
+tmp/
+mycart-linux
+mycart-test
+
+CLAUDE.md
+
+test-output.log
+test-results/
+playwright-report/
+

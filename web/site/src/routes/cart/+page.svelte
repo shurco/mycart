@@ -3,7 +3,7 @@
   import { cartStore } from '$lib/stores/cart'
   import { settingsStore } from '$lib/stores/settings'
   import { apiGet, apiPost } from '$lib/utils/api'
-  import { formatCurrency } from '$lib/utils/currency'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { costFormat } from '$lib/utils/costFormat'
   import { getProductImageUrl } from '$lib/utils/imageUrl'
   import { hasPaymentProviders } from '$lib/utils/payment'
@@ -13,7 +13,20 @@
   import Overlay from '$lib/components/Overlay.svelte'
   import CartItemCard from '$lib/components/CartItemCard.svelte'
   import { handleNavigation } from '$lib/utils/navigation'
-  import { translate } from '$lib/i18n'
+  import { translate, locale } from '$lib/i18n'
+  import * as PortOne from '@portone/browser-sdk/v2'
+
+  // UUID generator with fallback for non-secure contexts (HTTP)
+  function generateUUID(): string {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID()
+    }
+    // Fallback for HTTP or older browsers
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8)
+      return v.toString(16)
+    })
+  }
 
   // Reactive translation function
   let t = $derived($translate)
@@ -25,9 +38,120 @@
   let error = $state<string | undefined>(undefined)
   let isLoadingPaymentMethods = $state(false)
   let hasAttemptedLoadingPayments = $state(false)
+  let portoneStoreId = $state('')
+  let portoneChannelKey = $state('')
+  let portoneDebugEnabled = $state(false)
+
+  // Helper function for conditional logging
+  function debugLog(...args: any[]) {
+    if (portoneDebugEnabled) {
+      console.log(...args)
+    }
+  }
+
+  // Create cart record and return cart_id
+  async function createCartRecord(email: string, cart: any[]): Promise<string> {
+    debugLog('Creating cart record...')
+    const cartCreateRes = await apiPost<{ cart_id: string; amount_total: number; currency: string }>('/api/cart/create', {
+      email: email,
+      provider: 'portone',
+      products: cart.map((item) => ({ id: item.id, quantity: 1 }))
+    })
+    debugLog('Cart create response:', cartCreateRes)
+
+    if (!cartCreateRes.success || !cartCreateRes.result?.cart_id) {
+      throw new Error('Failed to create cart: ' + (cartCreateRes.message || 'Unknown error'))
+    }
+
+    return cartCreateRes.result.cart_id
+  }
+
+  // Verify payment with backend
+  async function verifyPayment(paymentId: string, cartId: string): Promise<boolean> {
+    console.log('Verifying payment with backend...')
+    const verifyRes = await apiPost('/api/payment/portone/complete', {
+      payment_id: paymentId,
+      cart_id: cartId
+    })
+    console.log('Backend verification response:', verifyRes)
+
+    if (!verifyRes.success) {
+      throw new Error('Payment verification failed: ' + (verifyRes.message || 'Unknown error'))
+    }
+
+    return true
+  }
+
+  // Handle PortOne payment flow
+  async function handlePortonePayment(email: string, cart: any[], cartTotal: number, currency: string) {
+    debugLog('=== PORTONE PAYMENT FLOW ===')
+    debugLog('PortOne SDK available?', typeof PortOne !== 'undefined')
+    debugLog('PortOne.requestPayment available?', typeof PortOne?.requestPayment === 'function')
+
+    // Validate PortOne configuration
+    if (!portoneStoreId || !portoneChannelKey) {
+      throw new Error('PortOne configuration not loaded. Please refresh the page.')
+    }
+
+    debugLog('PortOne payment request:', {
+      storeId: portoneStoreId,
+      channelKey: portoneChannelKey,
+      cartTotal: cartTotal,
+      currency: currency,
+      protocol: window.location.protocol,
+      hostname: window.location.hostname
+    })
+
+    // Generate unique payment ID
+    const paymentId = `payment-${generateUUID()}`
+    debugLog('Generated payment ID:', paymentId)
+
+    // Create cart and get cart_id
+    const cartId = await createCartRecord(email, cart)
+    debugLog('Cart created with ID:', cartId)
+
+    // Prepare and execute payment request
+    const paymentRequest = {
+      storeId: portoneStoreId,
+      channelKey: portoneChannelKey,
+      paymentId: paymentId,
+      orderName: `Order ${cart.length} items`,
+      totalAmount: cartTotal,
+      currency: "KRW",
+      payMethod: "EASY_PAY",
+      customData: { cart_id: cartId }
+    }
+    console.log('Payment request object:', paymentRequest)
+
+    // Call PortOne SDK
+    console.log('Calling PortOne.requestPayment...')
+    const response = await PortOne.requestPayment(paymentRequest)
+    console.log('PortOne payment response received:', response)
+
+    // Check for payment errors
+    if (response.code != null) {
+      console.error('PortOne returned error code:', response.code, 'message:', response.message)
+      throw new Error(response.message)
+    }
+
+    // Verify payment with backend
+    await verifyPayment(response.paymentId, cartId)
+    console.log('Payment verified successfully!')
+
+    // Clear cart and redirect to success
+    cartStore.set([])
+    removeLocalStorage('email')
+    removeLocalStorage('provider')
+    goto('/cart/payment/success')
+  }
+>>>>>>> main
 
   let cart = $derived($cartStore)
   let currency = $derived($settingsStore?.main.currency || '')
+  let truncationSettings = $derived($settingsStore?.payment?.truncation)
+  let numberFormat = $derived($settingsStore?.payment?.number_format)
+  let symbolMode = $derived($settingsStore?.payment?.symbol_display?.storefront)
+  let currentLocale = $derived($locale)
 
   // Calculate total cart amount in cents (amount * quantity for each item)
   let cartTotal = $derived(cart.reduce((sum, item) => sum + (item.amount * item.quantity), 0))
@@ -76,6 +200,16 @@
         payments = res.result
         provider = ''
         removeLocalStorage('provider')
+
+        // Load PortOne config if portone is available
+        if (payments.portone) {
+          const portoneRes = await apiGet<{ store_id: string; channel_key: string; debug_enabled: boolean }>('/api/cart/portone-config')
+          if (portoneRes.success && portoneRes.result) {
+            portoneStoreId = portoneRes.result.store_id
+            portoneChannelKey = portoneRes.result.channel_key
+            portoneDebugEnabled = portoneRes.result.debug_enabled
+          }
+        }
       } else {
         throw new Error(res.message || 'Failed to load payment methods')
       }
@@ -115,10 +249,20 @@
   let showPayments = $derived(!isFree && hasPaymentProviders(payments))
 
   // Computed value instead of function
-  let totalCartAmount = $derived(cartTotal === 0 ? t('product.free') : formatCurrency(cartTotal / 100, currency))
+  let totalCartAmount = $derived(
+    cartTotal === 0
+      ? t('product.free')
+      : formatCurrencyWithTruncation(cartTotal, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)
+  )
 
   async function checkOut(e: Event) {
     e.preventDefault()
+
+    debugLog('=== CHECKOUT STARTED ===')
+    debugLog('Email:', email)
+    debugLog('Provider:', provider)
+    debugLog('Cart:', cart)
+    debugLog('Is Free:', isFree)
 
     setLocalStorage('email', email)
     error = undefined
@@ -126,6 +270,7 @@
     const finalProvider = isFree ? 'dummy' : provider
 
     if (!isFree && !finalProvider) {
+      console.error('No payment provider selected')
       error = t('cart.selectPaymentError')
       showOverlay = true
       return
@@ -133,6 +278,27 @@
 
     setLocalStorage('provider', finalProvider)
 
+    // Handle PortOne payment with browser SDK
+    if (provider === 'portone') {
+      showOverlay = true
+
+      try {
+        await handlePortonePayment(email, cart, cartTotal, currency)
+      } catch (err) {
+        console.error('PortOne payment error (caught exception):', err)
+        console.error('Error type:', typeof err)
+        console.error('Error details:', err)
+        if (err instanceof Error) {
+          console.error('Error message:', err.message)
+          console.error('Error stack:', err.stack)
+        }
+        error = err instanceof Error ? `Payment error: ${err.message}` : 'Payment failed. Please try again.'
+        showOverlay = true
+      }
+      return
+    }
+
+    // Standard payment flow for other providers
     const cartData = {
       email,
       provider: finalProvider,
@@ -194,9 +360,52 @@
             <h2 class="mb-6 text-3xl font-black tracking-tighter text-black uppercase">
               {t('cart.itemsCount', { count: cart.length })}
             </h2>
+<<<<<<< HEAD
             <div class="space-y-4">
               {#each cart as item (`${item.id}-${item.variant_id || 'no-variant'}`)}
                 <CartItemCard {item} />
+=======
+            <ul class="list-none space-y-4">
+              {#each cart as item (item.id)}
+                <li class="border-4 border-black bg-white p-4" data-testid="cart-item">
+                  <div class="flex items-center gap-4">
+                    <div class="overflow-hidden border-4 border-black">
+                      <img src={getProductImageUrl(item.image, 'sm')} alt={item.name} class="h-20 w-20 object-cover" />
+                    </div>
+                    <div class="flex-1">
+                      <a
+                        href="/products/{item.slug}"
+                        target="_blank"
+                        class="cursor-pointer text-xl font-black tracking-tight text-black uppercase decoration-yellow-300 decoration-4 underline-offset-4 hover:underline"
+                        data-testid="item-name"
+                      >
+                        {item.name}
+                      </a>
+                    </div>
+                    <div class="flex items-center gap-4">
+                      <span
+                        class="text-2xl font-black {item.amount === 0
+                          ? 'text-green-500'
+                          : 'text-black'}"
+                      >
+                        {item.amount === 0
+                          ? t('product.free')
+                          : formatCurrencyWithTruncation(item.amount, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)}
+                      </span>
+                      <button
+                        type="button"
+                        class="cursor-pointer border-4 border-black bg-red-500 p-2 text-sm font-black text-white uppercase transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+                        onclick={() => cartStore.remove(item.id)}
+                        aria-label={t('cart.removeItem')}
+                      >
+                        <svg class="h-5 w-5">
+                          <use href="/assets/img/sprite.svg#trash" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </li>
+>>>>>>> main
               {/each}
             </div>
           </div>
@@ -205,8 +414,11 @@
           <div class="brutal-card mb-8 bg-yellow-300 p-8">
             <div class="flex items-center justify-between">
               <span class="text-3xl font-black tracking-tighter text-black uppercase"> {t('cart.total')} </span>
-              <span class="text-4xl font-black {cartTotal === 0 ? 'text-green-500' : 'text-black'}">
+              <span class="text-4xl font-black {cartTotal === 0 ? 'text-green-500' : 'text-black'}" data-testid="cart-total">
                 {totalCartAmount}
+                {#if cart.length > 0 && cartTotal !== 0}
+                  {currency}
+                {/if}
               </span>
             </div>
           </div>
@@ -261,6 +473,19 @@
                       >
                         <p class="mb-2 text-xl font-black tracking-tight text-black uppercase">{t('cart.paypal')}</p>
                         <p class="text-lg text-black">{t('cart.paypalDescription')}</p>
+                      </label>
+                    </div>
+                  {/if}
+
+                  {#if payments.portone}
+                    <div>
+                      <input type="radio" bind:group={provider} value="portone" id="portone" class="peer hidden" />
+                      <label
+                        for="portone"
+                        class="block cursor-pointer border-4 border-black bg-white p-6 peer-checked:border-yellow-300 peer-checked:bg-yellow-300"
+                      >
+                        <p class="mb-2 text-xl font-black tracking-tight text-black uppercase">{t('cart.portone')}</p>
+                        <p class="text-lg text-black">{t('cart.portoneDescription')}</p>
                       </label>
                     </div>
                   {/if}
