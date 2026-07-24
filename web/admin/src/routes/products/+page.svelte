@@ -751,19 +751,6 @@
                 </div>
               </div>
 
-              {#if !formData.has_variants}
-                <FormInput
-                  id="quantity"
-                  type="number"
-                  title={t('products.quantity')}
-                  bind:value={formData.quantity}
-                  error={formErrors.quantity}
-                  ico="cube"
-                  min="0"
-                  placeholder="0"
-                />
-              {/if}
-
               {#if drawerMode === 'add'}
                 <div class="flex">
                   <div class="grow pr-3">
@@ -875,6 +862,19 @@
                 currency={currency}
                 onUpdate={handleVariantUpdate}
               />
+
+              {#if !formData.has_variants}
+                <FormInput
+                  id="quantity"
+                  type="number"
+                  title={t('products.quantity')}
+                  bind:value={formData.quantity}
+                  error={formErrors.quantity}
+                  ico="cube"
+                  min="0"
+                  placeholder="0"
+                />
+              {/if}
 
               {#if drawerMode === 'edit' && fullProductData}
                 <hr />
