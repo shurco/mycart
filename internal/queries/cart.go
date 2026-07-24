@@ -264,6 +264,252 @@ func BuildCartItems(cart *models.Cart, products *models.Products) []map[string]a
 	return cartItems
 }
 
+// ValidateCartItems validates cart items against current product data
+// Returns validation result with errors if quantity or price mismatches detected
+func ValidateCartItems(
+	ctx context.Context,
+	db *Base,
+	requestedProducts []models.CartProduct,
+	currency string,
+) (*models.CartValidationResult, error) {
+	result := &models.CartValidationResult{
+		Valid:          true,
+		Errors:         nil,
+		CorrectedItems: make([]models.CorrectedCartItem, len(requestedProducts)),
+	}
+
+	if len(requestedProducts) == 0 {
+		return result, nil
+	}
+
+	// Extract product IDs for database query
+	productIDs := make([]models.CartProduct, len(requestedProducts))
+	for i, p := range requestedProducts {
+		productIDs[i] = models.CartProduct{ProductID: p.ProductID}
+	}
+
+	// Fetch current product data
+	products, err := db.ListProducts(ctx, false, 0, 0, "", productIDs...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build product map for quick lookup
+	productMap := make(map[string]*models.Product, len(products.Products))
+	for i := range products.Products {
+		productMap[products.Products[i].ID] = &products.Products[i]
+	}
+
+	// Validate each cart item
+	for i, requested := range requestedProducts {
+		validationError, correctedItem := validateCartItem(i, requested, productMap)
+
+		result.CorrectedItems[i] = correctedItem
+
+		if validationError != nil {
+			result.Valid = false
+			result.Errors = append(result.Errors, *validationError)
+		}
+	}
+
+	return result, nil
+}
+
+// validateCartItem validates a single cart item against current product data
+func validateCartItem(
+	index int,
+	requested models.CartProduct,
+	productMap map[string]*models.Product,
+) (*models.CartValidationError, models.CorrectedCartItem) {
+	product, exists := productMap[requested.ProductID]
+
+	// Check if product exists
+	if !exists {
+		return &models.CartValidationError{
+			ItemIndex:          index,
+			ProductID:          requested.ProductID,
+			VariantID:          requested.VariantID,
+			ErrorType:          "product_not_found",
+			RequestedQty:       requested.Quantity,
+			AvailableQty:       0,
+			RequestedUnitPrice: 0,
+			CurrentUnitPrice:   0,
+			RequestedTotal:     0,
+			CurrentTotal:       0,
+		}, models.CorrectedCartItem{
+			ProductID: requested.ProductID,
+			VariantID: requested.VariantID,
+			Quantity:  0,
+			UnitPrice: 0,
+			Available: false,
+		}
+	}
+
+	// Check if product is active
+	if !product.Active {
+		return &models.CartValidationError{
+			ItemIndex:          index,
+			ProductID:          requested.ProductID,
+			VariantID:          requested.VariantID,
+			ErrorType:          "product_inactive",
+			RequestedQty:       requested.Quantity,
+			AvailableQty:       0,
+			RequestedUnitPrice: product.Amount,
+			CurrentUnitPrice:   product.Amount,
+			RequestedTotal:     0,
+			CurrentTotal:       0,
+		}, models.CorrectedCartItem{
+			ProductID: requested.ProductID,
+			VariantID: requested.VariantID,
+			Quantity:  0,
+			UnitPrice: product.Amount,
+			Available: false,
+		}
+	}
+
+	// Handle variant validation
+	if requested.VariantID != nil && *requested.VariantID != "" {
+		return validateVariantItem(index, requested, product)
+	}
+
+	// Validate non-variant product
+	return validateNonVariantItem(index, requested, product)
+}
+
+// validateVariantItem validates a cart item with a variant
+func validateVariantItem(
+	index int,
+	requested models.CartProduct,
+	product *models.Product,
+) (*models.CartValidationError, models.CorrectedCartItem) {
+	var variant *models.ProductVariant
+
+	// Find the variant
+	for i := range product.Variants {
+		if product.Variants[i].ID == *requested.VariantID {
+			variant = &product.Variants[i]
+			break
+		}
+	}
+
+	// Variant not found
+	if variant == nil {
+		return &models.CartValidationError{
+			ItemIndex:          index,
+			ProductID:          requested.ProductID,
+			VariantID:          requested.VariantID,
+			ErrorType:          "product_not_found",
+			RequestedQty:       requested.Quantity,
+			AvailableQty:       0,
+			RequestedUnitPrice: product.Amount,
+			CurrentUnitPrice:   product.Amount,
+			RequestedTotal:     0,
+			CurrentTotal:       0,
+		}, models.CorrectedCartItem{
+			ProductID: requested.ProductID,
+			VariantID: requested.VariantID,
+			Quantity:  0,
+			UnitPrice: product.Amount,
+			Available: false,
+		}
+	}
+
+	// Variant inactive
+	if !variant.Active {
+		currentUnitPrice := product.Amount + variant.PriceSurcharge
+		return &models.CartValidationError{
+			ItemIndex:          index,
+			ProductID:          requested.ProductID,
+			VariantID:          requested.VariantID,
+			ErrorType:          "product_inactive",
+			RequestedQty:       requested.Quantity,
+			AvailableQty:       0,
+			RequestedUnitPrice: currentUnitPrice,
+			CurrentUnitPrice:   currentUnitPrice,
+			RequestedTotal:     0,
+			CurrentTotal:       0,
+		}, models.CorrectedCartItem{
+			ProductID: requested.ProductID,
+			VariantID: requested.VariantID,
+			Quantity:  0,
+			UnitPrice: currentUnitPrice,
+			Available: false,
+		}
+	}
+
+	currentUnitPrice := product.Amount + variant.PriceSurcharge
+
+	// Check quantity availability
+	if requested.Quantity > variant.Quantity {
+		return &models.CartValidationError{
+			ItemIndex:          index,
+			ProductID:          requested.ProductID,
+			VariantID:          requested.VariantID,
+			ErrorType:          "quantity_unavailable",
+			RequestedQty:       requested.Quantity,
+			AvailableQty:       variant.Quantity,
+			RequestedUnitPrice: currentUnitPrice,
+			CurrentUnitPrice:   currentUnitPrice,
+			RequestedTotal:     requested.Quantity * currentUnitPrice,
+			CurrentTotal:       0,
+		}, models.CorrectedCartItem{
+			ProductID: requested.ProductID,
+			VariantID: requested.VariantID,
+			Quantity:  0,
+			UnitPrice: currentUnitPrice,
+			Available: false,
+		}
+	}
+
+	// All validation passed
+	return nil, models.CorrectedCartItem{
+		ProductID: requested.ProductID,
+		VariantID: requested.VariantID,
+		Quantity:  requested.Quantity,
+		UnitPrice: currentUnitPrice,
+		Available: true,
+	}
+}
+
+// validateNonVariantItem validates a cart item without a variant
+func validateNonVariantItem(
+	index int,
+	requested models.CartProduct,
+	product *models.Product,
+) (*models.CartValidationError, models.CorrectedCartItem) {
+	currentUnitPrice := product.Amount
+
+	// Check quantity availability
+	if requested.Quantity > product.Quantity {
+		return &models.CartValidationError{
+			ItemIndex:          index,
+			ProductID:          requested.ProductID,
+			VariantID:          nil,
+			ErrorType:          "quantity_unavailable",
+			RequestedQty:       requested.Quantity,
+			AvailableQty:       product.Quantity,
+			RequestedUnitPrice: currentUnitPrice,
+			CurrentUnitPrice:   currentUnitPrice,
+			RequestedTotal:     requested.Quantity * currentUnitPrice,
+			CurrentTotal:       0,
+		}, models.CorrectedCartItem{
+			ProductID: requested.ProductID,
+			VariantID: nil,
+			Quantity:  0,
+			UnitPrice: currentUnitPrice,
+			Available: false,
+		}
+	}
+
+	// All validation passed
+	return nil, models.CorrectedCartItem{
+		ProductID: requested.ProductID,
+		VariantID: nil,
+		Quantity:  requested.Quantity,
+		UnitPrice: currentUnitPrice,
+		Available: true,
+	}
+}
 // AddCart inserts a new cart into the database.
 func (q *CartQueries) AddCart(ctx context.Context, cart *models.Cart) error {
 	byteCart, err := json.Marshal(cart.Cart)
