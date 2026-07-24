@@ -29,11 +29,15 @@ async function handleRequest<T = any>(url: string, options: RequestOptions): Pro
       return {
         success: false,
         message: errorMessage,
-        result: data.result || data
+        result: data.result || data,
+        status: response.status
       } as ApiResponse<T>
     }
 
-    return data as ApiResponse<T>
+    return {
+      ...data,
+      status: response.status
+    } as ApiResponse<T>
   } catch (error) {
     if (error instanceof SyntaxError) {
       return {

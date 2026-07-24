@@ -345,6 +345,13 @@
           console.error('Error message:', err.message)
           console.error('Error stack:', err.stack)
         }
+
+        // Don't show error overlay if validation modal is already showing
+        if (err instanceof Error && err.message === 'Cart validation failed') {
+          showOverlay = false
+          return
+        }
+
         error = err instanceof Error ? `Payment error: ${err.message}` : 'Payment failed. Please try again.'
         showOverlay = true
       }
@@ -362,7 +369,16 @@
       }))
     }
 
-    const res = await apiPost<{ url?: string }>('/cart/payment', cartData)
+    const res = await apiPost<{ url?: string; validation_errors?: any[]; corrected_cart?: any[] }>('/cart/payment', cartData)
+
+    // Handle validation errors (409 Conflict)
+    if (res.status === 409) {
+      if (res.result?.validation_errors && res.result?.corrected_cart) {
+        handleValidationErrors(res.result.validation_errors, res.result.corrected_cart)
+        return
+      }
+    }
+
     if (res.success && res.result?.url) {
       window.location.href = res.result.url
     } else {
