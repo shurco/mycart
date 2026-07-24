@@ -1,6 +1,0 @@
-name,slug,brief,description,images,attributes,amount,quantity,sku,variants,digital,active
-Basic Tee,basic-tee,Cotton shirt,Comfortable cotton t-shirt made from 100% organic cotton,img1.jpg,Clothing|Cotton|Organic,1000,50,TEE-001,,file,true
-Premium Mug,premium-mug,Ceramic mug,"Nice coffee mug, dishwasher safe",mug1.jpg|mug2.jpg|mug3.jpg,Kitchen|Ceramic|Gift|Premium,1500,100,MUG-001,,file,true
-Simple Shirt,simple-shirt,Basic tee,Plain cotton shirt,,,999,25,SIMPLE-001,,file,true
-Sized Hoodie,sized-hoodie,Comfy hoodie,Warm hoodie available in multiple sizes,hoodie.jpg,Clothing|Winter,3500,0,HOODIE,[Size:XS;S;M;L;XL]=>XS,0,5,H-XS|S,0,10,H-S|M,0,15,H-M|L,500,20,H-L|XL,1000,10,H-XL,file,true
-Variant Tee,variant-tee,Colorful tee,Multi-option variant shirt,tee.jpg|tee2.jpg,Clothing|Cotton|Colorful,2000,0,VTEE,[Size:S;M;L][Color:Red;Blue;Green]=>S,Red,0,10,VT-S-R|S,Blue,0,8,VT-S-B|S,Green,0,7,VT-S-G|M,Red,500,15,VT-M-R|M,Blue,500,12,VT-M-B|M,Green,500,10,VT-M-G|L,Red,1000,20,VT-L-R|L,Blue,1000,18,VT-L-B|L,Green,1000,15,VT-L-G,file,true

@@ -1,3 +1,0 @@
-name,slug,brief,description,images,attributes,amount,quantity,sku,variants,digital,active
-Sized Shirt,shirt,Tee,Nice shirt with sizes,s.jpg,Clothing,2000,0,SHIRT,[Size:S;M;L]=>S,0,10,S-SKU|M,0,20,M-SKU|L,500,15,L-SKU,file,true
-Color Tee,color-tee,Multi-variant,Colorful tee,c.jpg,Clothing,2000,0,CT,[Size:S;M][Color:Red;Blue]=>S,Red,0,10,SR|S,Blue,0,15,SB|M,Red,500,20,MR|M,Blue,500,25,MB,file,true

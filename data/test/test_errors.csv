@@ -1,5 +1,0 @@
-name,slug,brief,description,images,attributes,amount,quantity,sku,variants,digital,active
-Missing Slug,,Short,Description,,,1000,10,SKU1,,file,true
-Invalid Variant,slug,Short,Desc,,,2000,10,SKU2,[Size:S;M]S,0,10,SKU,file,true
-Bad Bracket,slug2,Short,Desc,,,2000,10,SKU3,[Size:S;M,file,true
-Too Many Options,slug3,Short,Desc,,,2000,10,SKU4,[Opt1:A][Opt2:B][Opt3:C][Opt4:D]=>A,B,C,D,0,10,SKU,file,true
