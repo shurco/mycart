@@ -34,6 +34,10 @@ function createCartStore() {
 
   return {
     subscribe,
+    set: (items: CartItem[]) => {
+      set(items)
+      saveToStorage(items)
+    },
     add: (item: CartItem) => {
       update((items) => {
         // Check if this exact item (product + variant) already exists
