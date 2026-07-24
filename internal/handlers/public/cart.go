@@ -123,6 +123,20 @@ func CreateCart(c fiber.Ctx) error {
 		return webutil.StatusInternalServerError(c)
 	}
 
+	// Validate cart items before processing
+	validationResult, err := queries.ValidateCartItems(c.Context(), db, payment.Products, currency)
+	if err != nil {
+		log.ErrorStack(err)
+		return webutil.StatusInternalServerError(c)
+	}
+
+	if !validationResult.Valid {
+		return webutil.Response(c, fiber.StatusConflict, "Cart validation failed", map[string]any{
+			"validation_errors": validationResult.Errors,
+			"corrected_cart":    validationResult.CorrectedItems,
+		})
+	}
+
 	// Calculate total amount
 	var amountTotal int
 	for _, product := range products.Products {
@@ -265,6 +279,20 @@ func Payment(c fiber.Ctx) error {
 	if err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusInternalServerError(c)
+	}
+
+	// Validate cart items before processing
+	validationResult, err := queries.ValidateCartItems(c.Context(), db, payment.Products, currency)
+	if err != nil {
+		log.ErrorStack(err)
+		return webutil.StatusInternalServerError(c)
+	}
+
+	if !validationResult.Valid {
+		return webutil.Response(c, fiber.StatusConflict, "Cart validation failed", map[string]any{
+			"validation_errors": validationResult.Errors,
+			"corrected_cart":    validationResult.CorrectedItems,
+		})
 	}
 
 	// Use request scheme (http/https) for URLs
