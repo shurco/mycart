@@ -159,3 +159,109 @@ func TestCartLetterPurchase_HappyPath_DataType(t *testing.T) {
 		t.Errorf("Purchases empty: %+v", mail.Data)
 	}
 }
+
+func TestValidateCartItems_Success(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	// Create test product
+	product := &models.Product{
+		Core:     models.Core{ID: "test-prod-1"},
+		Name:     "Test Product",
+		Amount:   2999,
+		Quantity: 10,
+		Active:   true,
+		Slug:     "test-product",
+		Digital:  models.Digital{Type: "file"},
+	}
+	if _, err := db.AddProduct(ctx, product); err != nil {
+		t.Fatalf("AddProduct failed: %v", err)
+	}
+
+	// Validate with available quantity
+	cartProducts := []models.CartProduct{
+		{ProductID: "test-prod-1", Quantity: 5},
+	}
+
+	result, err := ValidateCartItems(ctx, db, cartProducts, "USD")
+	if err != nil {
+		t.Fatalf("ValidateCartItems error: %v", err)
+	}
+
+	if !result.Valid {
+		t.Errorf("Expected valid result, got invalid with errors: %v", result.Errors)
+	}
+
+	if len(result.Errors) != 0 {
+		t.Errorf("Expected 0 errors, got: %d", len(result.Errors))
+	}
+}
+
+func TestValidateCartItems_QuantityUnavailable(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	// Create product with limited quantity
+	product := &models.Product{
+		Core:     models.Core{ID: "test-prod-2"},
+		Name:     "Limited Product",
+		Amount:   1999,
+		Quantity: 3,
+		Active:   true,
+		Slug:     "limited-product",
+		Digital:  models.Digital{Type: "file"},
+	}
+	if _, err := db.AddProduct(ctx, product); err != nil {
+		t.Fatalf("AddProduct failed: %v", err)
+	}
+
+	// Request more than available
+	cartProducts := []models.CartProduct{
+		{ProductID: "test-prod-2", Quantity: 10},
+	}
+
+	result, err := ValidateCartItems(ctx, db, cartProducts, "USD")
+	if err != nil {
+		t.Fatalf("ValidateCartItems error: %v", err)
+	}
+
+	if result.Valid {
+		t.Error("Expected invalid result, got valid")
+	}
+
+	if len(result.Errors) != 1 {
+		t.Fatalf("Expected 1 error, got: %d", len(result.Errors))
+	}
+
+	if result.Errors[0].ErrorType != "quantity_unavailable" {
+		t.Errorf("Expected error type 'quantity_unavailable', got: %s", result.Errors[0].ErrorType)
+	}
+
+	if result.CorrectedItems[0].Available {
+		t.Error("Expected item to be marked as unavailable")
+	}
+}
+
+func TestValidateCartItems_ProductNotFound(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	// Request non-existent product
+	cartProducts := []models.CartProduct{
+		{ProductID: "nonexistent", Quantity: 1},
+	}
+
+	result, err := ValidateCartItems(ctx, db, cartProducts, "USD")
+	if err != nil {
+		t.Fatalf("ValidateCartItems error: %v", err)
+	}
+
+	if result.Valid {
+		t.Error("Expected invalid result, got valid")
+	}
+
+	if len(result.Errors) != 1 {
+		t.Fatalf("Expected 1 error, got: %d", len(result.Errors))
+	}
+
+	if result.Errors[0].ErrorType != "product_not_found" {
+		t.Errorf("Expected error type 'product_not_found', got: %s", result.Errors[0].ErrorType)
+	}
+}
