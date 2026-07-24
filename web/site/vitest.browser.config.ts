@@ -8,28 +8,8 @@ export default defineConfig({
   test: {
     browser: {
       enabled: true,
-      provider: webdriverio({
-        capabilities: {
-          'goog:chromeOptions': {
-            binary: '/usr/local/bin/chrome',
-            args: [
-              '--headless',
-              '--no-sandbox',
-              '--disable-setuid-sandbox',
-              '--disable-dev-shm-usage',
-              '--disable-gpu'
-            ]
-          },
-          'wdio:chromedriverOptions': {
-            binary: '/usr/local/bin/chromedriver'
-          }
-        }
-      }),
-      instances: [
-        {
-          browser: 'chrome'
-        }
-      ],
+      provider: webdriverio(),
+      instances: [{ browser: 'chrome' }],
       headless: true
     },
     // Browser tests run in real browsers, no need for jsdom

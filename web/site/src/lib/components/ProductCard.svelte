@@ -33,7 +33,7 @@
   }
 </script>
 
-<li class="flex h-full flex-col">
+<li class="flex h-full flex-col" data-testid="product-card">
   <a
     href="/products/{product.slug}"
     onclick={(e) => handleNavigation(e, `/products/${product.slug}`)}

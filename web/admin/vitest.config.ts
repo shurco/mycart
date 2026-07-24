@@ -1,26 +1,11 @@
 import { defineConfig } from 'vitest/config'
 import { sveltekit } from '@sveltejs/kit/vite'
 import tailwindcss from '@tailwindcss/vite'
-import svg from 'vite-plugin-svelte-svg'
 
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    sveltekit(),
-    svg({
-      svgoConfig: {
-        plugins: [
-          {
-            name: 'preset-default',
-            params: {
-              overrides: {
-                removeViewBox: false
-              }
-            }
-          }
-        ]
-      }
-    })
+    sveltekit()
   ],
   test: {
     environment: 'jsdom',

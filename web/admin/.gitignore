@@ -72,6 +72,4 @@ CLAUDE.md
 test-output.log
 test-results/
 playwright-report/
-.vitest-attachments/
-__screenshots__/
 

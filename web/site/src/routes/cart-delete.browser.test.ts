@@ -1,87 +1,93 @@
 import { expect, test } from 'vitest'
-import { page } from '@vitest/browser/context'
+import { browser } from 'vitest/browser'
 
 // TDD RED Phase: Write failing tests for delete from cart functionality
 test.describe('Delete from Cart', () => {
   test('should remove product from cart page', async () => {
     // First, add a product to cart
-    await page.goto('http://localhost:8080/')
-    await page.waitForSelector('[data-testid="product-card"]', { timeout: 10000 })
+    await browser.url('http://localhost:8080/')
 
-    const firstProduct = page.getByTestId('product-card').first()
-    await firstProduct.getByRole('button', { name: /add/i }).click()
+    const productCard = await browser.$('[data-testid="product-card"]')
+    await productCard.waitForExist({ timeout: 10000 })
+
+    const addButton = await productCard.$('button*=ADD')
+    await addButton.click()
 
     // Navigate to cart
-    await page.goto('http://localhost:8080/cart')
+    await browser.url('http://localhost:8080/cart')
 
     // Find cart items
-    const cartItems = page.getByTestId('cart-item')
-    const initialCount = await cartItems.count()
+    const cartItems = await browser.$$('[data-testid="cart-item"]')
+    const initialCount = cartItems.length
     expect(initialCount).toBeGreaterThan(0)
 
     // Click remove/delete button on first item
-    const firstItem = cartItems.first()
-    const deleteButton = firstItem.getByRole('button', { name: /remove|delete/i })
+    const deleteButton = await cartItems[0].$('button*=REMOVE')
     await deleteButton.click()
 
     // Cart should have one less item
-    const remainingItems = page.getByTestId('cart-item')
-    expect(await remainingItems.count()).toBe(initialCount - 1)
+    await browser.pause(500) // Wait for removal
+    const remainingItems = await browser.$$('[data-testid="cart-item"]')
+    expect(remainingItems.length).toBe(initialCount - 1)
   })
 
   test('should show empty cart message when all items removed', async () => {
     // Add product to cart
-    await page.goto('http://localhost:8080/')
-    await page.waitForSelector('[data-testid="product-card"]', { timeout: 10000 })
+    await browser.url('http://localhost:8080/')
 
-    const firstProduct = page.getByTestId('product-card').first()
-    await firstProduct.getByRole('button', { name: /add/i }).click()
+    const productCard = await browser.$('[data-testid="product-card"]')
+    await productCard.waitForExist({ timeout: 10000 })
+
+    const addButton = await productCard.$('button*=ADD')
+    await addButton.click()
 
     // Navigate to cart
-    await page.goto('http://localhost:8080/cart')
+    await browser.url('http://localhost:8080/cart')
 
     // Remove all items
-    const cartItems = page.getByTestId('cart-item')
-    const count = await cartItems.count()
+    let cartItems = await browser.$$('[data-testid="cart-item"]')
 
-    for (let i = 0; i < count; i++) {
-      const firstItem = page.getByTestId('cart-item').first()
-      const deleteButton = firstItem.getByRole('button', { name: /remove|delete/i })
+    while (cartItems.length > 0) {
+      const deleteButton = await cartItems[0].$('button*=REMOVE')
       await deleteButton.click()
+      await browser.pause(500)
+      cartItems = await browser.$$('[data-testid="cart-item"]')
     }
 
     // Should show empty cart message
-    const emptyMessage = page.getByText(/empty|no items/i)
-    await expect.element(emptyMessage).toBeVisible()
+    const emptyMessage = await browser.$('*=empty')
+    await expect(emptyMessage.isDisplayed()).resolves.toBe(true)
   })
 
   test('should update cart total after removing item', async () => {
     // Add multiple products
-    await page.goto('http://localhost:8080/')
-    await page.waitForSelector('[data-testid="product-card"]', { timeout: 10000 })
+    await browser.url('http://localhost:8080/')
 
-    const products = page.getByTestId('product-card')
-    const productCount = Math.min(await products.count(), 2)
+    const productCards = await browser.$$('[data-testid="product-card"]')
+    const productCount = Math.min(productCards.length, 2)
 
     for (let i = 0; i < productCount; i++) {
-      const product = products.nth(i)
-      await product.getByRole('button', { name: /add/i }).click()
+      const addButton = await productCards[i].$('button*=ADD')
+      await addButton.click()
+      await browser.pause(500)
     }
 
     // Navigate to cart
-    await page.goto('http://localhost:8080/cart')
+    await browser.url('http://localhost:8080/cart')
 
     // Get initial total
-    const totalElement = page.getByTestId('cart-total')
-    const initialTotal = await totalElement.textContent()
+    const totalElement = await browser.$('[data-testid="cart-total"]')
+    const initialTotal = await totalElement.getText()
 
     // Remove one item
-    const firstItem = page.getByTestId('cart-item').first()
-    const deleteButton = firstItem.getByRole('button', { name: /remove|delete/i })
+    const cartItems = await browser.$$('[data-testid="cart-item"]')
+    const deleteButton = await cartItems[0].$('button*=REMOVE')
     await deleteButton.click()
 
+    await browser.pause(500)
+
     // Total should change
-    const newTotal = await totalElement.textContent()
+    const newTotal = await totalElement.getText()
     expect(newTotal).not.toBe(initialTotal)
   })
 })

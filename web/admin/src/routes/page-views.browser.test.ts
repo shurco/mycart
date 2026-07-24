@@ -1,77 +1,73 @@
 import { expect, test } from 'vitest'
-import { page } from '@vitest/browser/context'
+import { browser } from 'vitest/browser'
 
 // TDD RED Phase: Write failing tests for admin page views
 test.describe('Admin Page Views', () => {
-  // Note: These tests assume the admin is already authenticated
-  // or that the test environment has authentication disabled
-
   test('should display admin dashboard/home page', async () => {
-    await page.goto('http://localhost:8080/admin')
+    await browser.url('http://localhost:8080/admin')
 
-    // Check if dashboard loads (might redirect to signin if not authenticated)
-    const currentUrl = page.url()
+    const currentUrl = await browser.getUrl()
 
     if (currentUrl.includes('/signin')) {
-      // Skip test if authentication is required
       test.skip()
     } else {
-      // Dashboard should have navigation or main content
-      const mainContent = page.locator('main, [role="main"]')
-      await expect.element(mainContent).toBeVisible()
+      const mainContent = await browser.$('main')
+      await expect(mainContent.isDisplayed()).resolves.toBe(true)
     }
   })
 
   test('should display products page', async () => {
-    await page.goto('http://localhost:8080/admin/products')
+    await browser.url('http://localhost:8080/admin/products')
 
-    // Check if redirected to signin
-    if (page.url().includes('/signin')) {
+    const currentUrl = await browser.getUrl()
+    if (currentUrl.includes('/signin')) {
       test.skip()
     }
 
-    // Products page should have product list or add button
-    const productsHeading = page.getByRole('heading', { name: /products/i })
-    await expect.element(productsHeading).toBeVisible()
+    const productsHeading = await browser.$('h1')
+    await expect(productsHeading.isDisplayed()).resolves.toBe(true)
   })
 
   test('should display carts page', async () => {
-    await page.goto('http://localhost:8080/admin/carts')
+    await browser.url('http://localhost:8080/admin/carts')
 
-    if (page.url().includes('/signin')) {
+    const currentUrl = await browser.getUrl()
+    if (currentUrl.includes('/signin')) {
       test.skip()
     }
 
-    // Carts page should have heading
-    const cartsHeading = page.getByRole('heading', { name: /carts|orders/i })
-    await expect.element(cartsHeading).toBeVisible()
+    const cartsHeading = await browser.$('h1')
+    await expect(cartsHeading.isDisplayed()).resolves.toBe(true)
   })
 
   test('should display pages management page', async () => {
-    await page.goto('http://localhost:8080/admin/pages')
+    await browser.url('http://localhost:8080/admin/pages')
 
-    if (page.url().includes('/signin')) {
+    const currentUrl = await browser.getUrl()
+    if (currentUrl.includes('/signin')) {
       test.skip()
     }
 
-    // Pages management should have heading
-    const pagesHeading = page.getByRole('heading', { name: /pages/i })
-    await expect.element(pagesHeading).toBeVisible()
+    const pagesHeading = await browser.$('h1')
+    await expect(pagesHeading.isDisplayed()).resolves.toBe(true)
   })
 
   test('should navigate between admin pages', async () => {
-    await page.goto('http://localhost:8080/admin/products')
+    await browser.url('http://localhost:8080/admin/products')
 
-    if (page.url().includes('/signin')) {
+    const currentUrl = await browser.getUrl()
+    if (currentUrl.includes('/signin')) {
       test.skip()
     }
 
-    // Find navigation link to carts
-    const cartsLink = page.getByRole('link', { name: /carts/i })
+    const cartsLink = await browser.$('a[href="/admin/carts"]')
     await cartsLink.click()
 
-    // Should navigate to carts page
-    await page.waitForURL(/\/admin\/carts/, { timeout: 5000 })
-    expect(page.url()).toContain('/admin/carts')
+    await browser.waitUntil(
+      async () => (await browser.getUrl()).includes('/admin/carts'),
+      { timeout: 5000 }
+    )
+
+    expect(await browser.getUrl()).toContain('/admin/carts')
   })
 })

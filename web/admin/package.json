@@ -49,7 +49,6 @@
     "tailwindcss": "4.1.18",
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
-    "vite-plugin-svelte-svg": "^2.3.0",
     "vitest": "^4.1.10",
     "webdriverio": "^9.30.0"
   }
