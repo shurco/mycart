@@ -50,7 +50,13 @@
     "selectPaymentError": "请选择支付系统",
     "selectPaymentErrorPaid": "请为付费商品选择支付系统",
     "remove": "移除",
-    "removeItem": "删除商品"
+    "removeItem": "删除商品",
+    "validation_errors_title": "某些商品需要注意",
+    "out_of_stock": "此商品已不可用",
+    "please_remove": "请将其删除以继续",
+    "price_updated": "价格已更新",
+    "review_cart": "查看购物车",
+    "quantity_unavailable": "请求的数量不可用"
   },
   "product": {
     "addToCart": "加入购物车",

@@ -51,7 +51,13 @@
     "selectPaymentError": "결제 시스템을 선택하세요",
     "selectPaymentErrorPaid": "유료 항목에 대한 결제 시스템을 선택하세요",
     "remove": "제거",
-    "removeItem": "항목 제거"
+    "removeItem": "항목 제거",
+    "validation_errors_title": "일부 항목에 주의가 필요합니다",
+    "out_of_stock": "이 상품은 더 이상 사용할 수 없습니다",
+    "please_remove": "계속하려면 제거하세요",
+    "price_updated": "가격이 업데이트되었습니다",
+    "review_cart": "장바구니 검토",
+    "quantity_unavailable": "요청한 수량을 사용할 수 없습니다"
   },
   "product": {
     "addToCart": "장바구니에 추가",

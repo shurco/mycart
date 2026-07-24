@@ -50,7 +50,13 @@
     "selectPaymentError": "Please select a payment system",
     "selectPaymentErrorPaid": "Please select a payment system for paid items",
     "remove": "REMOVE",
-    "removeItem": "Remove item"
+    "removeItem": "Remove item",
+    "validation_errors_title": "Some items need attention",
+    "out_of_stock": "This item is no longer available",
+    "please_remove": "Please remove it to continue",
+    "price_updated": "Price has been updated",
+    "review_cart": "Review Cart",
+    "quantity_unavailable": "Requested quantity not available"
   },
   "product": {
     "addToCart": "ADD TO CART",
