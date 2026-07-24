@@ -309,6 +309,57 @@
       : formatCurrency(cartTotal / 100, currency, numberFormat, symbolMode, currentLocale)
   )
 
+  async function handlePortoneCheckout() {
+    showOverlay = true
+    try {
+      await handlePortonePayment(email, cart, cartTotal, currency)
+    } catch (err) {
+      console.error('PortOne payment error (caught exception):', err)
+      console.error('Error type:', typeof err)
+      console.error('Error details:', err)
+      if (err instanceof Error) {
+        console.error('Error message:', err.message)
+        console.error('Error stack:', err.stack)
+      }
+
+      // Don't show error overlay if validation modal is already showing
+      if (err instanceof Error && err.message === 'Cart validation failed') {
+        showOverlay = false
+        return
+      }
+
+      error = err instanceof Error ? `Payment error: ${err.message}` : 'Payment failed. Please try again.'
+      showOverlay = true
+    }
+  }
+
+  async function handleStandardCheckout(finalProvider: string) {
+    const cartData = {
+      email,
+      provider: finalProvider,
+      products: cart.map((item) => ({
+        id: item.id,
+        variant_id: item.variant_id || undefined,
+        quantity: item.quantity
+      }))
+    }
+
+    const res = await apiPost<{ url?: string; validation_errors?: any[]; corrected_cart?: any[] }>('/cart/payment', cartData)
+
+    // Handle validation errors (409 Conflict)
+    if (res.status === 409 && res.result?.validation_errors && res.result?.corrected_cart) {
+      handleValidationErrors(res.result.validation_errors, res.result.corrected_cart)
+      return
+    }
+
+    if (res.success && res.result?.url) {
+      window.location.href = res.result.url
+    } else {
+      error = res.message || t('payment.failed')
+      showOverlay = true
+    }
+  }
+
   async function checkOut(e: Event) {
     e.preventDefault()
 
@@ -332,60 +383,12 @@
 
     setLocalStorage('provider', finalProvider)
 
-    // Handle PortOne payment with browser SDK
     if (provider === 'portone') {
-      showOverlay = true
-
-      try {
-        await handlePortonePayment(email, cart, cartTotal, currency)
-      } catch (err) {
-        console.error('PortOne payment error (caught exception):', err)
-        console.error('Error type:', typeof err)
-        console.error('Error details:', err)
-        if (err instanceof Error) {
-          console.error('Error message:', err.message)
-          console.error('Error stack:', err.stack)
-        }
-
-        // Don't show error overlay if validation modal is already showing
-        if (err instanceof Error && err.message === 'Cart validation failed') {
-          showOverlay = false
-          return
-        }
-
-        error = err instanceof Error ? `Payment error: ${err.message}` : 'Payment failed. Please try again.'
-        showOverlay = true
-      }
+      await handlePortoneCheckout()
       return
     }
 
-    // Standard payment flow for other providers
-    const cartData = {
-      email,
-      provider: finalProvider,
-      products: cart.map((item) => ({
-        id: item.id,
-        variant_id: item.variant_id || undefined,
-        quantity: item.quantity
-      }))
-    }
-
-    const res = await apiPost<{ url?: string; validation_errors?: any[]; corrected_cart?: any[] }>('/cart/payment', cartData)
-
-    // Handle validation errors (409 Conflict)
-    if (res.status === 409) {
-      if (res.result?.validation_errors && res.result?.corrected_cart) {
-        handleValidationErrors(res.result.validation_errors, res.result.corrected_cart)
-        return
-      }
-    }
-
-    if (res.success && res.result?.url) {
-      window.location.href = res.result.url
-    } else {
-      error = res.message || t('payment.failed')
-      showOverlay = true
-    }
+    await handleStandardCheckout(finalProvider)
   }
 
   function closeOverlay() {
