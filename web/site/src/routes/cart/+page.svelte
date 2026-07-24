@@ -96,7 +96,8 @@
       products: cart.map((item) => ({
         id: item.id,
         variant_id: item.variant_id || undefined,
-        quantity: item.quantity
+        quantity: item.quantity,
+        unit_price: item.amount
       }))
     })
     debugLog('Cart create response:', cartCreateRes)
