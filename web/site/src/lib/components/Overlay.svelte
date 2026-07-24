@@ -1,5 +1,6 @@
 <script lang="ts">
   import { translate } from '$lib/i18n'
+  import type { Snippet } from 'svelte'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -8,9 +9,10 @@
     show: boolean
     error?: string
     onClose?: () => void
+    children?: Snippet
   }
 
-  let { show, error, onClose }: Props = $props()
+  let { show, error, onClose, children }: Props = $props()
 </script>
 
 {#if show}
@@ -20,7 +22,9 @@
     aria-modal="true"
     aria-labelledby="overlay-title"
   >
-    {#if error}
+    {#if children}
+      {@render children()}
+    {:else if error}
       <div role="alert" class="mx-4 max-w-md border-4 border-red-500 bg-white p-8">
         <div class="mb-4 flex items-center gap-4">
           <div class="border-4 border-red-500 bg-red-500 p-3 text-white">
