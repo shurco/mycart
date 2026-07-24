@@ -177,9 +177,26 @@ func TestValidateCartItems_Success(t *testing.T) {
 		t.Fatalf("AddProduct failed: %v", err)
 	}
 
+	// Activate product and set quantity
+	if err := db.UpdateActive(ctx, product.ID); err != nil {
+		t.Fatalf("UpdateActive failed: %v", err)
+	}
+	if _, err := db.ProductQueries.DB.ExecContext(ctx, "UPDATE product SET quantity = ? WHERE id = ?", 10, product.ID); err != nil {
+		t.Fatalf("Update quantity failed: %v", err)
+	}
+
+	// Verify product is queryable
+	testList, err := db.ListProducts(ctx, false, 0, 0, "", models.CartProduct{ProductID: product.ID, Quantity: 1})
+	if err != nil {
+		t.Fatalf("ListProducts verification failed: %v", err)
+	}
+	if len(testList.Products) == 0 {
+		t.Fatalf("Product not found in public listing after activation")
+	}
+
 	// Validate with available quantity
 	cartProducts := []models.CartProduct{
-		{ProductID: "test-prod-1", Quantity: 5},
+		{ProductID: product.ID, Quantity: 5},
 	}
 
 	result, err := ValidateCartItems(ctx, db, cartProducts, "USD")
@@ -213,9 +230,26 @@ func TestValidateCartItems_QuantityUnavailable(t *testing.T) {
 		t.Fatalf("AddProduct failed: %v", err)
 	}
 
+	// Activate product and set quantity
+	if err := db.UpdateActive(ctx, product.ID); err != nil {
+		t.Fatalf("UpdateActive failed: %v", err)
+	}
+	if _, err := db.ProductQueries.DB.ExecContext(ctx, "UPDATE product SET quantity = ? WHERE id = ?", 3, product.ID); err != nil {
+		t.Fatalf("Update quantity failed: %v", err)
+	}
+
+	// Verify product is queryable
+	testList, err := db.ListProducts(ctx, false, 0, 0, "", models.CartProduct{ProductID: product.ID, Quantity: 1})
+	if err != nil {
+		t.Fatalf("ListProducts verification failed: %v", err)
+	}
+	if len(testList.Products) == 0 {
+		t.Fatalf("Product not found in public listing after activation")
+	}
+
 	// Request more than available
 	cartProducts := []models.CartProduct{
-		{ProductID: "test-prod-2", Quantity: 10},
+		{ProductID: product.ID, Quantity: 10},
 	}
 
 	result, err := ValidateCartItems(ctx, db, cartProducts, "USD")
@@ -232,7 +266,7 @@ func TestValidateCartItems_QuantityUnavailable(t *testing.T) {
 	}
 
 	if result.Errors[0].ErrorType != "quantity_unavailable" {
-		t.Errorf("Expected error type 'quantity_unavailable', got: %s", result.Errors[0].ErrorType)
+		t.Errorf("Expected error type 'quantity_unavailable', got: %s (details: %+v)", result.Errors[0].ErrorType, result.Errors[0])
 	}
 
 	if result.CorrectedItems[0].Available {
