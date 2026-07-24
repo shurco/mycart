@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { cartStore } from '$lib/stores/cart'
   import { settingsStore } from '$lib/stores/settings'
   import { apiGet, apiPost } from '$lib/utils/api'
-  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
+  import { formatCurrency } from '$lib/utils/currency'
   import { costFormat } from '$lib/utils/costFormat'
   import { getProductImageUrl } from '$lib/utils/imageUrl'
   import { hasPaymentProviders } from '$lib/utils/payment'
@@ -11,6 +11,7 @@
   import type { PaymentMethods } from '$lib/types/models'
   import { goto } from '$app/navigation'
   import Overlay from '$lib/components/Overlay.svelte'
+  import CartItemCard from '$lib/components/CartItemCard.svelte'
   import { handleNavigation } from '$lib/utils/navigation'
   import { translate, locale } from '$lib/i18n'
   import * as PortOne from '@portone/browser-sdk/v2'
@@ -36,14 +37,53 @@
   let showOverlay = $state(false)
   let error = $state<string | undefined>(undefined)
   let isLoadingPaymentMethods = $state(false)
+  let hasAttemptedLoadingPayments = $state(false)
   let portoneStoreId = $state('')
   let portoneChannelKey = $state('')
   let portoneDebugEnabled = $state(false)
+  let validationErrors = $state<any[]>([])
+  let showValidationModal = $state(false)
+  let highlightedItems = $state<Set<string>>(new Set())
 
   // Helper function for conditional logging
   function debugLog(...args: any[]) {
     if (portoneDebugEnabled) {
       console.log(...args)
+    }
+  }
+
+  function getItemKey(item: any): string {
+    return item.variant_id ? `${item.id}_${item.variant_id}` : item.id
+  }
+
+  function handleValidationErrors(errors: any[], correctedCart: any[]) {
+    validationErrors = errors
+    showValidationModal = true
+
+    const updatedCart = $cartStore.map((item, index) => {
+      const corrected = correctedCart[index]
+      if (!corrected) return item
+
+      const hasError = errors.some(e => e.item_index === index)
+
+      if (!corrected.available) {
+        return { ...item, needsDeletion: true, disabled: true }
+      }
+
+      if (hasError) {
+        highlightedItems.add(getItemKey(item))
+        return { ...item, amount: corrected.unit_price }
+      }
+
+      return item
+    })
+
+    try {
+      cartStore.set(updatedCart)
+    } catch (err) {
+      console.error('Failed to update cart store:', err)
+      error = 'Failed to update cart. Please clear your cart and try again.'
+      showOverlay = true
     }
   }
 
@@ -53,9 +93,26 @@
     const cartCreateRes = await apiPost<{ cart_id: string; amount_total: number; currency: string }>('/api/cart/create', {
       email: email,
       provider: 'portone',
-      products: cart.map((item) => ({ id: item.id, quantity: 1 }))
+      products: cart.map((item) => ({
+        id: item.id,
+        variant_id: item.variant_id || undefined,
+        quantity: item.quantity,
+        unit_price: item.amount
+      }))
     })
     debugLog('Cart create response:', cartCreateRes)
+
+    // Handle validation errors (409 Conflict)
+    if (cartCreateRes.status === 409) {
+      if (!cartCreateRes.result?.validation_errors || !cartCreateRes.result?.corrected_cart) {
+        throw new Error('Validation error occurred. Please refresh and try again.')
+      }
+      handleValidationErrors(
+        cartCreateRes.result.validation_errors,
+        cartCreateRes.result.corrected_cart
+      )
+      throw new Error('Cart validation failed')
+    }
 
     if (!cartCreateRes.success || !cartCreateRes.result?.cart_id) {
       throw new Error('Failed to create cart: ' + (cartCreateRes.message || 'Unknown error'))
@@ -150,8 +207,8 @@
   let symbolMode = $derived($settingsStore?.payment?.symbol_display?.storefront)
   let currentLocale = $derived($locale)
 
-  // Calculate total cart amount in cents
-  let cartTotal = $derived(cart.reduce((sum, item) => sum + item.amount, 0))
+  // Calculate total cart amount in cents (amount * quantity for each item)
+  let cartTotal = $derived(cart.reduce((sum, item) => sum + (item.amount * item.quantity), 0))
   let isFree = $derived(cartTotal === 0)
 
   // Handle payment provider based on cart state
@@ -164,14 +221,17 @@
         provider = ''
         removeLocalStorage('provider')
       }
+      // Reset payment loading flag when cart becomes free
+      // This allows reloading if user adds paid items again later
+      hasAttemptedLoadingPayments = false
     } else if (!isFree) {
       // If cart is no longer free, reset provider and load payment methods
       if (provider === 'dummy') {
         provider = ''
         removeLocalStorage('provider')
       }
-      // Load payment methods if not already loaded and not currently loading
-      if (!hasPaymentProviders(payments) && !isLoadingPaymentMethods) {
+      // Load payment methods only once per cart state change - don't retry if already attempted
+      if (!hasAttemptedLoadingPayments && !isLoadingPaymentMethods) {
         loadPaymentMethods().catch(() => {
           error = 'Failed to load payment methods. Please refresh the page.'
           showOverlay = true
@@ -187,6 +247,7 @@
     }
 
     isLoadingPaymentMethods = true
+    hasAttemptedLoadingPayments = true
     try {
       const res = await apiGet<PaymentMethods>('/api/cart/payment')
       if (res.success && res.result) {
@@ -223,16 +284,81 @@
       })
     }
     // Don't auto-set provider for free carts on mount to prevent accidental checkout
+
+    // Handle browser back/forward cache (bfcache) - reload cart when page restored from cache
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        // Page was restored from bfcache, reload cart from storage
+        cartStore.reload()
+      }
+    }
+
+    window.addEventListener('pageshow', handlePageShow)
+
+    return () => {
+      window.removeEventListener('pageshow', handlePageShow)
+    }
   })
 
   let showPayments = $derived(!isFree && hasPaymentProviders(payments))
 
-  // Computed value instead of function
+  // Computed value instead of function - using formatCurrency (no truncation) for exact totals
   let totalCartAmount = $derived(
     cartTotal === 0
       ? t('product.free')
-      : formatCurrencyWithTruncation(cartTotal, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)
+      : formatCurrency(cartTotal / 100, currency, numberFormat, symbolMode, currentLocale)
   )
+
+  async function handlePortoneCheckout() {
+    showOverlay = true
+    try {
+      await handlePortonePayment(email, cart, cartTotal, currency)
+    } catch (err) {
+      console.error('PortOne payment error (caught exception):', err)
+      console.error('Error type:', typeof err)
+      console.error('Error details:', err)
+      if (err instanceof Error) {
+        console.error('Error message:', err.message)
+        console.error('Error stack:', err.stack)
+      }
+
+      // Don't show error overlay if validation modal is already showing
+      if (err instanceof Error && err.message === 'Cart validation failed') {
+        showOverlay = false
+        return
+      }
+
+      error = err instanceof Error ? `Payment error: ${err.message}` : 'Payment failed. Please try again.'
+      showOverlay = true
+    }
+  }
+
+  async function handleStandardCheckout(finalProvider: string) {
+    const cartData = {
+      email,
+      provider: finalProvider,
+      products: cart.map((item) => ({
+        id: item.id,
+        variant_id: item.variant_id || undefined,
+        quantity: item.quantity
+      }))
+    }
+
+    const res = await apiPost<{ url?: string; validation_errors?: any[]; corrected_cart?: any[] }>('/cart/payment', cartData)
+
+    // Handle validation errors (409 Conflict)
+    if (res.status === 409 && res.result?.validation_errors && res.result?.corrected_cart) {
+      handleValidationErrors(res.result.validation_errors, res.result.corrected_cart)
+      return
+    }
+
+    if (res.success && res.result?.url) {
+      window.location.href = res.result.url
+    } else {
+      error = res.message || t('payment.failed')
+      showOverlay = true
+    }
+  }
 
   async function checkOut(e: Event) {
     e.preventDefault()
@@ -257,40 +383,12 @@
 
     setLocalStorage('provider', finalProvider)
 
-    // Handle PortOne payment with browser SDK
     if (provider === 'portone') {
-      showOverlay = true
-
-      try {
-        await handlePortonePayment(email, cart, cartTotal, currency)
-      } catch (err) {
-        console.error('PortOne payment error (caught exception):', err)
-        console.error('Error type:', typeof err)
-        console.error('Error details:', err)
-        if (err instanceof Error) {
-          console.error('Error message:', err.message)
-          console.error('Error stack:', err.stack)
-        }
-        error = err instanceof Error ? `Payment error: ${err.message}` : 'Payment failed. Please try again.'
-        showOverlay = true
-      }
+      await handlePortoneCheckout()
       return
     }
 
-    // Standard payment flow for other providers
-    const cartData = {
-      email,
-      provider: finalProvider,
-      products: cart.map((item) => ({ id: item.id, quantity: 1 }))
-    }
-
-    const res = await apiPost<{ url?: string }>('/cart/payment', cartData)
-    if (res.success && res.result?.url) {
-      window.location.href = res.result.url
-    } else {
-      error = res.message || t('payment.failed')
-      showOverlay = true
-    }
+    await handleStandardCheckout(finalProvider)
   }
 
   function closeOverlay() {
@@ -335,48 +433,15 @@
             <h2 class="mb-6 text-3xl font-black tracking-tighter text-black uppercase">
               {t('cart.itemsCount', { count: cart.length })}
             </h2>
-            <ul class="list-none space-y-4">
-              {#each cart as item (item.id)}
-                <li class="border-4 border-black bg-white p-4" data-testid="cart-item">
-                  <div class="flex items-center gap-4">
-                    <div class="overflow-hidden border-4 border-black">
-                      <img src={getProductImageUrl(item.image, 'sm')} alt={item.name} class="h-20 w-20 object-cover" />
-                    </div>
-                    <div class="flex-1">
-                      <a
-                        href="/products/{item.slug}"
-                        target="_blank"
-                        class="cursor-pointer text-xl font-black tracking-tight text-black uppercase decoration-yellow-300 decoration-4 underline-offset-4 hover:underline"
-                        data-testid="item-name"
-                      >
-                        {item.name}
-                      </a>
-                    </div>
-                    <div class="flex items-center gap-4">
-                      <span
-                        class="text-2xl font-black {item.amount === 0
-                          ? 'text-green-500'
-                          : 'text-black'}"
-                      >
-                        {item.amount === 0
-                          ? t('product.free')
-                          : formatCurrencyWithTruncation(item.amount, currency, 'storefront', truncationSettings, currentLocale, numberFormat, symbolMode)}
-                      </span>
-                      <button
-                        type="button"
-                        class="cursor-pointer border-4 border-black bg-red-500 p-2 text-sm font-black text-white uppercase transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
-                        onclick={() => cartStore.remove(item.id)}
-                        aria-label={t('cart.removeItem')}
-                      >
-                        <svg class="h-5 w-5">
-                          <use href="/assets/img/sprite.svg#trash" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                </li>
+            <div class="space-y-4">
+              {#each cart as item (`${item.id}-${item.variant_id || 'no-variant'}`)}
+                <CartItemCard
+                  {item}
+                  highlighted={highlightedItems.has(getItemKey(item))}
+                  needsDeletion={item.needsDeletion || false}
+                />
               {/each}
-            </ul>
+            </div>
           </div>
 
           <!-- Total -->
@@ -385,9 +450,6 @@
               <span class="text-3xl font-black tracking-tighter text-black uppercase"> {t('cart.total')} </span>
               <span class="text-4xl font-black {cartTotal === 0 ? 'text-green-500' : 'text-black'}" data-testid="cart-total">
                 {totalCartAmount}
-                {#if cart.length > 0 && cartTotal !== 0}
-                  {currency}
-                {/if}
               </span>
             </div>
           </div>
@@ -526,4 +588,34 @@
     </div>
   </div>
   <Overlay show={showOverlay} {error} onClose={closeOverlay} />
+
+  {#if showValidationModal}
+    <Overlay show={true} onClose={() => showValidationModal = false}>
+      <div class="validation-modal bg-white p-8 border-4 border-black max-w-lg mx-auto">
+        <h2 class="text-2xl font-black tracking-tight text-red-600 uppercase mb-4">{t('cart.validation_errors_title')}</h2>
+        <ul class="space-y-3 mb-6">
+          {#each validationErrors as error}
+            <li class="bg-yellow-100 p-4 border-2 border-black">
+              {#if error.error_type === 'quantity_unavailable'}
+                <p class="font-bold">{t('cart.out_of_stock')} - {t('cart.please_remove')}</p>
+              {:else if error.error_type === 'price_changed'}
+                <p>{t('cart.price_updated')}:
+                  <span class="line-through text-gray-600">{formatCurrency(error.requested_unit_price, currency)}</span>
+                  → <span class="font-bold text-green-700">{formatCurrency(error.current_unit_price, currency)}</span>
+                </p>
+              {:else if error.error_type === 'product_inactive' || error.error_type === 'product_not_found'}
+                <p class="font-bold">{t('cart.out_of_stock')} - {t('cart.please_remove')}</p>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+        <button
+          onclick={() => showValidationModal = false}
+          class="w-full border-4 border-black bg-blue-500 px-6 py-3 text-lg font-black tracking-wider text-white uppercase hover:bg-blue-600"
+        >
+          {t('cart.review_cart')}
+        </button>
+      </div>
+    </Overlay>
+  {/if}
 </section>

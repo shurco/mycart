@@ -27,7 +27,7 @@ func TestPayment_DummyProviderRejectsPaidCart(t *testing.T) {
 	// Fixture product has amount > 0; dummy provider must be blocked.
 	body := `{"provider":"dummy","email":"x@y.com","products":[{"product_id":"sqyavyhyvzyn3tu","quantity":1}]}`
 	resp := testutil.DoRequest(t, app, http.MethodPost, "/cart/payment", body, "")
-	testutil.AssertStatus(t, resp, http.StatusBadRequest, http.StatusInternalServerError)
+	testutil.AssertStatus(t, resp, http.StatusBadRequest, http.StatusConflict, http.StatusInternalServerError)
 }
 
 func TestPayment_DummyFreeCartSucceedsOrFailsInternally(t *testing.T) {

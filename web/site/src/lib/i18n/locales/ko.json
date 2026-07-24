@@ -1,7 +1,8 @@
 {
   "common": {
     "loading": "로딩 중...",
-    "poweredBy": "myCart 제공"
+    "poweredBy": "myCart 제공",
+    "backToHome": "홈으로 돌아가기"
   },
   "languages": {
     "en": "English",
@@ -25,6 +26,7 @@
     "portone": "PortOne",
     "portoneDescription": "간편결제 서비스",
     "yourCart": "장바구니",
+    "inYourCart": "장바구니에 담긴 상품",
     "cartIsEmpty": "장바구니가 비어있습니다",
     "emptyMessage": "장바구니가 비어 있습니다. 쇼핑을 계속하려면 상품을 추가하세요.",
     "goToHome": "홈으로 가기",
@@ -48,18 +50,36 @@
     "noPaymentSystems": "사용 가능한 결제 시스템이 없습니다. 관리자에게 문의하세요.",
     "selectPaymentError": "결제 시스템을 선택하세요",
     "selectPaymentErrorPaid": "유료 항목에 대한 결제 시스템을 선택하세요",
-    "removeItem": "항목 제거"
+    "remove": "제거",
+    "removeItem": "항목 제거",
+    "validation_errors_title": "일부 항목에 주의가 필요합니다",
+    "out_of_stock": "이 상품은 더 이상 사용할 수 없습니다",
+    "please_remove": "계속하려면 제거하세요",
+    "price_updated": "가격이 업데이트되었습니다",
+    "review_cart": "장바구니 검토",
+    "quantity_unavailable": "요청한 수량을 사용할 수 없습니다"
   },
   "product": {
     "addToCart": "장바구니에 추가",
     "addToCartShort": "추가",
+    "add": "추가",
     "removeFromCart": "장바구니에서 제거",
     "removeFromCartShort": "제거",
+    "remove": "제거",
     "free": "무료",
     "new": "새로운",
     "description": "설명",
     "previousImage": "이전 이미지",
-    "nextImage": "다음 이미지"
+    "nextImage": "다음 이미지",
+    "selectedVariant": "선택됨",
+    "inStock": "재고 있음",
+    "outOfStock": "품절",
+    "variantNotAvailable": "이 조합은 사용할 수 없습니다",
+    "selectOptions": "옵션 선택",
+    "details": "상세보기",
+    "quantity": "수량",
+    "variant": "옵션",
+    "variants": "옵션"
   },
   "error": {
     "notFound": "페이지를 찾을 수 없습니다",

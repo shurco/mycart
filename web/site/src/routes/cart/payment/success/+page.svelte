@@ -59,11 +59,6 @@
       error = res.message || t('payment.success.loadFailed')
     }
     loading = false
-
-    // Redirect to home page after 5 seconds
-    setTimeout(() => {
-      goto('/')
-    }, 5000)
   })
 
   function totalAmount(): string {
@@ -103,7 +98,7 @@
             {t('payment.success.orderDetails')}
           </h2>
           <ul class="mb-8 space-y-4">
-            {#each cart.items as item (item.id)}
+            {#each cart.items as item (`${item.id}-${item.variant_id || 'no-variant'}-${item.quantity}`)}
               <li class="border-4 border-black bg-white p-4">
                 <div class="flex items-center gap-4">
                   <div class="overflow-hidden border-4 border-black">
@@ -116,19 +111,25 @@
                     >
                       {item.name}
                     </a>
-                    {#if item.quantity > 1}
-                      <p class="mt-1 text-lg text-gray-700">{t('payment.success.quantity')} {item.quantity}</p>
+                    {#if item.variant_options && Object.keys(item.variant_options).length > 0}
+                      <p class="mt-1 text-base text-gray-700">
+                        {#each Object.entries(item.variant_options) as [key, value], i}
+                          {#if i > 0}<span class="mx-1">•</span>{/if}<span class="font-medium">{key}:</span> {value}
+                        {/each}
+                      </p>
                     {/if}
+                    {#if item.variant_sku}
+                      <p class="mt-1 text-sm text-gray-600">SKU: {item.variant_sku}</p>
+                    {/if}
+                    <p class="mt-1 text-lg text-gray-700">{t('payment.success.quantity')} {item.quantity}</p>
                   </div>
                   <div class="text-right">
                     <p class="text-2xl font-black text-black">
                       {item.amount === 0 ? t('product.free') : formatCurrency((item.amount * item.quantity) / 100, cart.currency)}
                     </p>
-                    {#if item.quantity > 1}
-                      <p class="text-lg text-gray-600">
-                        {item.amount === 0 ? t('product.free') : formatCurrency(item.amount / 100, cart.currency) + ' ' + t('payment.success.each')}
-                      </p>
-                    {/if}
+                    <p class="text-lg text-gray-600">
+                      {item.amount === 0 ? t('product.free') : formatCurrency(item.amount / 100, cart.currency) + ' ' + t('payment.success.each')}
+                    </p>
                   </div>
                 </div>
               </li>
@@ -145,11 +146,14 @@
           </div>
 
           <div class="mt-8 text-center">
-            <div class="inline-block border-4 border-black bg-yellow-300 px-6 py-4">
+            <a
+              href="/"
+              class="inline-block border-4 border-black bg-yellow-300 px-6 py-4 transition-colors hover:bg-yellow-400"
+            >
               <p class="text-lg font-black tracking-wider text-black uppercase">
-                {t('payment.success.redirecting')}
+                {t('common.backToHome') || 'Back to Home'}
               </p>
-            </div>
+            </a>
           </div>
         </div>
       {/if}

@@ -5,6 +5,8 @@
   import ProductView from '$lib/components/product/View.svelte'
   import ProductSeo from '$lib/components/product/Seo.svelte'
   import ProductDigital from '$lib/components/product/Digital.svelte'
+  import VariantManager from '$lib/components/product/VariantManager.svelte'
+  import CsvImportExport from '$lib/components/product/CsvImportExport.svelte'
   import FormButton from '$lib/components/form/Button.svelte'
   import FormInput from '$lib/components/form/Input.svelte'
   import FormSelect from '$lib/components/form/Select.svelte'
@@ -22,9 +24,10 @@
   import { CENTS_PER_UNIT, DEFAULT_AMOUNT } from '$lib/constants/pricing'
   import { DEFAULT_PAGE_SIZE } from '$lib/constants/pagination'
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
-  import type { Product } from '$lib/types/models'
+  import type { Product, ProductOption, ProductVariant } from '$lib/types/models'
   import { paymentSettingsStore } from '$lib/stores/payment'
   import { translate, locale } from '$lib/i18n'
+  import { generateSlug } from '$lib/utils/slugGenerator'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -46,8 +49,19 @@
   let products = $state<Product[]>([])
   let currency = $state('')
   let loading = $state(true)
+
+  // DEBUG: Watch for products array changes
+  $effect(() => {
+    const ids = products.map(p => p.id)
+    const uniqueIds = new Set(ids)
+    if (ids.length !== uniqueIds.size) {
+      console.error('[EFFECT] Duplicate IDs detected in products array!')
+      console.error('IDs:', ids)
+      console.error('Duplicates:', ids.filter((id, i) => ids.indexOf(id) !== i))
+    }
+  })
   let drawerOpen = $state(false)
-  let drawerMode = $state<'view' | 'add' | 'edit' | 'seo' | 'digital'>('view')
+  let drawerMode = $state<'view' | 'add' | 'edit' | 'seo' | 'digital' | 'csv'>('view')
   let drawerProduct = $state<DrawerProduct | null>(null)
   let drawerIndex = $state(-1)
   let currentPage = $state(1)
@@ -60,12 +74,17 @@
     brief: string
     description: string
     amount: string | number
+    quantity?: number
+    sku?: string
+    has_variants?: boolean
     active: boolean
     metadata: Array<{ key: string; value: string }>
     attributes: string[]
     digital: {
       type: '' | 'file' | 'data' | 'api'
     }
+    options?: ProductOption[]
+    variants?: ProductVariant[]
   }
 
   let formData = $state<ProductFormData>({
@@ -74,12 +93,17 @@
     brief: '',
     description: '',
     amount: DEFAULT_AMOUNT,
+    quantity: 0,
+    sku: '',
+    has_variants: false,
     active: true,
     metadata: [],
     attributes: [],
     digital: {
       type: ''
-    }
+    },
+    options: [],
+    variants: []
   })
   let formErrors = $state<Record<string, string>>({})
   let productImages = $state<Product['images']>([])
@@ -87,6 +111,90 @@
 
   // Display value for price (in regular units, not cents)
   let amountDisplay = $state('0')
+
+  // Converts Product from API to form data format with price conversion
+  function convertProductToFormData(product: Product): ProductFormData {
+    const amountValue = typeof product.amount === 'string' ? parseFloat(product.amount) : (product.amount || 0)
+    const amountInUnits = amountValue / CENTS_PER_UNIT
+    const amountStr = amountInUnits.toFixed(2)
+
+    return {
+      name: product.name || '',
+      slug: product.slug || '',
+      brief: product.brief || '',
+      description: product.description || '',
+      amount: amountStr,
+      quantity: product.quantity || 0,
+      sku: product.sku || '',
+      has_variants: product.has_variants || false,
+      active: product.active !== undefined ? product.active : true,
+      metadata: product.metadata || [],
+      attributes: product.attributes || [],
+      digital: product.digital || { type: '' },
+      options: product.options || [],
+      variants: product.variants || []
+    }
+  }
+
+  // Validates product form fields and returns error object
+  function validateProductForm(formData: ProductFormData, drawerMode: string): Record<string, string> {
+    const errors = validateFields(formData, [
+      { field: 'name', ...validators.minLength(MIN_NAME_LENGTH, ERROR_MESSAGES.NAME_TOO_SHORT) },
+      { field: 'slug', ...validators.minLength(MIN_SLUG_LENGTH, ERROR_MESSAGES.SLUG_TOO_SHORT) }
+    ])
+
+    const amountValue = typeof formData.amount === 'string' ? parseFloat(formData.amount) : formData.amount
+    if (isNaN(amountValue) || amountValue < 0) {
+      errors.amount = ERROR_MESSAGES.AMOUNT_INVALID
+    }
+
+    if (drawerMode === 'add' && (!formData.digital?.type || formData.digital.type.trim() === '')) {
+      errors.digital_type = ERROR_MESSAGES.DIGITAL_TYPE_REQUIRED
+    }
+
+    return errors
+  }
+
+  // Prepares form data for API submission with conversions
+  function prepareSubmitData(formData: ProductFormData): Partial<Product> {
+    const amountValue = typeof formData.amount === 'string' ? parseFloat(formData.amount) : formData.amount
+    const amountInCents = Math.round((amountValue || 0) * CENTS_PER_UNIT)
+
+    // Convert Svelte 5 $state proxies to plain objects for JSON serialization
+    return {
+      ...formData,
+      amount: amountInCents,
+      options: formData.options ? JSON.parse(JSON.stringify(formData.options)) : [],
+      variants: formData.variants ? JSON.parse(JSON.stringify(formData.variants)) : []
+    }
+  }
+
+  // Handles the response after form submission
+  async function handleSubmitResponse(
+    result: Product | null,
+    isUpdate: boolean,
+    drawerProduct: DrawerProduct | null,
+    updateProductInList: (product: Product) => void,
+    loadProducts: () => Promise<void>,
+    closeDrawer: () => void
+  ): Promise<void> {
+    if (result) {
+      if (isUpdate) {
+        updateProductInList(result)
+      } else {
+        await loadProducts()
+      }
+      closeDrawer()
+    } else if (isUpdate && drawerProduct) {
+      const updatedProduct = await loadData<Product>(
+        `/api/_/products/${drawerProduct.product.id}`,
+        'Failed to load product'
+      )
+      if (updatedProduct) {
+        updateProductInList(updatedProduct)
+      }
+    }
+  }
 
   function handleAmountInput(event: Event) {
     const target = event.target as HTMLInputElement
@@ -111,23 +219,45 @@
     target.value = value
   }
 
+  async function handleNameBlur() {
+    // Only generate if slug is empty
+    if (formData.slug) return
+
+    // Don't generate for empty name
+    if (!formData.name.trim()) return
+
+    const result = await generateSlug(formData.name)
+    formData.slug = result.slug
+
+    if (result.error) {
+      formErrors.slug = t('products.slugGenerationError')
+    } else {
+      delete formErrors.slug
+    }
+  }
+
   onMount(async () => {
     await loadProducts()
   })
 
   async function loadProducts(page = currentPage) {
+    console.log(`[loadProducts] Starting - page ${page}`)
     loading = true
     currentPage = page
     const result = await loadData<ProductsResponse>(
       `/api/_/products?page=${page}&limit=${limit}`,
       t('products.failedToLoad')
     )
+
+    console.log('[loadProducts] API response:', result)
+
     if (result) {
       products = sortByDate(result.products || [])
       currency = result.currency || ''
       total = result.total || 0
     }
     loading = false
+    console.log('[loadProducts] Finished')
   }
 
   function handlePageChange(page: number) {
@@ -147,12 +277,17 @@
       brief: '',
       description: '',
       amount: '0',
+      quantity: 0,
+      sku: '',
+      has_variants: false,
       active: true,
       metadata: [],
       attributes: [],
       digital: {
         type: ''
-      }
+      },
+      options: [],
+      variants: []
     }
     amountDisplay = '0'
     productImages = []
@@ -170,22 +305,8 @@
     const result = await loadData<Product>(`/api/_/products/${product.id}`, 'Failed to load product')
     if (result) {
       fullProductData = result
-      // Convert price from cents to regular number for form
-      const amountValue = typeof result.amount === 'string' ? parseFloat(result.amount) : (result.amount || 0)
-      const amountInUnits = amountValue / CENTS_PER_UNIT
-      const amountStr = amountInUnits.toFixed(2)
-      formData = {
-        name: result.name || '',
-        slug: result.slug || '',
-        brief: result.brief || '',
-        description: result.description || '',
-        amount: amountStr,
-        active: result.active !== undefined ? result.active : true,
-        metadata: result.metadata || [],
-        attributes: result.attributes || [],
-        digital: result.digital || { type: '' }
-      }
-      amountDisplay = amountStr
+      formData = convertProductToFormData(result)
+      amountDisplay = typeof formData.amount === 'string' ? formData.amount : formData.amount.toString()
       productImages = result.images || []
       drawerOpen = true
     }
@@ -205,6 +326,16 @@
 
   async function handleDigitalContentUpdate() {
     await loadProducts()
+  }
+
+  function openCsv() {
+    drawerMode = 'csv'
+    drawerOpen = true
+  }
+
+  async function handleCsvImportComplete() {
+    await loadProducts()
+    closeDrawer()
   }
 
   function closeDrawer() {
@@ -248,57 +379,44 @@
     }
   }
 
-  function validateProductForm(): number | null {
-    formErrors = validateFields(formData, [
-      { field: 'name', ...validators.minLength(MIN_NAME_LENGTH, ERROR_MESSAGES.NAME_TOO_SHORT) },
-      { field: 'slug', ...validators.minLength(MIN_SLUG_LENGTH, ERROR_MESSAGES.SLUG_TOO_SHORT) }
-    ])
-
-    const amountValue = typeof formData.amount === 'string' ? parseFloat(formData.amount) : formData.amount
-    if (isNaN(amountValue) || amountValue < 0) {
-      formErrors.amount = ERROR_MESSAGES.AMOUNT_INVALID
-      return null
-    }
-
-    if (drawerMode === 'add' && (!formData.digital?.type || formData.digital.type.trim() === '')) {
-      formErrors.digital_type = ERROR_MESSAGES.DIGITAL_TYPE_REQUIRED
-    }
-
-    return Object.keys(formErrors).length > 0 ? null : amountValue
-  }
-
-  function prepareSubmitData(amountValue: number): Partial<Product> {
-    const amountInCents = Math.round(amountValue * CENTS_PER_UNIT)
-    return {
-      ...formData,
-      amount: amountInCents
-    }
-  }
-
-  async function handleSaveResult(result: Product | null, isUpdate: boolean) {
-    if (!result) return
-
-    if (isUpdate) {
-      updateProductInList(result)
-    } else {
-      products = [result, ...products]
-      total++
-    }
-    closeDrawer()
-  }
-
   async function handleSubmit() {
-    const amountValue = validateProductForm()
-    if (amountValue === null) return
+    // Validate form
+    formErrors = validateProductForm(formData, drawerMode)
+    if (Object.keys(formErrors).length > 0) {
+      return
+    }
 
+    // Determine mode and URL
     const isUpdate = drawerMode === 'edit' && drawerProduct !== null
     const url = isUpdate ? `/api/_/products/${drawerProduct!.product.id}` : '/api/_/products'
-    const submitData = prepareSubmitData(amountValue)
 
-    const result = await saveData<Product>(url, submitData, isUpdate, t('products.failedToSave'), t('products.failedToSave'))
-    await handleSaveResult(result, isUpdate)
+    // Prepare data for submission
+    const submitData = prepareSubmitData(formData)
+
+    console.log('=== PRODUCT SAVE DEBUG ===')
+    console.log('has_variants:', submitData.has_variants)
+    console.log('options:', JSON.stringify(submitData.options, null, 2))
+    console.log('variants:', JSON.stringify(submitData.variants, null, 2))
+    console.log('Full submitData:', submitData)
+
+    // Submit to API
+    const result = await saveData<Product>(
+      url,
+      submitData,
+      isUpdate,
+      isUpdate ? t('products.updated') : t('products.created'),
+      t('products.failedToSave')
+    )
+
+    console.log('=== SAVE RESULT ===')
+    console.log('Result has_variants:', result?.has_variants)
+    console.log('Result options:', result?.options)
+    console.log('Result variants:', result?.variants)
+
+    // Handle response
+    await handleSubmitResponse(result, isUpdate, drawerProduct, updateProductInList, loadProducts, closeDrawer)
   }
-
+  
   async function handleDeleteProduct() {
     if (!fullProductData || !confirmDelete('product', fullProductData.name)) {
       return
@@ -352,6 +470,12 @@
 
   function deleteAttributeRecord(index: number) {
     formData.attributes = (formData.attributes || []).filter((_, i) => i !== index)
+  }
+
+  function handleVariantUpdate(data: { hasVariants: boolean; options: ProductOption[]; variants: ProductVariant[] }) {
+    formData.has_variants = data.hasVariants
+    formData.options = data.options
+    formData.variants = data.variants
   }
 
   async function deleteProductImage(index: number) {
@@ -439,11 +563,14 @@
 <Main>
   <div class="mb-5 flex items-center justify-between">
     <h1>{t('products.title')}</h1>
-    <FormButton name={t('products.addProduct')} color="green" ico="plus" onclick={openAdd} />
+    <div class="flex gap-2">
+      <FormButton name={`${t('products.csv.import')} / ${t('products.csv.export')}`} variant="secondary" ico="arrow-path" onclick={openCsv} />
+      <FormButton name={t('products.addProduct')} color="green" ico="plus" onclick={openAdd} />
+    </div>
   </div>
 
   {#if loading}
-    <div class="py-8 text-center">{t('common.loading')}</div>
+    <div class="py-8 text-center">{t('common.loading')} [PAGE {currentPage}] [FIX v2.0]</div>
   {:else if products.length === 0}
     <div class="py-8 text-center text-gray-500">{t('products.noProducts')}</div>
   {:else}
@@ -499,7 +626,9 @@
                   currency || 'USD',
                   'admin',
                   paymentSettings?.truncation,
-                  currentLocale
+                  currentLocale,
+                  paymentSettings?.number_format,
+                  paymentSettings?.symbol_display?.admin
                 )}
               {/if}
             </td>
@@ -564,6 +693,11 @@
       <ProductSeo drawer={drawerProduct} onclose={closeDrawer} />
     {:else if drawerMode === 'digital' && drawerProduct}
       <ProductDigital drawer={drawerProduct} onContentUpdate={handleDigitalContentUpdate} onclose={closeDrawer} />
+    {:else if drawerMode === 'csv'}
+      <div class="pb-8">
+        <h1>{t('products.csv.importProducts')} / {t('products.csv.exportProducts')}</h1>
+      </div>
+      <CsvImportExport onImportComplete={handleCsvImportComplete} />
     {:else}
       <div>
         <div class="pb-8">
@@ -584,10 +718,18 @@
           </div>
         </div>
 
-        <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+        <form onsubmit={(e) => {
+          e.preventDefault();
+          const form = e.currentTarget;
+          if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+          }
+          handleSubmit();
+        }}>
           <div class="flow-root">
             <dl class="mx-auto -my-3 mt-2 mb-0 space-y-4 text-sm">
-              <FormInput id="name" title={t('products.name')} bind:value={formData.name} error={formErrors.name} ico="at-symbol" />
+              <FormInput id="name" title={t('products.name')} bind:value={formData.name} error={formErrors.name} ico="at-symbol" onfocusout={handleNameBlur} />
               <div class="flex flex-row">
                 <div class="pr-3">
                   <FormInput
@@ -618,6 +760,7 @@
                       bind:value={formData.slug}
                       error={formErrors.slug}
                       ico="glob-alt"
+                      placeholder={t('products.slugPlaceholder')}
                     />
                   </div>
                   <div class="grow">
@@ -632,7 +775,7 @@
                   </div>
                 </div>
               {:else}
-                <FormInput id="slug" title={t('products.slug')} bind:value={formData.slug} error={formErrors.slug} ico="glob-alt" />
+                <FormInput id="slug" title={t('products.slug')} bind:value={formData.slug} error={formErrors.slug} ico="glob-alt" placeholder={t('products.slugPlaceholder')} />
               {/if}
 
               <hr />
@@ -709,6 +852,29 @@
                   </button>
                 </div>
               </div>
+
+              <hr />
+              <VariantManager
+                hasVariants={formData.has_variants || false}
+                options={formData.options || []}
+                variants={formData.variants || []}
+                basePrice={typeof formData.amount === 'string' ? parseFloat(formData.amount) * 100 : (formData.amount || 0)}
+                currency={currency}
+                onUpdate={handleVariantUpdate}
+              />
+
+              {#if !formData.has_variants}
+                <FormInput
+                  id="quantity"
+                  type="number"
+                  title={t('products.quantity')}
+                  bind:value={formData.quantity}
+                  error={formErrors.quantity}
+                  ico="cube"
+                  min="0"
+                  placeholder="0"
+                />
+              {/if}
 
               {#if drawerMode === 'edit' && fullProductData}
                 <hr />

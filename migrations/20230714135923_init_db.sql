@@ -65,7 +65,7 @@ CREATE TABLE product (
 	desc       TEXT NOT NULL,
 	slug       TEXT UNIQUE NOT NULL,
 	amount     NUMERC NOT NULL,
-	metadata   JSON DEFAULT '{}' NOT NULL,
+	metadata   JSON DEFAULT '[]' NOT NULL,
 	attribute  JSON DEFAULT '[]' NOT NULL,
 	digital    TEXT CHECK (digital == 'file' OR digital == 'data' OR digital == 'api'),
 	active     BOOLEAN DEFAULT TRUE NOT NULL,

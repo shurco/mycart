@@ -56,16 +56,20 @@ web/*/build/
 docker/docker-compose_private.yml
 /graphify-out/
 
-# Temporary files
-docker/Dockerfile.dev.bak
+# Runtime directories
+lc_base/
 lc_*/
-mycart
-web/admin/package-lock.json
-web/site/package-lock.json
-
 tmp/
+
+# Compiled binary
+mycart
 mycart-linux
 mycart-test
+
+# Temporary files
+docker/Dockerfile.dev.bak
+web/admin/package-lock.json
+web/site/package-lock.json
 
 CLAUDE.md
 
@@ -74,4 +78,3 @@ test-results/
 playwright-report/
 .vitest-attachments/
 __screenshots__/
-

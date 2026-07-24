@@ -1,7 +1,8 @@
 {
   "common": {
     "loading": "LOADING...",
-    "poweredBy": "Powered by myCart"
+    "poweredBy": "Powered by myCart",
+    "backToHome": "BACK TO HOME"
   },
   "languages": {
     "en": "English",
@@ -22,6 +23,7 @@
   },
   "cart": {
     "yourCart": "YOUR CART",
+    "inYourCart": "IN YOUR CART",
     "cartIsEmpty": "CART IS EMPTY",
     "emptyMessage": "Your cart is empty. Add some products to continue shopping.",
     "goToHome": "GO TO HOME",
@@ -47,18 +49,36 @@
     "noPaymentSystems": "NO PAYMENT SYSTEMS AVAILABLE. CONTACT ADMINISTRATOR.",
     "selectPaymentError": "Please select a payment system",
     "selectPaymentErrorPaid": "Please select a payment system for paid items",
-    "removeItem": "Remove item"
+    "remove": "REMOVE",
+    "removeItem": "Remove item",
+    "validation_errors_title": "Some items need attention",
+    "out_of_stock": "This item is no longer available",
+    "please_remove": "Please remove it to continue",
+    "price_updated": "Price has been updated",
+    "review_cart": "Review Cart",
+    "quantity_unavailable": "Requested quantity not available"
   },
   "product": {
     "addToCart": "ADD TO CART",
     "addToCartShort": "ADD",
+    "add": "ADD",
     "removeFromCart": "REMOVE FROM CART",
     "removeFromCartShort": "REMOVE",
+    "remove": "REMOVE",
     "free": "FREE",
     "new": "NEW",
     "description": "DESCRIPTION",
     "previousImage": "Previous image",
-    "nextImage": "Next image"
+    "nextImage": "Next image",
+    "selectedVariant": "SELECTED",
+    "inStock": "IN STOCK",
+    "outOfStock": "OUT OF STOCK",
+    "variantNotAvailable": "THIS COMBINATION IS NOT AVAILABLE",
+    "selectOptions": "SELECT OPTIONS",
+    "details": "DETAILS",
+    "quantity": "QUANTITY",
+    "variant": "variant",
+    "variants": "variants"
   },
   "error": {
     "notFound": "Page not found",

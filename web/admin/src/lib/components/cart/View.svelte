@@ -119,7 +119,9 @@
                 cart.currency || 'USD',
                 'admin',
                 paymentSettings?.truncation,
-                currentLocale
+                currentLocale,
+                paymentSettings?.number_format,
+                paymentSettings?.symbol_display?.admin
               )}
             </a>
           {:else}
@@ -128,7 +130,9 @@
               cart.currency || 'USD',
               'admin',
               paymentSettings?.truncation,
-              currentLocale
+              currentLocale,
+              paymentSettings?.number_format,
+              paymentSettings?.symbol_display?.admin
             )}
           {/if}
         </DetailList>
@@ -164,55 +168,98 @@
         {/if}
 
         {#if cart.items && cart.items.length > 0}
-          <DetailList name={t('carts.items')} grid={false}>
-            <div class="space-y-4">
-              {#each cart.items as item (item.id)}
-                <div class="flex items-start gap-4 border-b border-gray-200 pb-4 last:border-0">
-                  {#if item.image}
-                    <div class="flex-shrink-0">
-                      <a
-                        href="/uploads/{item.image.name}.{item.image.ext}"
-                        target="_blank"
-                        aria-label={t('carts.viewFullSizeImage')}
-                      >
-                        <img
-                          class="w-20 h-20 object-cover rounded"
-                          src="/uploads/{item.image.name}_sm.{item.image.ext}"
-                          alt="{item.name}"
-                          loading="lazy"
-                        />
-                      </a>
-                    </div>
-                  {/if}
-                  <div class="flex-1 min-w-0">
-                    <div class="font-medium text-gray-900">{item.name}</div>
-                    <div class="text-sm text-gray-500">{t('carts.slug')} {item.slug}</div>
-                    <div class="mt-1 text-sm text-gray-700">
-                      <span class="font-medium">{t('carts.price')}</span>
+          <DetailList name={t('carts.items')} grid={false} fullWidth={true}>
+            <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('carts.productName')}
+                    </th>
+                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('carts.variantColumn')}
+                    </th>
+                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('carts.priceColumn')}
+                    </th>
+                    <th class="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('carts.quantityColumn')}
+                    </th>
+                    <th class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {t('carts.subtotalColumn')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  {#each cart.items as item (item.id)}
+                    {@const unitPrice = item.amount + (item.variant_price_surcharge || 0)}
+                    {@const subtotal = unitPrice * item.quantity}
+                    <tr>
+                      <td class="px-3 py-4 whitespace-nowrap">
+                        <div class="font-medium text-gray-900">{item.name}</div>
+                        <div class="text-sm text-gray-500">{item.slug}</div>
+                      </td>
+                      <td class="px-3 py-4">
+                        {#if item.variant_options && Object.keys(item.variant_options).length > 0}
+                          <div class="text-sm text-gray-700">
+                            {#each Object.entries(item.variant_options) as [key, value]}
+                              <div>{key}: {value}</div>
+                            {/each}
+                          </div>
+                        {:else}
+                          <span class="text-sm text-gray-400">-</span>
+                        {/if}
+                      </td>
+                      <td class="px-3 py-4 whitespace-nowrap text-right text-sm text-gray-700">
+                        {formatCurrencyWithTruncation(
+                          unitPrice,
+                          cart.currency || 'USD',
+                          'admin',
+                          paymentSettings?.truncation,
+                          currentLocale,
+                          paymentSettings?.number_format,
+                          paymentSettings?.symbol_display?.admin
+                        )}
+                      </td>
+                      <td class="px-3 py-4 whitespace-nowrap text-center text-sm text-gray-700">
+                        {item.quantity}
+                      </td>
+                      <td class="px-3 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                        {formatCurrencyWithTruncation(
+                          subtotal,
+                          cart.currency || 'USD',
+                          'admin',
+                          paymentSettings?.truncation,
+                          currentLocale,
+                          paymentSettings?.number_format,
+                          paymentSettings?.symbol_display?.admin
+                        )}
+                      </td>
+                    </tr>
+                  {/each}
+                </tbody>
+                <tfoot class="bg-gray-50">
+                  <tr>
+                    <td colspan="4" class="px-3 py-4 text-right font-bold text-gray-900">
+                      {t('carts.totalAmount')}
+                    </td>
+                    <td class="px-3 py-4 whitespace-nowrap text-right text-base font-bold text-gray-900">
                       {formatCurrencyWithTruncation(
-                        item.amount,
+                        cart.items.reduce((sum, item) => {
+                          const unitPrice = item.amount + (item.variant_price_surcharge || 0)
+                          return sum + (unitPrice * item.quantity)
+                        }, 0),
                         cart.currency || 'USD',
                         'admin',
                         paymentSettings?.truncation,
-                        currentLocale
+                        currentLocale,
+                        paymentSettings?.number_format,
+                        paymentSettings?.symbol_display?.admin
                       )}
-                    </div>
-                    <div class="mt-1 text-sm text-gray-700">
-                      <span class="font-medium">{t('carts.quantity')}</span> {item.quantity}
-                    </div>
-                    <div class="mt-1 text-sm text-gray-700">
-                      <span class="font-medium">{t('carts.subtotal')}</span>
-                      {formatCurrencyWithTruncation(
-                        item.amount * item.quantity,
-                        cart.currency || 'USD',
-                        'admin',
-                        paymentSettings?.truncation,
-                        currentLocale
-                      )}
-                    </div>
-                  </div>
-                </div>
-              {/each}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </DetailList>
         {:else}

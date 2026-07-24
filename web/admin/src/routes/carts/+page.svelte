@@ -123,7 +123,9 @@
                 cart.currency || 'USD',
                 'admin',
                 paymentSettings?.truncation,
-                currentLocale
+                currentLocale,
+                paymentSettings?.number_format,
+                paymentSettings?.symbol_display?.admin
               )}
             </td>
             <td

@@ -117,22 +117,24 @@ func CreateCart(c fiber.Ctx) error {
 	}
 	currency := setting["currency"].Value.(string)
 
-	products, err := db.ListProducts(c.Context(), false, 0, 0, "", payment.Products...)
+	// Validate cart items before processing
+	validationResult, err := queries.ValidateCartItems(c.Context(), db, payment.Products, currency)
 	if err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusInternalServerError(c)
 	}
 
-	// Calculate total amount
+	if !validationResult.Valid {
+		return webutil.Response(c, fiber.StatusConflict, "Cart validation failed", map[string]any{
+			"validation_errors": validationResult.Errors,
+			"corrected_cart":    validationResult.CorrectedItems,
+		})
+	}
+
+	// Calculate total amount using validated prices (includes variant surcharges)
 	var amountTotal int
-	for _, product := range products.Products {
-		quantity := 1
-		for _, cartProduct := range payment.Products {
-			if cartProduct.ProductID == product.ID {
-				quantity = cartProduct.Quantity
-			}
-		}
-		amountTotal += product.Amount * quantity
+	for _, correctedItem := range validationResult.CorrectedItems {
+		amountTotal += correctedItem.UnitPrice * correctedItem.Quantity
 	}
 
 	// Generate cart ID
@@ -267,47 +269,63 @@ func Payment(c fiber.Ctx) error {
 		return webutil.StatusInternalServerError(c)
 	}
 
-	items := make([]litepay.Item, len(products.Products))
-	for i, product := range products.Products {
+	// Validate cart items before processing
+	validationResult, err := queries.ValidateCartItems(c.Context(), db, payment.Products, currency)
+	if err != nil {
+		log.ErrorStack(err)
+		return webutil.StatusInternalServerError(c)
+	}
+
+	if !validationResult.Valid {
+		return webutil.Response(c, fiber.StatusConflict, "Cart validation failed", map[string]any{
+			"validation_errors": validationResult.Errors,
+			"corrected_cart":    validationResult.CorrectedItems,
+		})
+	}
+
+	// Use request scheme (http/https) for URLs
+	protocol := c.Scheme()
+
+	// Build product map for quick lookup
+	productMap := make(map[string]*models.Product)
+	for i := range products.Products {
+		productMap[products.Products[i].ID] = &products.Products[i]
+	}
+
+	// Build cart items using validated prices
+	items := make([]litepay.Item, 0, len(validationResult.CorrectedItems))
+	var amountTotal int
+	for _, correctedItem := range validationResult.CorrectedItems {
+		product, exists := productMap[correctedItem.ProductID]
+		if !exists {
+			continue
+		}
+
 		images := []string{}
 		for _, image := range product.Images {
-			path := fmt.Sprintf("https://%s/uploads/%s_md.%s", domain, image.Name, image.Ext)
+			path := fmt.Sprintf("%s://%s/uploads/%s_md.%s", protocol, domain, image.Name, image.Ext)
 			images = append(images, path)
 		}
 
-		quantity := 1
-		for _, cartProduct := range payment.Products {
-			if cartProduct.ProductID == product.ID {
-				quantity = cartProduct.Quantity
-			}
-		}
-
-		items[i] = litepay.Item{
+		items = append(items, litepay.Item{
 			PriceData: litepay.Price{
-				UnitAmount: product.Amount,
+				UnitAmount: correctedItem.UnitPrice, // Uses validated price with variant surcharge
 				Product: litepay.Product{
-					Name:   product.Name,
-					Images: images,
+					Name:        product.Name,
+					Description: product.Description,
+					Images:      images,
 				},
 			},
-			Quantity: quantity,
-		}
+			Quantity: correctedItem.Quantity,
+		})
 
-		if product.Description != "" {
-			items[i].PriceData.Product.Description = product.Description
-		}
+		amountTotal += correctedItem.UnitPrice * correctedItem.Quantity
 	}
 
 	cart := litepay.Cart{
 		ID:       security.RandomString(),
 		Currency: currency,
 		Items:    items,
-	}
-
-	// Calculate total amount before processing payment
-	var amountTotal int
-	for _, item := range cart.Items {
-		amountTotal += item.PriceData.UnitAmount * item.Quantity
 	}
 
 	// Validate dummy provider usage: only allowed for free carts (amountTotal = 0)
@@ -317,12 +335,12 @@ func Payment(c fiber.Ctx) error {
 		return webutil.StatusBadRequest(c, "Dummy payment provider can only be used for free items")
 	}
 
-	callbackURL := fmt.Sprintf("https://%s/cart/payment/callback", domain)
-	successURL := fmt.Sprintf("https://%s/cart/payment/success", domain)
-	cancelURL := fmt.Sprintf("https://%s/cart/payment/cancel", domain)
+	callbackURL := fmt.Sprintf("%s://%s/cart/payment/callback", protocol, domain)
+	successURL := fmt.Sprintf("%s://%s/cart/payment/success", protocol, domain)
+	cancelURL := fmt.Sprintf("%s://%s/cart/payment/cancel", protocol, domain)
 	pay := litepay.New(callbackURL, successURL, cancelURL)
 
-	paymentURL := fmt.Sprintf("https://%s/cart", domain)
+	paymentURL := fmt.Sprintf("%s://%s/cart", protocol, domain)
 	switch paymentSystem {
 	case litepay.STRIPE:
 		setting, err := queries.GetSettingByGroup[models.Stripe](c.Context(), db)

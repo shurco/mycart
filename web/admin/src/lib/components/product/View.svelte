@@ -3,14 +3,18 @@
   import FormButton from '../form/Button.svelte'
   import DetailList from '../DetailList.svelte'
   import SvgIcon from '../SvgIcon.svelte'
-  import { costFormat, formatDate } from '$lib/utils'
+  import { formatDate } from '$lib/utils'
+  import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { loadData } from '$lib/utils/apiHelpers'
   import type { Product } from '$lib/types/models'
-  import { translate } from '$lib/i18n'
+  import { translate, locale } from '$lib/i18n'
+  import { paymentSettingsStore } from '$lib/stores/payment'
   import { sanitizeHTML } from '$lib/utils/sanitize'
 
   // Reactive translation function
   let t = $derived($translate)
+  let currentLocale = $derived($locale)
+  let paymentSettings = $derived($paymentSettingsStore)
 
   interface DrawerProduct {
     product: Product
@@ -98,7 +102,15 @@
           {#if !product.amount || parseFloat(String(product.amount)) === 0}
             <span class="font-bold text-green-600">{t('carts.free')}</span>
           {:else}
-            {costFormat(product.amount)} {drawer.currency || ''}
+            {formatCurrencyWithTruncation(
+              product.amount,
+              drawer.currency || 'USD',
+              'admin',
+              paymentSettings?.truncation,
+              currentLocale,
+              paymentSettings?.number_format,
+              paymentSettings?.symbol_display?.admin
+            )}
           {/if}
         </DetailList>
         <DetailList name={t('products.slug')}>{product.slug}</DetailList>

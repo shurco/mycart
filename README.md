@@ -67,6 +67,8 @@ Formerly known as **litecart** (legacy project name kept here for discoverabilit
 
 🌐 **Multi-language Support**: Built-in internationalization (i18n) support allows you to create multilingual stores. By default, myCart includes support for English and Chinese languages. The language switcher is available in both the admin panel and the public site, making it easy to manage content in multiple languages and provide a localized shopping experience for your customers.
 
+🎨 **Product Variants**: Offer products with multiple options (size, color, style, etc.) with separate inventory tracking, pricing, and SKUs for each variant. Automatically generate all combinations or manually manage specific variants with quantity and availability control.
+
 
 ## ⬇️&nbsp;&nbsp;Installation
 
@@ -432,7 +434,6 @@ Free products are perfect for:
 - All standard features work with free products: email delivery, digital file downloads, license keys, and webhooks
 - Free products are included in order history and cart management just like paid products
 - No external payment processing occurs - orders are immediately marked as paid when using Dummy Payment
-
 
 ## 🧩&nbsp;&nbsp;For developers
 The backend is developed in Go language. The frontend admin panel operates on SvelteKit and TailwindCSS.  
