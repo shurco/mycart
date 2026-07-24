@@ -41,11 +41,49 @@
   let portoneStoreId = $state('')
   let portoneChannelKey = $state('')
   let portoneDebugEnabled = $state(false)
+  let validationErrors = $state<any[]>([])
+  let showValidationModal = $state(false)
+  let highlightedItems = $state<Set<string>>(new Set())
 
   // Helper function for conditional logging
   function debugLog(...args: any[]) {
     if (portoneDebugEnabled) {
       console.log(...args)
+    }
+  }
+
+  function getItemKey(item: any): string {
+    return item.variant_id ? `${item.id}_${item.variant_id}` : item.id
+  }
+
+  function handleValidationErrors(errors: any[], correctedCart: any[]) {
+    validationErrors = errors
+    showValidationModal = true
+
+    const updatedCart = $cartStore.map((item, index) => {
+      const corrected = correctedCart[index]
+      if (!corrected) return item
+
+      const hasError = errors.some(e => e.item_index === index)
+
+      if (!corrected.available) {
+        return { ...item, needsDeletion: true, disabled: true }
+      }
+
+      if (hasError) {
+        highlightedItems.add(getItemKey(item))
+        return { ...item, amount: corrected.unit_price }
+      }
+
+      return item
+    })
+
+    try {
+      cartStore.set(updatedCart)
+    } catch (err) {
+      console.error('Failed to update cart store:', err)
+      error = 'Failed to update cart. Please clear your cart and try again.'
+      showOverlay = true
     }
   }
 
@@ -62,6 +100,18 @@
       }))
     })
     debugLog('Cart create response:', cartCreateRes)
+
+    // Handle validation errors (409 Conflict)
+    if (cartCreateRes.status === 409) {
+      if (!cartCreateRes.result?.validation_errors || !cartCreateRes.result?.corrected_cart) {
+        throw new Error('Validation error occurred. Please refresh and try again.')
+      }
+      handleValidationErrors(
+        cartCreateRes.result.validation_errors,
+        cartCreateRes.result.corrected_cart
+      )
+      throw new Error('Cart validation failed')
+    }
 
     if (!cartCreateRes.success || !cartCreateRes.result?.cart_id) {
       throw new Error('Failed to create cart: ' + (cartCreateRes.message || 'Unknown error'))
@@ -514,4 +564,34 @@
     </div>
   </div>
   <Overlay show={showOverlay} {error} onClose={closeOverlay} />
+
+  {#if showValidationModal}
+    <Overlay show={true} onClose={() => showValidationModal = false}>
+      <div class="validation-modal bg-white p-8 border-4 border-black max-w-lg mx-auto">
+        <h2 class="text-2xl font-black tracking-tight text-red-600 uppercase mb-4">{t('cart.validation_errors_title')}</h2>
+        <ul class="space-y-3 mb-6">
+          {#each validationErrors as error}
+            <li class="bg-yellow-100 p-4 border-2 border-black">
+              {#if error.error_type === 'quantity_unavailable'}
+                <p class="font-bold">{t('cart.out_of_stock')} - {t('cart.please_remove')}</p>
+              {:else if error.error_type === 'price_changed'}
+                <p>{t('cart.price_updated')}:
+                  <span class="line-through text-gray-600">{formatCurrency(error.requested_unit_price, currency)}</span>
+                  → <span class="font-bold text-green-700">{formatCurrency(error.current_unit_price, currency)}</span>
+                </p>
+              {:else if error.error_type === 'product_inactive' || error.error_type === 'product_not_found'}
+                <p class="font-bold">{t('cart.out_of_stock')} - {t('cart.please_remove')}</p>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+        <button
+          onclick={() => showValidationModal = false}
+          class="w-full border-4 border-black bg-blue-500 px-6 py-3 text-lg font-black tracking-wider text-white uppercase hover:bg-blue-600"
+        >
+          {t('cart.review_cart')}
+        </button>
+      </div>
+    </Overlay>
+  {/if}
 </section>
