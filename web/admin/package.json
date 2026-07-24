@@ -9,32 +9,47 @@
     "preview": "bun --bunx vite preview",
     "check": "bun --bunx svelte-kit sync",
     "format": "prettier --write .",
-    "update": "bun update"
+    "update": "bun update",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:browser": "vitest --config vitest.browser.config.ts",
+    "test:browser:ui": "vitest --config vitest.browser.config.ts --ui"
   },
   "dependencies": {
-    "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.69.0",
     "@tiptap/core": "^2.27.2",
     "@tiptap/extension-placeholder": "^2.27.2",
     "@tiptap/pm": "^2.27.2",
     "@tiptap/starter-kit": "^2.27.2",
     "isomorphic-dompurify": "^3.18.0",
     "nprogress": "^0.2.0",
-    "svelte": "^5.56.4",
     "svelte-french-toast": "^1.2.0"
   },
   "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.69.0",
     "@sveltejs/vite-plugin-svelte": "^5.1.1",
     "@tailwindcss/forms": "0.5.11",
     "@tailwindcss/vite": "^4.3.2",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/svelte": "^5.4.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/nprogress": "^0.2.3",
+    "@vitest/browser": "^4.1.10",
+    "@vitest/browser-webdriverio": "^4.1.10",
+    "@vitest/ui": "^4.1.10",
     "autoprefixer": "^10.5.2",
+    "happy-dom": "^20.11.1",
+    "jsdom": "^29.1.1",
     "prettier": "^3.9.4",
     "prettier-plugin-svelte": "^3.5.2",
     "prettier-plugin-tailwindcss": "^0.7.4",
+    "svelte": "^5.56.4",
     "tailwindcss": "4.1.18",
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
-    "vite-plugin-svelte-svg": "^2.3.0"
+    "vitest": "^4.1.10",
+    "webdriverio": "^9.30.0"
   }
 }

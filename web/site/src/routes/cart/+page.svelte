@@ -337,7 +337,7 @@
             </h2>
             <ul class="list-none space-y-4">
               {#each cart as item (item.id)}
-                <li class="border-4 border-black bg-white p-4">
+                <li class="border-4 border-black bg-white p-4" data-testid="cart-item">
                   <div class="flex items-center gap-4">
                     <div class="overflow-hidden border-4 border-black">
                       <img src={getProductImageUrl(item.image, 'sm')} alt={item.name} class="h-20 w-20 object-cover" />
@@ -347,6 +347,7 @@
                         href="/products/{item.slug}"
                         target="_blank"
                         class="cursor-pointer text-xl font-black tracking-tight text-black uppercase decoration-yellow-300 decoration-4 underline-offset-4 hover:underline"
+                        data-testid="item-name"
                       >
                         {item.name}
                       </a>
@@ -382,7 +383,7 @@
           <div class="brutal-card mb-8 bg-yellow-300 p-8">
             <div class="flex items-center justify-between">
               <span class="text-3xl font-black tracking-tighter text-black uppercase"> {t('cart.total')} </span>
-              <span class="text-4xl font-black {cartTotal === 0 ? 'text-green-500' : 'text-black'}">
+              <span class="text-4xl font-black {cartTotal === 0 ? 'text-green-500' : 'text-black'}" data-testid="cart-total">
                 {totalCartAmount}
                 {#if cart.length > 0 && cartTotal !== 0}
                   {currency}

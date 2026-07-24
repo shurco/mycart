@@ -462,7 +462,7 @@
       </thead>
       <tbody>
         {#each products as product, index (product.id)}
-          <tr class:opacity-30={!product.active}>
+          <tr class:opacity-30={!product.active} data-testid="product-row">
             <td>
               {#if product.images && product.images.length > 0}
                 <a href="/uploads/{product.images[0].name}.{product.images[0].ext}" target="_blank">
