@@ -19,12 +19,11 @@
   },
   "dependencies": {
     "@portone/browser-sdk": "^0.0.9",
-    "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.69.0",
-    "isomorphic-dompurify": "^3.18.0",
-    "svelte": "^5.56.4"
+    "isomorphic-dompurify": "^3.18.0"
   },
   "devDependencies": {
+    "@sveltejs/adapter-static": "^3.0.10",
+    "@sveltejs/kit": "^2.69.0",
     "@sveltejs/vite-plugin-svelte": "^5.1.1",
     "@tailwindcss/forms": "0.5.11",
     "@tailwindcss/vite": "^4.3.2",
@@ -41,6 +40,7 @@
     "prettier": "^3.9.4",
     "prettier-plugin-svelte": "^3.5.2",
     "prettier-plugin-tailwindcss": "^0.7.4",
+    "svelte": "^5.56.4",
     "tailwindcss": "4.1.18",
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
