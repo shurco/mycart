@@ -4,7 +4,7 @@ go 1.26.1
 
 require (
 	github.com/disintegration/imaging v1.6.2
-	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
+	github.com/go-ozzo/ozzo-validation/v4 v4.4.1
 	github.com/gofiber/contrib/v3/jwt v1.1.7
 	github.com/gofiber/contrib/v3/zerolog v1.1.1
 	github.com/gofiber/fiber/v3 v3.4.0
