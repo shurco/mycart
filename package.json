@@ -13,7 +13,7 @@
     "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
-    "patchright": "^1.61.1"
+    "patchright": "^1.62.1"
   },
   "devDependencies": {
     "@nolebase/vitepress-plugin-enhanced-readabilities": "^2.18.2",
