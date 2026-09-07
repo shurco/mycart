@@ -18,10 +18,10 @@
     "test:browser:ui": "vitest --config vitest.browser.config.ts --ui"
   },
   "dependencies": {
-    "@tiptap/core": "^3.30.2",
-    "@tiptap/extension-placeholder": "^3.30.2",
+    "@tiptap/core": "^3.31.0",
+    "@tiptap/extension-placeholder": "^3.31.0",
     "@tiptap/pm": "^3.30.2",
-    "@tiptap/starter-kit": "^3.30.2",
+    "@tiptap/starter-kit": "^3.31.0",
     "isomorphic-dompurify": "^3.22.0",
     "nprogress": "^0.2.0",
     "svelte": "^5.56.4",
