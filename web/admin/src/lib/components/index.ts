@@ -26,6 +26,7 @@ export { default as Editor } from './Editor.svelte'
 export { default as IconButton } from './IconButton.svelte'
 export { default as LanguageSelect } from './LanguageSelect.svelte'
 export { default as Pagination } from './Pagination.svelte'
+export { default as SortableImage } from './SortableImage.svelte'
 export { default as SvgIcon } from './SvgIcon.svelte'
 
 // Product components

@@ -16,6 +16,24 @@
   // Reactive translation function
   let t = $derived($translate)
 
+  // Map backend error messages to translation keys
+  function translateError(message: string): string {
+    if (message.includes('already holds an installed cart')) {
+      return t('install.errors.databaseAlreadyInstalled')
+    }
+    if (message.includes('connect to the selected database')) {
+      return t('install.errors.databaseConnectionFailed')
+    }
+    if (message.includes('inspect the selected database')) {
+      return t('install.errors.databaseInspectionFailed')
+    }
+    if (message.includes('migrations failed')) {
+      return t('install.errors.migrationsFailed')
+    }
+    // Return original message if no translation found
+    return message
+  }
+
   let email = $state('')
   let password = $state('')
   let domain = $state('')
@@ -96,8 +114,9 @@
         showMessage(t('install.connectionOk'), 'connextSuccess')
       } else {
         tested = false
-        dbError = String(res?.result || res?.message || t('install.connectionFailed'))
-        showMessage(dbError, 'connextError')
+        const errorMsg = res?.message ? translateError(res.message) : t('install.connectionFailed')
+        dbError = errorMsg
+        showMessage(errorMsg, 'connextError')
       }
     } finally {
       testing = false
@@ -173,7 +192,8 @@
           goto(`${base}/signin`)
         }, 1000)
       } else {
-        showMessage(res?.result || res?.message || t('install.installationFailed'), 'connextError')
+        const errorMsg = res?.message ? translateError(res.message) : t('install.installationFailed')
+        showMessage(errorMsg, 'connextError')
       }
     } catch (error) {
       showMessage(t('install.networkError'), 'connextError')

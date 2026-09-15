@@ -73,6 +73,7 @@ docs/e2e/
 mycart
 mycart-linux
 mycart-test
+main
 
 # Temporary files
 docker/Dockerfile.dev.bak
@@ -96,3 +97,4 @@ docs/readme.md
 
 # Session the e2e suite shares between global setup and the tests
 e2e/.auth/
+Makefile

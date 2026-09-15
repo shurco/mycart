@@ -183,7 +183,13 @@
     "testingConnection": "Testing…",
     "testConnectionFirst": "Test the connection before installing",
     "connectionOk": "Connection successful",
-    "connectionFailed": "Connection failed"
+    "connectionFailed": "Connection failed",
+    "errors": {
+      "databaseAlreadyInstalled": "The selected database already holds an installed cart",
+      "databaseConnectionFailed": "Failed to connect to the selected database",
+      "databaseInspectionFailed": "Failed to inspect the selected database",
+      "migrationsFailed": "Database schema migration failed. Check server logs for details"
+    }
   },
   "products": {
     "title": "Products",
@@ -223,6 +229,8 @@
     "ifZeroPriceFree": "(if 0, the price will be free)",
     "imageDeleted": "Image deleted",
     "failedToDeleteImage": "Failed to delete image",
+    "imageUploaded": "Image uploaded successfully",
+    "imageUploadFailed": "Failed to upload image",
     "productVariants": "Product Variants",
     "variantsDescription": "Create product variations with different options like size, color, or material",
     "enableVariants": "Enable Variants",
@@ -246,6 +254,11 @@
     "tooManyVariants": "Warning: Maximum 100 variants allowed",
     "created": "Product created successfully",
     "updated": "Product updated successfully",
+    "imagesReordered": "Images reordered successfully",
+    "failedToReorderImages": "Failed to reorder images",
+    "representativeSet": "Representative image set successfully",
+    "failedToSetRepresentative": "Failed to set representative image",
+    "firstImageDescription": "First image is shown in product listings and accessible at /products/{urlslug}.png",
     "csv": {
       "exportProducts": "Export Products",
       "exportDescription": "Download all products as CSV file",

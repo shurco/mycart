@@ -97,10 +97,12 @@ func (v Digital) Validate() error {
 
 // File is ...
 type File struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Ext      string `json:"ext"`
-	OrigName string `json:"orig_name,omitempty"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Ext              string `json:"ext"`
+	OrigName         string `json:"orig_name,omitempty"`
+	Position         int    `json:"position"`
+	IsRepresentative bool   `json:"is_representative"`
 }
 
 // Validate is ...

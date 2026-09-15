@@ -319,6 +319,12 @@ func TestStartHTTP(t *testing.T) {
 		addr := ln.Addr().String()
 		_ = ln.Close()
 
+		// Small delay to let the kernel release the port. Without this,
+		// the Listen call inside startHTTP can race with the Close above
+		// and fail with "address already in use" if another process or
+		// test claims the port first.
+		time.Sleep(50 * time.Millisecond)
+
 		app := fiber.New()
 		app.Get("/ping", func(c fiber.Ctx) error { return c.SendString("pong") })
 

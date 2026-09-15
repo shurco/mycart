@@ -49,8 +49,11 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 	// The aggregates are built from dialect fragments rather than written out
 	// literally: SQLite and PostgreSQL disagree on both the function names and
 	// on how a text column becomes a nested JSON value.
-	imagesJSON := d.JSONAgg(d.JSONObject(
-		"'id', product_image.id, 'name', product_image.name, 'ext', product_image.ext"))
+	imageObj := d.JSONObject(
+		"'id', pi.id, 'name', pi.name, 'ext', pi.ext, " +
+			"'position', pi.position, 'is_representative', " + d.JSONBool("pi.is_representative"))
+	// Wrap in subquery to ORDER BY before aggregation
+	imagesJSON := d.JSONAgg(imageObj)
 	variantsJSON := d.JSONAgg(d.JSONObject(
 		"'id', product_variant.id, 'sku', product_variant.sku, 'quantity', product_variant.quantity, " +
 			"'price_surcharge', product_variant.price_surcharge, " +
@@ -74,7 +77,7 @@ func (q *ProductQueries) ListProducts(ctx context.Context, private bool, limit, 
 				product.digital,
 				(EXISTS(SELECT 1 FROM digital_data WHERE digital_data.product_id = product.id AND digital_data.cart_id IS NULL) OR
 				EXISTS(SELECT 1 FROM digital_file WHERE digital_file.product_id = product.id)) AS digital_filled,
-				(SELECT %s as images FROM product_image WHERE product_id = product.id) as image,
+				(SELECT %s FROM (SELECT * FROM product_image WHERE product_id = product.id ORDER BY position, id) pi) as image,
 				(SELECT %s FROM product_variant WHERE product_id = product.id%s) as variants,
 				%s
 			FROM product
@@ -202,7 +205,10 @@ func (q *ProductQueries) Product(ctx context.Context, private bool, id string) (
 	// without images, which then had to be filtered out by comparing the
 	// aggregated JSON against a literal — and PostgreSQL and SQLite format that
 	// same JSON differently. A subquery simply yields NULL instead.
-	imagesJSON := d.JSONAgg(d.JSONObject("'id', pi.id, 'name', pi.name, 'ext', pi.ext"))
+	imageObj := d.JSONObject("'id', pi.id, 'name', pi.name, 'ext', pi.ext, " +
+		"'position', pi.position, 'is_representative', " + d.JSONBool("pi.is_representative"))
+	// Wrap in subquery to ORDER BY before aggregation
+	imagesJSON := d.JSONAgg(imageObj)
 
 	query := fmt.Sprintf(`
 			SELECT
@@ -220,7 +226,7 @@ func (q *ProductQueries) Product(ctx context.Context, private bool, id string) (
 				product.attribute,
 				product.digital,
 				product.seo,
-				(SELECT %s FROM product_image pi WHERE pi.product_id = product.id) as images,
+				(SELECT %s FROM (SELECT * FROM product_image WHERE product_id = product.id ORDER BY position, id) pi) as images,
 				%s,
 				%s
 	`, imagesJSON, d.Epoch("product.created"), d.Epoch("product.updated"))

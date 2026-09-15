@@ -17,6 +17,7 @@
     PageState,
     Pagination,
     ProductView,
+    SortableImage,
     SvgIcon
   } from '$lib/components'
   import ProductSeo from '$lib/components/product/Seo.svelte'
@@ -59,6 +60,16 @@
   let currency = $state('')
   let loading = $state(true)
 
+  // DEBUG: Watch for products array changes
+  $effect(() => {
+    const ids = products.map(p => p.id)
+    const uniqueIds = new Set(ids)
+    if (ids.length !== uniqueIds.size) {
+      console.error('[EFFECT] Duplicate IDs detected in products array!')
+      console.error('IDs:', ids)
+      console.error('Duplicates:', ids.filter((id, i) => ids.indexOf(id) !== i))
+    }
+  })
   let drawerOpen = $state(false)
   let drawerMode = $state<'view' | 'add' | 'edit' | 'seo' | 'digital' | 'csv'>('view')
   let drawerProduct = $state<DrawerProduct | null>(null)
@@ -187,7 +198,7 @@
     } else if (isUpdate && drawerProduct) {
       const updatedProduct = await loadData<Product>(
         `/api/_/products/${drawerProduct.product.id}`,
-        t('products.failedToLoadProduct')
+        'Failed to load product'
       )
       if (updatedProduct) {
         updateProductInList(updatedProduct)
@@ -240,6 +251,7 @@
   })
 
   async function loadProducts(page = currentPage) {
+    console.log(`[loadProducts] Starting - page ${page}`)
     loading = true
     currentPage = page
     const result = await loadData<ProductsResponse>(
@@ -247,12 +259,15 @@
       t('products.failedToLoad')
     )
 
+    console.log('[loadProducts] API response:', result)
+
     if (result) {
       products = sortByDate(result.products || [])
       currency = result.currency || ''
       total = result.total || 0
     }
     loading = false
+    console.log('[loadProducts] Finished')
   }
 
   function handlePageChange(page: number) {
@@ -297,7 +312,7 @@
     formErrors = {}
     drawerMode = 'edit'
 
-    const result = await loadData<Product>(`/api/_/products/${product.id}`, t('products.failedToLoadProduct'))
+    const result = await loadData<Product>(`/api/_/products/${product.id}`, 'Failed to load product')
     if (result) {
       fullProductData = result
       formData = convertProductToFormData(result)
@@ -390,6 +405,12 @@
     // Prepare data for submission
     const submitData = prepareSubmitData(formData)
 
+    console.log('=== PRODUCT SAVE DEBUG ===')
+    console.log('has_variants:', submitData.has_variants)
+    console.log('options:', JSON.stringify(submitData.options, null, 2))
+    console.log('variants:', JSON.stringify(submitData.variants, null, 2))
+    console.log('Full submitData:', submitData)
+
     // Submit to API
     const result = await saveData<Product>(
       url,
@@ -399,10 +420,15 @@
       t('products.failedToSave')
     )
 
+    console.log('=== SAVE RESULT ===')
+    console.log('Result has_variants:', result?.has_variants)
+    console.log('Result options:', result?.options)
+    console.log('Result variants:', result?.variants)
+
     // Handle response
     await handleSubmitResponse(result, isUpdate, drawerProduct, updateProductInList, loadProducts, closeDrawer)
   }
-
+  
   async function handleDeleteProduct() {
     if (!fullProductData || !confirmDelete('product', fullProductData.name)) {
       return
@@ -435,7 +461,7 @@
     if (result === null) {
       updateProductInList(fullProductData)
     } else {
-      const serverProduct = await loadData<Product>(`/api/_/products/${fullProductData.id}`, t('products.failedToLoadProduct'))
+      const serverProduct = await loadData<Product>(`/api/_/products/${fullProductData.id}`, 'Failed to load product')
       if (serverProduct) {
         updateProductInList(serverProduct)
       }
@@ -495,7 +521,7 @@
   async function toggleActive(product: Product, index: number) {
     const originalActive = product.active
     const newActive = !product.active
-
+    
     // Optimistic update - update directly instead of map
     products[index] = { ...products[index], active: newActive }
 
@@ -537,127 +563,188 @@
 
   function handleUpload(result: any) {
     if (result?.success) {
-      showMessage(t('common.fileUploaded'), 'connextSuccess')
+      showMessage(t('products.imageUploaded'), 'connextSuccess')
       if (result?.result && fullProductData) {
         productImages = [...(productImages || []), result.result]
       }
       loadProducts()
+    } else {
+      // Show error message from server
+      const errorMsg = result?.message || result?.result || t('products.imageUploadFailed')
+      showMessage(errorMsg, 'connextError')
+    }
+  }
+
+  async function handleImageReorder(updates: Array<{ imageId: string; position: number }>) {
+    if (!fullProductData) return
+
+    try {
+      const res = await fetch(`/api/_/products/${fullProductData.id}/images/reorder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates })
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        showMessage(data.message || t('products.failedToReorderImages'), 'connextError')
+        return
+      }
+
+      showMessage(t('products.imagesReordered'), 'connextSuccess')
+
+      // Refetch product data to get updated positions
+      const updatedProduct = await loadData<Product>(`/api/_/products/${fullProductData.id}`, 'Failed to load product')
+      if (updatedProduct) {
+        productImages = updatedProduct.images || []
+      }
+    } catch (error) {
+      showMessage(t('common.networkError'), 'connextError')
+    }
+  }
+
+  async function handleSetRepresentative(imageId: string) {
+    if (!fullProductData) return
+
+    try {
+      const res = await fetch(`/api/_/products/${fullProductData.id}/images/${imageId}/representative`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        showMessage(data.message || t('products.failedToSetRepresentative'), 'connextError')
+        return
+      }
+
+      showMessage(t('products.representativeSet'), 'connextSuccess')
+
+      // Refetch product data to get updated representative status
+      const updatedProduct = await loadData<Product>(`/api/_/products/${fullProductData.id}`, 'Failed to load product')
+      if (updatedProduct) {
+        productImages = updatedProduct.images || []
+      }
+    } catch (error) {
+      showMessage(t('common.networkError'), 'connextError')
     }
   }
 </script>
 
 <Main>
-  <PageHeader title={t('products.title')}>
-    {#snippet actions()}
-      <FormButton
-        name={`${t('products.csv.import')} / ${t('products.csv.export')}`}
-        variant="secondary"
-        ico="arrow-path"
-        onclick={openCsv}
-      />
-      <FormButton name={t('products.addProduct')} variant="primary" ico="plus" onclick={openAdd} />
-    {/snippet}
-  </PageHeader>
+  <div class="mb-5 flex items-center justify-between">
+    <h1>{t('products.title')}</h1>
+    <div class="flex gap-2">
+      <FormButton name={`${t('products.csv.import')} / ${t('products.csv.export')}`} variant="secondary" ico="arrow-path" onclick={openCsv} />
+      <FormButton name={t('products.addProduct')} color="green" ico="plus" onclick={openAdd} />
+    </div>
+  </div>
 
   {#if loading}
-    <PageState kind="loading" />
+    <div class="py-8 text-center">{t('common.loading')} [PAGE {currentPage}] [FIX v2.0]</div>
   {:else if products.length === 0}
-    <PageState kind="empty" message={t('products.noProducts')} />
+    <div class="py-8 text-center text-gray-500">{t('products.noProducts')}</div>
   {:else}
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th class="w-28"></th>
-            <th>{t('products.name')}</th>
-            <th class="w-32">{t('products.slug')}</th>
-            <th class="w-32">{t('products.price')}</th>
-            <th class="w-12">
-              <SvgIcon name="cube" className="h-5 w-5" stroke="currentColor" />
-            </th>
-            <th class="w-24"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each products as product, index (product.id)}
-            <tr class:opacity-30={!product.active} data-testid="product-row">
-              <td>
-                {#if product.images && product.images.length > 0}
-                  <a href="/uploads/{product.images[0].name}.{product.images[0].ext}" target="_blank">
-                    <img
-                      style="width: 100%; max-width: 80px"
-                      src="/uploads/{product.images[0].name}_sm.{product.images[0].ext}"
-                      alt={product.name}
-                      loading="lazy"
-                    />
-                  </a>
-                {:else}
-                  <img style="width: 100%; max-width: 80px" src="/assets/img/noimage.png" alt="" loading="lazy" />
-                {/if}
-              </td>
-              <td onclick={() => openView(product, index)}>
-                <div class="font-bold">{product.name}</div>
-                {#if product.brief}
-                  <span class="hidden text-gray-400 xl:block">{product.brief}</span>
-                {/if}
-              </td>
-              <td>
-                {#if product.active}
-                  <a href="/products/{product.slug}" target="_blank" class="a-link">{product.slug}</a>
-                {:else}
-                  <span>{product.slug}</span>
-                {/if}
-              </td>
-              <td onclick={() => openView(product, index)}>
-                {#if !product.amount || parseFloat(String(product.amount)) === 0}
-                  <span class="font-bold text-green-600">{t('carts.free')}</span>
-                {:else}
-                  {formatCurrencyWithTruncation(
-                    product.amount,
-                    currency || 'USD',
-                    'admin',
-                    paymentSettings?.truncation,
-                    currentLocale,
-                    paymentSettings?.number_format,
-                    paymentSettings?.symbol_display?.admin
-                  )}
-                {/if}
-              </td>
-              <td>
-                {#if product.digital && product.digital.type}
-                  <IconButton
-                    ico={digitalTypeIco(product.digital.type)}
-                    label={t('products.digital')}
-                    svgClass="h-5 w-5 {product.digital.filled === true ? 'text-black' : 'text-red-600'}"
-                    onclick={() => openDigital(product, index)}
+    <table>
+      <thead>
+        <tr>
+          <th class="w-28"></th>
+          <th>{t('products.name')}</th>
+          <th class="w-32">{t('products.slug')}</th>
+          <th class="w-32">{t('products.price')}</th>
+          <th class="w-12 px-4 py-2">
+            <SvgIcon name="cube" className="h-5 w-5" stroke="currentColor" />
+          </th>
+          <th class="w-24 px-4 py-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each products as product, index (product.id)}
+          <tr class:opacity-30={!product.active} data-testid="product-row">
+            <td>
+              {#if product.images && product.images.length > 0}
+                <a href="/uploads/{product.images[0].name}.{product.images[0].ext}" target="_blank">
+                  <img
+                    style="width: 100%; max-width: 80px"
+                    src="/uploads/{product.images[0].name}_sm.{product.images[0].ext}"
+                    alt={product.name}
+                    loading="lazy"
                   />
-                {/if}
-              </td>
-              <td>
-                <div class="flex items-center gap-2">
-                  <IconButton
-                    ico="pencil-square"
-                    label={t('common.edit')}
+                </a>
+              {:else}
+                <img style="width: 100%; max-width: 80px" src="/assets/img/noimage.png" alt="" loading="lazy" />
+              {/if}
+            </td>
+            <td onclick={() => openView(product, index)}>
+              <div class="font-bold">{product.name}</div>
+              {#if product.brief}
+                <span class="hidden text-gray-400 xl:block">{product.brief}</span>
+              {/if}
+            </td>
+            <td>
+              {#if product.active}
+                <a href="/products/{product.slug}" target="_blank">{product.slug}</a>
+              {:else}
+                <span>{product.slug}</span>
+              {/if}
+            </td>
+            <td onclick={() => openView(product, index)}>
+              {#if !product.amount || parseFloat(String(product.amount)) === 0}
+                <span class="font-bold text-green-600">free</span>
+              {:else}
+                {formatCurrencyWithTruncation(
+                  product.amount,
+                  currency || 'USD',
+                  'admin',
+                  paymentSettings?.truncation,
+                  currentLocale,
+                  paymentSettings?.number_format,
+                  paymentSettings?.symbol_display?.admin
+                )}
+              {/if}
+            </td>
+            <td class="px-4 py-2">
+              {#if product.digital && product.digital.type}
+                <SvgIcon
+                  name={digitalTypeIco(product.digital.type)}
+                  className="h-5 w-5 cursor-pointer {product.digital.filled === true ? 'text-black' : 'text-red-600'}"
+                  onclick={() => openDigital(product, index)}
+                  stroke="currentColor"
+                />
+              {/if}
+            </td>
+            <td class="px-4 py-2">
+              <div class="flex">
+                <div class="pr-3">
+                  <SvgIcon
+                    name="pencil-square"
+                    className="h-5 w-5 cursor-pointer"
                     onclick={() => openEdit(product, index)}
-                  />
-                  <IconButton
-                    ico="rocket"
-                    label={t('products.seo')}
-                    onclick={() => openSeo(product, index)}
-                  />
-                  <IconButton
-                    ico={product.active ? 'eye' : 'eye-slash'}
-                    label={t('products.toggleActive')}
-                    svgClass="h-5 w-5 {product.active ? 'text-green-600' : 'text-gray-400'}"
-                    onclick={() => toggleActive(product, index)}
+                    stroke="currentColor"
                   />
                 </div>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+                <div class="pr-3">
+                  <SvgIcon
+                    name="rocket"
+                    className="h-5 w-5 cursor-pointer"
+                    onclick={() => openSeo(product, index)}
+                    stroke="currentColor"
+                  />
+                </div>
+                <div>
+                  <SvgIcon
+                    name={product.active ? 'eye' : 'eye-slash'}
+                    className="h-5 w-5 cursor-pointer"
+                    onclick={() => toggleActive(product, index)}
+                    stroke="currentColor"
+                  />
+                </div>
+              </div>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
 
     {#if total > 0}
       <Pagination
@@ -666,7 +753,7 @@
         onPageChange={handlePageChange}
       />
     {/if}
-  {/if}
+    {/if}
 </Main>
 
 {#if drawerOpen}
@@ -678,29 +765,41 @@
     {:else if drawerMode === 'digital' && drawerProduct}
       <ProductDigital drawer={drawerProduct} onContentUpdate={handleDigitalContentUpdate} onclose={closeDrawer} />
     {:else if drawerMode === 'csv'}
-      <DrawerHeader title={`${t('products.csv.importProducts')} / ${t('products.csv.exportProducts')}`} />
+      <div class="pb-8">
+        <h1>{t('products.csv.importProducts')} / {t('products.csv.exportProducts')}</h1>
+      </div>
       <CsvImportExport onImportComplete={handleCsvImportComplete} />
-      <DrawerFooter onclose={closeDrawer} />
     {:else}
       <div>
-        <DrawerHeader
-          title={drawerMode === 'add' ? t('products.addProduct') : `${t('products.editProduct')} ${formData.name || ''}`}
-        >
-          {#snippet actions()}
+        <div class="pb-8">
+          <div class="flex items-center">
+            <div class="pr-3">
+              <h1>{drawerMode === 'add' ? t('products.addProduct') : `${t('products.editProduct')} ${formData.name || ''}`}</h1>
+            </div>
             {#if drawerMode === 'edit' && fullProductData}
-              <IconButton
-                ico={fullProductData.active ? 'eye' : 'eye-slash'}
-                label={t('products.toggleActive')}
-                svgClass="h-5 w-5 {fullProductData.active ? 'text-green-600' : 'text-gray-400'}"
-                onclick={toggleActiveInEdit}
-              />
+              <div>
+                <SvgIcon
+                  name={fullProductData.active ? 'eye' : 'eye-slash'}
+                  className="h-5 w-5 cursor-pointer"
+                  onclick={toggleActiveInEdit}
+                  stroke="currentColor"
+                />
+              </div>
             {/if}
-          {/snippet}
-        </DrawerHeader>
+          </div>
+        </div>
 
-        <form onsubmit={(e) => { e.preventDefault(); handleSubmit() }}>
+        <form onsubmit={(e) => {
+          e.preventDefault();
+          const form = e.currentTarget;
+          if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+          }
+          handleSubmit();
+        }}>
           <div class="flow-root">
-            <div class="space-y-4">
+            <dl class="mx-auto -my-3 mt-2 mb-0 space-y-4 text-sm">
               <FormInput id="name" title={t('products.name')} bind:value={formData.name} error={formErrors.name} ico="at-symbol" onfocusout={handleNameBlur} />
               <div class="flex flex-row">
                 <div class="pr-3">
@@ -717,7 +816,7 @@
                 <div class="mt-3">
                   {currency}
                   {#if parseFloat(amountDisplay) === 0}
-                    <span class="ml-2 font-bold text-green-600">{t('carts.free')}</span>
+                    <span class="ml-2 font-bold text-green-600">free</span>
                   {/if}
                   <span class="ml-2 text-xs text-gray-500">{t('products.ifZeroPriceFree')}</span>
                 </div>
@@ -750,66 +849,80 @@
                 <FormInput id="slug" title={t('products.slug')} bind:value={formData.slug} error={formErrors.slug} ico="glob-alt" placeholder={t('products.slugPlaceholder')} />
               {/if}
 
-              <FormGroup label={t('products.metadata')}>
-                {#each formData.metadata || [] as metadata, index (index)}
-                  <div class="flex">
-                    <div class="grow pr-3">
-                      <FormInput id="mtd-key-{index}" type="text" title={t('products.key')} bind:value={metadata.key} />
-                    </div>
-                    <div class="grow">
-                      <FormInput id="mtd-value-{index}" type="text" title={t('products.value')} bind:value={metadata.value} />
-                    </div>
-                    <div class="flex-none pt-3 pl-3">
-                      <IconButton
-                        ico="trash"
-                        label={t('common.delete')}
-                        variant="danger"
-                        onclick={() => deleteMetadataRecord(index)}
-                      />
-                    </div>
-                  </div>
-                {/each}
+              <hr />
+              <p class="font-semibold">{t('products.metadata')}</p>
+              {#each formData.metadata || [] as metadata, index (index)}
                 <div class="flex">
-                  <div class="grow"></div>
-                  <div class="mt-2 flex-none">
-                    <FormButton
-                      type="button"
-                      variant="secondary"
-                      name={t('common.addRecord')}
-                      onclick={addMetadataRecord}
-                    />
+                  <div class="grow pr-3">
+                    <FormInput id="mtd-key-{index}" type="text" title={t('products.key')} bind:value={metadata.key} />
+                  </div>
+                  <div class="grow">
+                    <FormInput id="mtd-value-{index}" type="text" title={t('products.value')} bind:value={metadata.value} />
+                  </div>
+                  <div
+                    class="flex-none cursor-pointer pt-3 pl-3"
+                    role="button"
+                    tabindex="0"
+                    onclick={() => deleteMetadataRecord(index)}
+                    onkeydown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        deleteMetadataRecord(index)
+                      }
+                    }}
+                  >
+                    <SvgIcon name="trash" className="h-5 w-5" stroke="currentColor" />
                   </div>
                 </div>
-              </FormGroup>
+              {/each}
+              <div class="flex">
+                <div class="grow"></div>
+                <div class="mt-2 flex-none">
+                  <button
+                    type="button"
+                    class="shrink-0 rounded-lg bg-gray-200 p-2 text-sm font-medium text-gray-700"
+                    onclick={addMetadataRecord}
+                  >
+                    {t('products.addMetadataRecord')}
+                  </button>
+                </div>
+              </div>
 
-              <FormGroup label={t('products.attributes')}>
-                {#each formData.attributes || [] as attribute, index (index)}
-                  <div class="flex">
-                    <div class="grow">
-                      <FormInput id="atr-key-{index}" type="text" title="" bind:value={formData.attributes[index]} />
-                    </div>
-                    <div class="flex-none pt-3 pl-3">
-                      <IconButton
-                        ico="trash"
-                        label={t('common.delete')}
-                        variant="danger"
-                        onclick={() => deleteAttributeRecord(index)}
-                      />
-                    </div>
-                  </div>
-                {/each}
+              <hr />
+              <p class="font-semibold">{t('products.attributes')}</p>
+              {#each formData.attributes || [] as attribute, index (index)}
                 <div class="flex">
-                  <div class="grow"></div>
-                  <div class="mt-2 flex-none">
-                    <FormButton
-                      type="button"
-                      variant="secondary"
-                      name={t('common.addRecord')}
-                      onclick={addAttributeRecord}
-                    />
+                  <div class="grow">
+                    <FormInput id="atr-key-{index}" type="text" title="" bind:value={formData.attributes[index]} />
+                  </div>
+                  <div
+                    class="flex-none cursor-pointer pt-3 pl-3"
+                    role="button"
+                    tabindex="0"
+                    onclick={() => deleteAttributeRecord(index)}
+                    onkeydown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        deleteAttributeRecord(index)
+                      }
+                    }}
+                  >
+                    <SvgIcon name="trash" className="h-5 w-5" stroke="currentColor" />
                   </div>
                 </div>
-              </FormGroup>
+              {/each}
+              <div class="flex">
+                <div class="grow"></div>
+                <div class="mt-2 flex-none">
+                  <button
+                    type="button"
+                    class="shrink-0 rounded-lg bg-gray-200 p-2 text-sm font-medium text-gray-700"
+                    onclick={addAttributeRecord}
+                  >
+                    {t('products.addAttributeRecord')}
+                  </button>
+                </div>
+              </div>
 
               <hr />
               <VariantManager
@@ -835,56 +948,67 @@
               {/if}
 
               {#if drawerMode === 'edit' && fullProductData}
-                <FormGroup label={t('products.images')}>
-                  {#if productImages && productImages.length > 0}
-                    <div class="grid grid-cols-4 content-start gap-4">
-                      {#each productImages as image, index (image.id || index)}
-                        <div class="relative" style="width: 100%; max-width: 150px">
-                          <a href="/uploads/{image.name}.{image.ext}" target="_blank">
-                            <img src="/uploads/{image.name}_sm.{image.ext}" alt="" />
-                          </a>
-                          <div class="absolute end-4 top-4">
-                            <IconButton
-                              ico="trash"
-                              label={t('common.delete')}
-                              variant="danger"
-                              class="bg-white"
-                              onclick={() => deleteProductImage(index)}
-                            />
-                          </div>
-                        </div>
-                      {/each}
-                    </div>
-                  {/if}
-                  <FormUpload
-                    section="image"
-                    productId={fullProductData.id}
-                    accept=".jpg,.jpeg,.png"
-                    onadded={handleUpload}
+                <hr />
+                <p class="font-semibold">{t('products.images')}</p>
+                {#if productImages && productImages.length > 0}
+                  <SortableImage
+                    images={productImages.map(img => ({
+                      id: img.id,
+                      url: `/uploads/${img.name}_sm.${img.ext}`,
+                      position: img.position || 0,
+                      is_representative: img.is_representative || false
+                    }))}
+                    onReorder={handleImageReorder}
+                    onSetRepresentative={handleSetRepresentative}
                   />
-                </FormGroup>
+                {/if}
+                <FormUpload
+                  section="image"
+                  productId={fullProductData.id}
+                  accept=".jpg,.jpeg,.png"
+                  onadded={handleUpload}
+                />
               {/if}
 
-              <FormGroup label={t('products.shortDescription')}>
-                <FormTextarea id="brief" title={t('products.brief')} bind:value={formData.brief} />
-              </FormGroup>
+              <hr />
+              <p class="font-semibold">{t('products.shortDescription')}</p>
+              <FormTextarea id="brief" title={t('products.brief')} bind:value={formData.brief} />
 
-              <FormGroup label={t('products.description')}>
-                <Editor
-                  bind:modelValue={formData.description}
-                  placeholder={t('products.typeDescriptionHere')}
-                  onupdateModelValue={handleEditorUpdate}
-                />
-              </FormGroup>
-            </div>
+              <hr />
+              <p class="font-semibold">{t('products.description')}</p>
+              <Editor
+                bind:modelValue={formData.description}
+                placeholder={t('products.typeDescriptionHere')}
+                onupdateModelValue={handleEditorUpdate}
+              />
+            </dl>
           </div>
 
-          <DrawerFooter
-            submitLabel={drawerMode === 'add' ? t('common.add') : t('common.save')}
-            onclose={closeDrawer}
-            ondelete={drawerMode === 'edit' && fullProductData ? handleDeleteProduct : undefined}
-            deleteLabel={t('common.delete')}
-          />
+          <div class="pt-8">
+            <div class="flex">
+              <div class="flex-none">
+                <FormButton type="submit" name={drawerMode === 'add' ? t('common.add') : t('common.save')} color="green" />
+                <FormButton type="button" name={t('common.close')} color="gray" onclick={closeDrawer} />
+              </div>
+              <div class="grow"></div>
+              {#if drawerMode === 'edit' && fullProductData}
+                <div class="mt-2 flex-none">
+                  <span
+                    onclick={handleDeleteProduct}
+                    onkeydown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleDeleteProduct()
+                      }
+                    }}
+                    role="button"
+                    tabindex="0"
+                    class="cursor-pointer text-red-700">{t('common.delete')}</span
+                  >
+                </div>
+              {/if}
+            </div>
+          </div>
         </form>
       </div>
     {/if}

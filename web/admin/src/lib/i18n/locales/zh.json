@@ -183,7 +183,13 @@
     "testingConnection": "测试中…",
     "testConnectionFirst": "安装前请先测试连接",
     "connectionOk": "连接成功",
-    "connectionFailed": "连接失败"
+    "connectionFailed": "连接失败",
+    "errors": {
+      "databaseAlreadyInstalled": "所选数据库中已安装购物车",
+      "databaseConnectionFailed": "无法连接到所选数据库",
+      "databaseInspectionFailed": "无法检查所选数据库",
+      "migrationsFailed": "数据库架构迁移失败。请检查服务器日志"
+    }
   },
   "products": {
     "title": "商品",
@@ -223,6 +229,8 @@
     "ifZeroPriceFree": "（如果为 0，价格将免费）",
     "imageDeleted": "图片已删除",
     "failedToDeleteImage": "删除图片失败",
+    "imageUploaded": "图片上传成功",
+    "imageUploadFailed": "图片上传失败",
     "productVariants": "商品规格",
     "variantsDescription": "创建具有不同选项（如尺寸、颜色或材料）的产品变体",
     "enableVariants": "启用规格",
@@ -246,6 +254,11 @@
     "tooManyVariants": "警告：最多允许 100 个变体",
     "created": "产品创建成功",
     "updated": "产品更新成功",
+    "imagesReordered": "图片顺序已成功调整",
+    "failedToReorderImages": "调整图片顺序失败",
+    "representativeSet": "代表图片已成功设置",
+    "failedToSetRepresentative": "设置代表图片失败",
+    "firstImageDescription": "第一张图片显示在商品列表中,可通过 /products/{urlslug}.png 访问",
     "csv": {
       "exportProducts": "导出商品",
       "exportDescription": "将所有商品下载为 CSV 文件",
