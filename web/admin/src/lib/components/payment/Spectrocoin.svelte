@@ -28,13 +28,38 @@
     active: false,
     merchant_id: '',
     project_id: '',
+    callback_merchant_id: 0,
+    callback_api_id: 0,
     private_key: ''
   })
+  // The callback identity is numeric but the form takes it as typed text: an
+  // input bound to a number turns an empty box into 0, which is
+  // indistinguishable from an id that was never filled in. The strings are
+  // converted on submit.
+  let callbackMerchantID = $state('')
+  let callbackApiID = $state('')
   let formErrors = $state<Record<string, string>>({})
   let unsubscribe: (() => void) | null = null
 
+  // Zero means "not configured": the server accepts it and the callback handler
+  // refuses to match it, so an empty box must stay savable — a shop that does
+  // not take SpectroCoin callbacks still has to be able to save its settings.
+  // Anything typed has to be a positive integer instead: sent as NaN it would
+  // reach the server as zero, and past Number.MAX_SAFE_INTEGER it would reach it
+  // as a different number than SpectroCoin reports, rejecting every callback
+  // with nothing to point at the cause.
+  function parseMerchantNumber(value: string): number | null {
+    const trimmed = value.trim()
+    if (trimmed === '') return 0
+
+    const parsed = Number(trimmed)
+    return /^\d+$/.test(trimmed) && Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
+  }
+
   onMount(async () => {
     settings = await loadPaymentSettings<SpectrocoinSettings>('spectrocoin', settings)
+    callbackMerchantID = settings.callback_merchant_id ? String(settings.callback_merchant_id) : ''
+    callbackApiID = settings.callback_api_id ? String(settings.callback_api_id) : ''
 
     unsubscribe = systemStore.subscribe((store) => {
       if (store.payments?.spectrocoin !== undefined) {
@@ -58,12 +83,36 @@
       formErrors.project_id = ERROR_MESSAGES.PROJECT_ID_TOO_SHORT
       return
     }
+    const merchantNumber = parseMerchantNumber(callbackMerchantID)
+    const apiNumber = parseMerchantNumber(callbackApiID)
+    if (merchantNumber === null) {
+      formErrors.callback_merchant_id = t('payment.callbackMerchantIdInvalid')
+      return
+    }
+    if (apiNumber === null) {
+      formErrors.callback_api_id = t('payment.callbackApiIdInvalid')
+      return
+    }
+    // A half-filled pair can never match a callback, and would leave the
+    // operator with nothing on screen to explain why every one is rejected.
+    if ((merchantNumber === 0) !== (apiNumber === 0)) {
+      if (merchantNumber === 0) {
+        formErrors.callback_merchant_id = t('payment.callbackMerchantIdInvalid')
+      } else {
+        formErrors.callback_api_id = t('payment.callbackApiIdInvalid')
+      }
+      return
+    }
     if (!settings.private_key || settings.private_key.length < MIN_PRIVATE_KEY_LENGTH) {
       formErrors.private_key = ERROR_MESSAGES.PRIVATE_KEY_TOO_SHORT
       return
     }
 
-    await savePaymentSettings('spectrocoin', settings)
+    await savePaymentSettings('spectrocoin', {
+      ...settings,
+      callback_merchant_id: merchantNumber,
+      callback_api_id: apiNumber
+    })
   }
 
   async function handleToggleActive() {
@@ -113,6 +162,27 @@
             ico="key"
           />
         </div>
+        <div class="mt-5">
+          <FormInput
+            id="callback_merchant_id"
+            type="text"
+            title={t('payment.callbackMerchantId')}
+            bind:value={callbackMerchantID}
+            error={formErrors.callback_merchant_id}
+            ico="key"
+          />
+        </div>
+        <div class="mt-5">
+          <FormInput
+            id="callback_api_id"
+            type="text"
+            title={t('payment.callbackApiId')}
+            bind:value={callbackApiID}
+            error={formErrors.callback_api_id}
+            ico="key"
+          />
+        </div>
+        <p class="text-xs text-gray-500 mt-1">{t('payment.callbackIdentityHint')}</p>
         <div class="mt-5">
           <FormTextarea id="private_key" title={t('payment.privateKey')} bind:value={settings.private_key} rows={15} />
           {#if formErrors.private_key}

@@ -201,6 +201,11 @@ export interface SpectrocoinSettings {
   active: boolean
   merchant_id: string
   project_id: string
+  // The numeric merchantId and apiId SpectroCoin reports in every callback.
+  // They are the only callback identity fields SpectroCoin signs, so the server
+  // refuses a callback whose pair does not match them.
+  callback_merchant_id: number
+  callback_api_id: number
   private_key: string
 }
 

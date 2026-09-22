@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
-	"strconv"
 	"strings"
 	"time"
 
@@ -523,8 +522,13 @@ func Payment(c fiber.Ctx) error {
 // @Failure      500 {object} webutil.HTTPResponse "Internal server error"
 // @Router       /cart/payment/callback [post]
 func PaymentCallback(c fiber.Ctx) error {
+	return paymentCallback(c, litepay.VerifySpectrocoinCallback)
+}
+
+// paymentCallback is PaymentCallback with the SpectroCoin signature verifier
+// injected, so that the tests can reach the checks the signature guards.
+func paymentCallback(c fiber.Ctx, verifySpectrocoin spectrocoinVerifier) error {
 	log := logging.New()
-	db := queries.DB()
 	payment := &litepay.Payment{
 		CartID:        c.Query("cart_id"),
 		PaymentSystem: litepay.PaymentSystem(c.Query("payment_system")),
@@ -538,7 +542,7 @@ func PaymentCallback(c fiber.Ctx) error {
 			return webutil.StatusBadRequest(c, err.Error())
 		}
 
-		setting, err := queries.GetSettingByGroup[models.Spectrocoin](c.Context(), db)
+		setting, err := queries.GetSettingByGroup[models.Spectrocoin](c.Context(), queries.DB())
 		if err != nil {
 			log.ErrorStack(err)
 			return webutil.StatusInternalServerError(c)
@@ -550,23 +554,28 @@ func PaymentCallback(c fiber.Ctx) error {
 		// The callback is unauthenticated input: its RSA signature must be
 		// verified against the official SpectroCoin public key before any
 		// field (status, amount) may be trusted.
-		if err := litepay.VerifySpectrocoinCallback(response); err != nil {
+		if err := verifySpectrocoin(response); err != nil {
 			log.Error().Msgf("spectrocoin callback signature verification failed for cart %s: %v", payment.CartID, err)
 			return webutil.StatusBadRequest(c, "invalid callback signature")
 		}
-		if response.OrderID != payment.CartID {
-			return webutil.StatusBadRequest(c, "callback order does not match cart")
-		}
 
-		payment.Status = litepay.StatusPayment(litepay.SPECTROCOIN, strconv.Itoa(response.Status))
-		payment.MerchantID = response.MerchantApiID
-		payment.Coin = &litepay.Coin{
-			AmountTotal: response.ReceiveAmount,
-			Currency:    response.ReceiveCurrency,
+		settled, err := spectrocoinPayment(log, response, setting, payment.CartID)
+		if err != nil {
+			return webutil.StatusBadRequest(c, err.Error())
 		}
+		payment = settled
 	default:
 		return webutil.StatusBadRequest(c, "unsupported payment system")
 	}
+
+	return settleCart(c, log, payment)
+}
+
+// settleCart records the payment a provider's callback describes, then tells
+// the buyer and the shop's webhooks about it. It is the pipeline every provider
+// shares; paymentCallback only decides how a callback becomes a Payment.
+func settleCart(c fiber.Ctx, log *logging.Log, payment *litepay.Payment) error {
+	db := queries.DB()
 
 	cartInfo, err := db.Cart(c.Context(), payment.CartID)
 	if err != nil {
@@ -582,9 +591,12 @@ func PaymentCallback(c fiber.Ctx) error {
 
 	if payment.Status == litepay.PAID {
 		gotCents := int(math.Round(payment.Coin.AmountTotal * 100))
-		if payment.Coin.Currency != cartInfo.Currency || math.Abs(float64(gotCents-cartInfo.AmountTotal)) > 1 {
-			log.Error().Msgf("spectrocoin amount mismatch for cart %s: got %s %.2f, want %s %.2f",
-				payment.CartID, payment.Coin.Currency, payment.Coin.AmountTotal, cartInfo.Currency, float64(cartInfo.AmountTotal)/100)
+		// EqualFold, not !=: the provider's spelling of a currency code may
+		// differ in case from the stored one, and verifyCartAmount already
+		// treats it that way.
+		if !strings.EqualFold(payment.Coin.Currency, cartInfo.Currency) || math.Abs(float64(gotCents-cartInfo.AmountTotal)) > 1 {
+			log.Error().Msgf("%s callback amount mismatch for cart %s: got %s %.2f, want %s %.2f",
+				payment.PaymentSystem, payment.CartID, payment.Coin.Currency, payment.Coin.AmountTotal, cartInfo.Currency, float64(cartInfo.AmountTotal)/100)
 			return webutil.StatusBadRequest(c, "callback amount does not match cart")
 		}
 	}

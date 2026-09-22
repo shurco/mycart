@@ -66,10 +66,12 @@ func (q *SettingQueries) GroupFieldMap(settings any) map[string]any {
 		}
 	case *models.Spectrocoin:
 		return map[string]any{
-			"spectrocoin_merchant_id": &s.MerchantID,
-			"spectrocoin_project_id":  &s.ProjectID,
-			"spectrocoin_private_key": &s.PrivateKey,
-			"spectrocoin_active":      &s.Active,
+			"spectrocoin_merchant_id":          &s.MerchantID,
+			"spectrocoin_project_id":           &s.ProjectID,
+			"spectrocoin_callback_merchant_id": &s.CallbackMerchantID,
+			"spectrocoin_callback_api_id":      &s.CallbackApiID,
+			"spectrocoin_private_key":          &s.PrivateKey,
+			"spectrocoin_active":               &s.Active,
 		}
 	case *models.Coinbase:
 		return map[string]any{
