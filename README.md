@@ -503,10 +503,14 @@ To obtain a "Merchant ID", "Project (API) ID" and "Private key" in <a href="http
 4. Navigate to the "New project" section in the navigation menu.
 5. Fill in the project name and make sure to enable the "Public key" section. A window with a "Private key" will appear, copy and save it. You can activate other options if needed.
 6. After filling in the details, you will be redirected to the projects page. Go to the created project and in the header, copy the "Merchant ID" and "Project (API) ID".
+7. Still on the project, take the two numbers SpectroCoin reports in every order callback and enter them as the "Callback merchant ID" and "Callback API ID". They are the `merchantId` and `apiId` fields of any callback body; the project's "Order History" shows past callbacks under "Callback to Merchant", and the project dashboard shows the same values.
 
 > [!WARNING]
 > Please note that creating a project may require you to complete the verification process for your <a href="https://spectrocoin.com/en/invite?referralId=b2n87748" target="_blank">SpectroCoin</a> account.  
 > Please note that the "Private key" is confidential information that should be kept secure.
+
+> [!IMPORTANT]
+> The "Callback merchant ID" and "Callback API ID" are required. SpectroCoin signs every merchant's callbacks with one key shared by the whole platform, so a valid signature only proves that SpectroCoin signed the payload — not that the payment reached your shop. The shop compares these two signed fields with the ones above and refuses a callback that carries a different merchant's identity. Until they are filled in, SpectroCoin payments are **not** credited: every callback is answered with `400` and logged.
 
 
 #### Coinbase

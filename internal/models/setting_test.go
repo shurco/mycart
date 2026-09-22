@@ -86,11 +86,27 @@ func TestSpectrocoin_Validate(t *testing.T) {
 	t.Parallel()
 	const uuid = "00000000-0000-0000-0000-000000000000"
 	key := strings.Repeat("x", 1800)
-	if err := (Spectrocoin{MerchantID: uuid, ProjectID: uuid, PrivateKey: key}).Validate(); err != nil {
+	valid := Spectrocoin{
+		MerchantID: uuid, ProjectID: uuid,
+		CallbackMerchantID: 25, CallbackApiID: 7,
+		PrivateKey: key,
+	}
+	if err := valid.Validate(); err != nil {
 		t.Errorf("valid spectrocoin rejected: %v", err)
 	}
 	if err := (Spectrocoin{MerchantID: "bad"}).Validate(); err == nil {
 		t.Error("bad uuid must fail")
+	}
+
+	// An unset callback identity is deliberately not a validation error: this
+	// struct cannot tell a shop that does not use SpectroCoin from an operator
+	// who has not filled the values in yet, and the first must still be able to
+	// save. The callback handler is what refuses to match a zero, so this test
+	// pins the split rather than the model rejecting it.
+	if err := (Spectrocoin{
+		MerchantID: uuid, ProjectID: uuid, PrivateKey: key,
+	}).Validate(); err != nil {
+		t.Errorf("unset callback identity must stay saveable: %v", err)
 	}
 }
 

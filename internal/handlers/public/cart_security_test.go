@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -127,40 +128,62 @@ func TestPaymentCallback_UnsupportedSystemRejected(t *testing.T) {
 	testutil.AssertStatus(t, resp, http.StatusBadRequest)
 }
 
-// The callback is unauthenticated input: a payload whose RSA signature does
-// not verify must never reach the cart update.
-func TestPaymentCallback_InvalidSignatureRejected(t *testing.T) {
-	app, _, cleanup := testutil.SetupTestApp(t)
-	defer cleanup()
-	app.Post("/cart/payment/callback", PaymentCallback)
+// enableSpectrocoin installs the SpectroCoin settings the callback handler
+// reads, including the numeric merchant identity a genuine callback carries.
+func enableSpectrocoin(t *testing.T, callbackMerchantID, callbackApiID int) {
+	t.Helper()
 
-	db := queries.DB()
-	ctx := context.Background()
-
-	// SpectroCoin must be active, otherwise the handler short-circuits with 404.
-	if err := db.UpdateSettingByGroup(ctx, &models.Spectrocoin{
-		MerchantID: "0f8fad7b-c931-41c4-a111-8b80651c9d01",
-		ProjectID:  "0f8fad7b-c931-41c4-a222-8b80651c9d02",
-		PrivateKey: "unused-for-verification",
-		Active:     true,
+	if err := queries.DB().UpdateSettingByGroup(context.Background(), &models.Spectrocoin{
+		MerchantID:         "0f8fad7b-c931-41c4-a111-8b80651c9d01",
+		ProjectID:          "0f8fad7b-c931-41c4-a222-8b80651c9d02",
+		CallbackMerchantID: callbackMerchantID,
+		CallbackApiID:      callbackApiID,
+		PrivateKey:         "unused-for-verification",
+		Active:             true,
 	}); err != nil {
 		t.Fatalf("activate spectrocoin: %v", err)
 	}
+}
 
-	cartID := seedCart(t, "", litepay.NEW, litepay.SPECTROCOIN, 10000)
+// registerSpectrocoinCallback registers the callback route with a verifier that
+// accepts every payload, so a test can reach the checks that run after the
+// signature check.
+//
+// The real verifier checks the payload against SpectroCoin's global public key,
+// whose private half nobody here holds: no test can produce a signature it
+// accepts, so without this the merchant binding — everything the signature
+// guards — would be unreachable from this package. The signature check itself is
+// covered by TestPaymentCallback_InvalidSignatureRejected below, which registers
+// PaymentCallback and so runs the real verifier.
+func registerSpectrocoinCallback(app *fiber.App) {
+	app.Post("/cart/payment/callback", func(c fiber.Ctx) error {
+		return paymentCallback(c, func(*litepay.CallbackSpectrocoin) error { return nil })
+	})
+}
 
+// spectrocoinCallbackForm builds the PAID callback SpectroCoin would send for a
+// cart, carrying the given merchant identity.
+func spectrocoinCallbackForm(cartID string, merchantID, apiID int) url.Values {
 	form := url.Values{}
-	form.Set("merchantId", "12345")
-	form.Set("apiId", "1")
+	form.Set("merchantId", strconv.Itoa(merchantID))
+	form.Set("apiId", strconv.Itoa(apiID))
+	form.Set("userId", "0f8fad7b-c931-41c4-a111-8b80651c9d01")
+	form.Set("merchantApiId", "0f8fad7b-c931-41c4-a222-8b80651c9d02")
 	form.Set("orderId", cartID)
 	form.Set("payCurrency", "BTC")
 	form.Set("payAmount", "0.1")
 	form.Set("receiveCurrency", "USD")
 	form.Set("receiveAmount", "100.0")
 	form.Set("description", "")
-	form.Set("orderRequestId", "11")
-	form.Set("status", "3") // forged PAID
-	form.Set("sign", "Zm9yZ2VkLXNpZ25hdHVyZQ==")
+	form.Set("orderRequestId", "4242")
+	form.Set("status", "3")
+	form.Set("sign", "stubbed")
+	return form
+}
+
+// postSpectrocoinCallback delivers a form-encoded SpectroCoin callback.
+func postSpectrocoinCallback(t *testing.T, app *fiber.App, cartID string, form url.Values) *http.Response {
+	t.Helper()
 
 	req, err := http.NewRequest(http.MethodPost,
 		"/cart/payment/callback?cart_id="+cartID+"&payment_system=spectrocoin",
@@ -174,6 +197,34 @@ func TestPaymentCallback_InvalidSignatureRejected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("app.Test: %v", err)
 	}
+	return resp
+}
+
+// The callback is unauthenticated input: a payload whose RSA signature does
+// not verify must never reach the cart update.
+//
+// The payload carries this shop's own merchant identity, so the rejection is
+// attributable to the signature alone. This is also the only test that registers
+// PaymentCallback itself rather than an injected verifier, so it is what keeps
+// the handler's wiring to litepay.VerifySpectrocoinCallback under test - the
+// other SpectroCoin cases stub the verifier out to reach the checks behind it.
+func TestPaymentCallback_InvalidSignatureRejected(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+	app.Post("/cart/payment/callback", PaymentCallback)
+
+	db := queries.DB()
+	ctx := context.Background()
+
+	// SpectroCoin must be active, otherwise the handler short-circuits with 404.
+	enableSpectrocoin(t, 25, 7)
+
+	cartID := seedCart(t, "", litepay.NEW, litepay.SPECTROCOIN, 10000)
+
+	form := spectrocoinCallbackForm(cartID, 25, 7)
+	form.Set("sign", "Zm9yZ2VkLXNpZ25hdHVyZQ==") // forged PAID
+
+	resp := postSpectrocoinCallback(t, app, cartID, form)
 	testutil.AssertStatus(t, resp, http.StatusBadRequest)
 
 	// The forged PAID must NOT have been persisted.
@@ -183,6 +234,96 @@ func TestPaymentCallback_InvalidSignatureRejected(t *testing.T) {
 	}
 	if cart.PaymentStatus == litepay.PAID {
 		t.Fatal("forged callback must not mark the cart as paid")
+	}
+}
+
+// SpectroCoin signs every merchant's callbacks with one global Merchant API key,
+// so a valid signature proves only that SpectroCoin signed the payload - not
+// that the payment reached this shop. A merchant can therefore pay themselves,
+// take the callback SpectroCoin sends them, and forward it here; orderId,
+// receiveCurrency and receiveAmount are all theirs to choose, so every other
+// check in the handler passes. Only merchantId and apiId identify the account
+// the payment reached, and only they are signed: userId and merchantApiId sit
+// outside the signature and an attacker may set them to anything.
+//
+// This is the regression test for that: the merchant identity here is a
+// different account's, and the cart must be left alone.
+func TestPaymentCallback_ForeignMerchantRejected(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+	registerSpectrocoinCallback(app)
+	silenceSMTP(t)
+	enableSpectrocoin(t, 25, 7)
+
+	cartID := seedCart(t, "", litepay.NEW, litepay.SPECTROCOIN, 10000)
+
+	// The attacker's merchant account, this shop's cart: the id, currency and
+	// exact total all match, so nothing downstream of the binding would object.
+	resp := postSpectrocoinCallback(t, app, cartID, spectrocoinCallbackForm(cartID, 99999, 8))
+	testutil.AssertStatus(t, resp, http.StatusBadRequest)
+
+	cart, err := queries.DB().Cart(context.Background(), cartID)
+	if err != nil {
+		t.Fatalf("load cart: %v", err)
+	}
+	if cart.PaymentStatus == litepay.PAID {
+		t.Error("a callback for another merchant must not mark the cart as paid")
+	}
+	if cart.PaymentID != "" {
+		t.Errorf("payment id = %q, want it left empty", cart.PaymentID)
+	}
+}
+
+// A zero callback identity means the operator has not filled it in yet, and
+// the handler must refuse rather than match anything: an unset setting that
+// behaved as a wildcard would put the hole straight back.
+func TestPaymentCallback_UnconfiguredMerchantRejected(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+	registerSpectrocoinCallback(app)
+	silenceSMTP(t)
+	enableSpectrocoin(t, 0, 0)
+
+	cartID := seedCart(t, "", litepay.NEW, litepay.SPECTROCOIN, 10000)
+
+	// Even a callback claiming the zeros themselves must not settle the cart.
+	resp := postSpectrocoinCallback(t, app, cartID, spectrocoinCallbackForm(cartID, 0, 0))
+	testutil.AssertStatus(t, resp, http.StatusBadRequest)
+
+	cart, err := queries.DB().Cart(context.Background(), cartID)
+	if err != nil {
+		t.Fatalf("load cart: %v", err)
+	}
+	if cart.PaymentStatus == litepay.PAID {
+		t.Error("an unconfigured merchant identity must not settle a cart")
+	}
+}
+
+// The counterpart: the callback this shop's own merchant account produces is
+// still accepted, so the binding does not reject real payments.
+func TestPaymentCallback_MatchingMerchantAccepted(t *testing.T) {
+	app, _, cleanup := testutil.SetupTestApp(t)
+	defer cleanup()
+	registerSpectrocoinCallback(app)
+	silenceSMTP(t)
+	enableSpectrocoin(t, 25, 7)
+
+	cartID := seedCart(t, "", litepay.NEW, litepay.SPECTROCOIN, 10000)
+
+	resp := postSpectrocoinCallback(t, app, cartID, spectrocoinCallbackForm(cartID, 25, 7))
+	testutil.AssertStatus(t, resp, http.StatusOK)
+
+	cart, err := queries.DB().Cart(context.Background(), cartID)
+	if err != nil {
+		t.Fatalf("load cart: %v", err)
+	}
+	if cart.PaymentStatus != litepay.PAID {
+		t.Errorf("payment status = %q, want %q", cart.PaymentStatus, litepay.PAID)
+	}
+	// The signed, per-order reference - not the unsigned merchantApiId, which
+	// the caller used to be able to set to anything.
+	if cart.PaymentID != "4242" {
+		t.Errorf("payment id = %q, want the callback's orderRequestId", cart.PaymentID)
 	}
 }
 

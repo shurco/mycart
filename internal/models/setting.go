@@ -209,8 +209,23 @@ func (v Paypal) Validate() error {
 type Spectrocoin struct {
 	MerchantID string `json:"merchant_id"`
 	ProjectID  string `json:"project_id"`
-	PrivateKey string `json:"private_key"`
-	Active     bool   `json:"active"`
+	// CallbackMerchantID and CallbackApiID are the numeric merchantId and
+	// apiId SpectroCoin reports in every order callback. Of all the identity
+	// fields a callback carries they are the only two that both name this
+	// shop's merchant account and are covered by SpectroCoin's signature, so
+	// the callback handler compares them against these values before trusting
+	// anything else in the payload. The UUIDs above travel outside the
+	// signature and cannot serve that purpose: anyone may set them.
+	//
+	// Zero means unconfigured, and the callback handler refuses to match it
+	// rather than treating an absent setting as a wildcard. Zero is allowed
+	// here because this struct cannot tell "a shop that does not use
+	// SpectroCoin" from "an operator who has not filled the values in yet",
+	// and a shop that does not use it must still be able to save its settings.
+	CallbackMerchantID int    `json:"callback_merchant_id"`
+	CallbackApiID      int    `json:"callback_api_id"`
+	PrivateKey         string `json:"private_key"`
+	Active             bool   `json:"active"`
 }
 
 // Validate is ...
