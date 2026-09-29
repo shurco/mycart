@@ -151,6 +151,11 @@ docker run \
   ghcr.io/shurco/mycart:latest
 ```
 
+#### Run using Easypanel
+[Easypanel](https://easypanel.io) is a self-hosted Docker deployment platform, and it maintains a one-click deployment template for myCart:
+
+[![Deploy on Easypanel](https://easypanel.io/img/deploy-on-easypanel-40.svg)](https://easypanel.io/templates/mycart)
+
 #### <img width="20" src="https://raw.githubusercontent.com/shurco/mycart/main/.github/media/platforms/docker.svg">&nbsp;Run using Docker Compose
 Docker Compose provides a convenient way to manage multiple containers and services. The project includes several Docker Compose configurations for different use cases.
 
