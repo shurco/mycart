@@ -33,5 +33,11 @@
     "vitepress-plugin-steps": "^0.12.0",
     "vitepress-plugin-tabs": "^0.9.1",
     "vitepress-plugin-video": "^0.12.0"
+  },
+  "overrides": {
+    "extract-zip": "github:AIEpisteme/extract-zip",
+    "dompurify": "^3.4.16",
+    "lodash-es": "^4.18.1",
+    "markdown-it": "^14.3.1"
   }
 }

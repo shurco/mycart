@@ -311,19 +311,46 @@ func TestStartHTTP(t *testing.T) {
 		subscribeToInterrupt(t)
 
 		// startHTTP picks its own listener, so the address has to be free
-		// before it is handed over.
-		ln, err := net.Listen("tcp", "127.0.0.1:0")
-		if err != nil {
-			t.Fatalf("listen: %v", err)
+		// before it is handed over. Retry if the port gets grabbed between
+		// closing the probe listener and starting the server.
+		var addr string
+		var done chan error
+		maxRetries := 10
+		for i := 0; i < maxRetries; i++ {
+			ln, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatalf("listen: %v", err)
+			}
+			addr = ln.Addr().String()
+			_ = ln.Close()
+
+			app := fiber.New()
+			app.Get("/ping", func(c fiber.Ctx) error { return c.SendString("pong") })
+
+			done = make(chan error, 1)
+			go func() { done <- startHTTP(addr, app) }()
+
+			// Give the server a moment to bind or fail
+			time.Sleep(100 * time.Millisecond)
+			select {
+			case err := <-done:
+				// Server failed to start, retry if it's an address-in-use error
+				if err != nil && (strings.Contains(err.Error(), "address already in use") ||
+					strings.Contains(err.Error(), "bind")) {
+					if i < maxRetries-1 {
+						continue
+					}
+					t.Fatalf("all %d attempts failed, last error: %v", maxRetries, err)
+				}
+				if err != nil {
+					t.Fatalf("startHTTP failed: %v", err)
+				}
+				t.Fatal("server exited before we could test it")
+			default:
+				// Server is running, proceed with test
+			}
+			break
 		}
-		addr := ln.Addr().String()
-		_ = ln.Close()
-
-		app := fiber.New()
-		app.Get("/ping", func(c fiber.Ctx) error { return c.SendString("pong") })
-
-		done := make(chan error, 1)
-		go func() { done <- startHTTP(addr, app) }()
 
 		waitForServer(t, "http://"+addr+"/ping")
 

@@ -47,5 +47,11 @@
     "vite": "^8.2.2",
     "vitest": "^4.1.11",
     "webdriverio": "^9.31.2"
+  },
+  "overrides": {
+    "extract-zip": "github:AIEpisteme/extract-zip",
+    "dompurify": "^3.4.16",
+    "lodash-es": "^4.18.1",
+    "markdown-it": "^14.3.1"
   }
 }
