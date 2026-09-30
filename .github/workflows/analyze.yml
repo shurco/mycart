@@ -49,6 +49,8 @@ jobs:
       uses: github/codeql-action/init@v4.37.9
       with:
         languages: ${{ matrix.language }}
+        paths-ignore: |
+          docs/swagger
       timeout-minutes: 10
 
     - name: Autobuild
