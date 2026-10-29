@@ -22,8 +22,8 @@
     "isomorphic-dompurify": "^3.22.0"
   },
   "devDependencies": {
-    "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/adapter-static": "^4.0.0",
+    "@sveltejs/kit": "^3.1.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tailwindcss/forms": "0.5.11",
     "@tailwindcss/vite": "^4.3.3",
