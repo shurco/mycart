@@ -41,7 +41,7 @@
     "@vitest/browser-webdriverio": "^4.1.11",
     "@vitest/ui": "^4.1.11",
     "autoprefixer": "^10.5.4",
-    "happy-dom": "^20.11.6",
+    "happy-dom": "^21.0.4",
     "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
     "prettier-plugin-svelte": "^4.1.1",
