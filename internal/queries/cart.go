@@ -425,6 +425,32 @@ func validateCartItem(
 		}
 	}
 
+	// A line quantity is the number of copies ordered, and only a positive
+	// count is one. A zero or negative value is rejected here rather than
+	// carried into the total: multiplied into the per item subtotal it lets a
+	// cart cancel a paid item against itself and check out at a total of zero,
+	// which the dummy provider then settles without a real payment.
+	if requested.Quantity < 1 {
+		return &models.CartValidationError{
+			ItemIndex:          index,
+			ProductID:          requested.ProductID,
+			VariantID:          requested.VariantID,
+			ErrorType:          "invalid_quantity",
+			RequestedQty:       requested.Quantity,
+			AvailableQty:       0,
+			RequestedUnitPrice: 0,
+			CurrentUnitPrice:   0,
+			RequestedTotal:     0,
+			CurrentTotal:       0,
+		}, models.CorrectedCartItem{
+			ProductID: requested.ProductID,
+			VariantID: requested.VariantID,
+			Quantity:  0,
+			UnitPrice: 0,
+			Available: false,
+		}
+	}
+
 	// Handle variant validation
 	// For variant products, the variant's active status is checked, not the parent's
 	if requested.VariantID != nil && *requested.VariantID != "" {
