@@ -176,7 +176,7 @@ TEST_POSTGRES_DSN='postgres://postgres:password@localhost:5433/postgres?sslmode=
 go test ./... -count=1
 ```
 
-The `pgtestdb` service in `docker/docker-compose_dev.yml` is a throwaway `postgres:17-alpine` on port 5433: its data
+The `pgtestdb` service in `docker/docker-compose_dev.yml` is a throwaway `postgres:18-alpine` on port 5433: its data
 directory is a tmpfs and its durability is off, so there is nothing in it to preserve or to lose.
 
 `TEST_POSTGRES_DSN` is an administrator connection, not a database the suite works in. The tests provision their own

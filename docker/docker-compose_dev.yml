@@ -27,7 +27,7 @@ services:
   #
   # Port 5433 keeps it out of the way of a PostgreSQL already listening on 5432.
   pgtestdb:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     restart: unless-stopped
     ports:
       - "5433:5432"
@@ -44,7 +44,7 @@ services:
       - "-c"
       - "synchronous_commit=off"
     tmpfs:
-      - /var/lib/postgresql/data
+      - /var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s

@@ -29,7 +29,7 @@ jobs:
       # Started for the whole job because GitHub cannot make a service
       # conditional; only that one test connects to it.
       postgres:
-        image: postgres:17-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_PASSWORD: test
           # Created empty on purpose: the wizard refuses a database that

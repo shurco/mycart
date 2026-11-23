@@ -25,7 +25,7 @@ jobs:
       # Started for both legs — GitHub cannot make a service conditional — and
       # used by the postgres leg only.
       postgres:
-        image: postgres:17-alpine
+        image: postgres:18-alpine
         env:
           POSTGRES_PASSWORD: test
           # The tests provision their own databases with pgtestdb; this one is

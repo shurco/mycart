@@ -68,7 +68,7 @@ services:
   postgres:
     profiles:
       - postgres
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: mycart-postgres
     restart: always
     environment:
@@ -82,7 +82,7 @@ services:
       # pins its own session to UTC and refuses to start otherwise.
       - TZ=UTC
     volumes:
-      - ./lc_pgdata:/var/lib/postgresql/data
+      - ./lc_pgdata:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-mycart} -d $${POSTGRES_DB:-mycart}"]
       interval: 5s

@@ -49,7 +49,7 @@ go test ./... -count=1 -race
 # in-memory SQLite; the PostgreSQL run is what proves a change is portable.
 #
 # pgtestdb is the throwaway server from docker/docker-compose_dev.yml: a
-# tmpfs-backed postgres:17-alpine on port 5433, holding nothing worth keeping.
+# tmpfs-backed postgres:18-alpine on port 5433, holding nothing worth keeping.
 # It is not the `postgres` service in that file, which holds a real shop's data.
 #
 # TEST_POSTGRES_DSN is an administrator connection to a *dedicated* test

@@ -40,7 +40,7 @@ construct that only one engine has belongs in `Dialect`.
    if `SHOW timezone` says otherwise. Timestamps are stored without a time
    zone and read as unix seconds, so a non-UTC session shifts every stored
    date by the server's offset — the drift measured against
-   `postgres:17-alpine` under `TZ=Asia/Seoul` is exactly 32400 s. Do not remove
+   `postgres:18-alpine` under `TZ=Asia/Seoul` is exactly 32400 s. Do not remove
    the pin or downgrade the check to a warning.
 5. **`EXTRACT(EPOCH FROM …)::bigint`.** The cast is not optional: `EXTRACT`
    returns `numeric`, which does not scan into an `int64`.
@@ -75,7 +75,7 @@ PostgreSQL test. A change here is not finished until both runs are green, and
 the non-UTC run is worth doing too — it is the only one where a lost pin shows
 up as failing dates rather than passing quietly. Both run against the
 `pgtestdb` service in `docker/docker-compose_dev.yml`, a tmpfs-backed
-`postgres:17-alpine` on port 5433 that holds nothing worth keeping; `PGTESTDB_TZ`
+`postgres:18-alpine` on port 5433 that holds nothing worth keeping; `PGTESTDB_TZ`
 is what puts that server in another zone:
 
 ```bash

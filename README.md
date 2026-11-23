@@ -683,7 +683,7 @@ TEST_POSTGRES_DSN='postgres://postgres:password@localhost:5433/postgres?sslmode=
 go test ./... -count=1
 ```
 
-The `pgtestdb` service is a `postgres:17-alpine` on port 5433 whose data directory is a tmpfs and whose durability is
+The `pgtestdb` service is a `postgres:18-alpine` on port 5433 whose data directory is a tmpfs and whose durability is
 off: it holds nothing worth keeping, so restarting it and throwing it away both cost nothing. It is not the
 `postgres` service in the same file — that one holds a real shop's data.
 
