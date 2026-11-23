@@ -183,7 +183,13 @@
     "testingConnection": "Праверка…",
     "testConnectionFirst": "Праверце злучэнне перад усталяваннем",
     "connectionOk": "Злучэнне паспяховае",
-    "connectionFailed": "Не ўдалося злучыцца"
+    "connectionFailed": "Не ўдалося злучыцца",
+    "errors": {
+      "databaseAlreadyInstalled": "Выбраная база даных ужо змяшчае ўсталяваны кошык",
+      "databaseConnectionFailed": "Не ўдалося падключыцца да выбранай базы даных",
+      "databaseInspectionFailed": "Не ўдалося праверыць выбраную базу даных",
+      "migrationsFailed": "Не ўдалося выканаць міграцыю схемы базы даных. Падрабязнасці глядзіце ў журналах сервера"
+    }
   },
   "products": {
     "title": "Тавары",

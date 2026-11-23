@@ -1,12 +1,9 @@
 package handlers
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
+	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -107,233 +104,27 @@ func validateCartID(customDataJSON, expectedCartID string, log *logging.Log) err
 	return nil
 }
 
-// CompletePortonePayment verifies payment after browser completes PortOne payment flow
-//
-// @Summary      Complete PortOne payment
-// @Description  Verify payment with PortOne API and update cart status
-// @Tags         Cart
-// @Accept       json
-// @Produce      json
-// @Param        request body object{payment_id=string,cart_id=string} true "Payment completion request"
-// @Success      200 {object} webutil.HTTPResponse "Payment verified"
-// @Failure      400 {object} webutil.HTTPResponse "Validation error"
-// @Failure      500 {object} webutil.HTTPResponse "Internal server error"
-// @Router       /api/payment/portone/complete [post]
-func CompletePortonePayment(c fiber.Ctx) error {
-	db := queries.DB()
-	log := logging.New()
+// portonePayment is the part of a PortOne payment record that is checked
+// before a cart is marked as paid.
+type portonePayment struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+	Amount struct {
+		Total    int    `json:"total"`
+		Currency string `json:"currency"`
+	} `json:"amount"`
+	CustomData string `json:"customData"`
+}
 
-	var request struct {
-		PaymentID string `json:"payment_id"`
-		CartID    string `json:"cart_id"`
-	}
+// isPaid reports whether PortOne considers the payment settled.
+func (p *portonePayment) isPaid() bool {
+	return p.Status == "PAID" || p.Status == "VIRTUAL_ACCOUNT_ISSUED"
+}
 
-	if err := c.Bind().JSON(&request); err != nil {
-		return webutil.StatusBadRequest(c, "Invalid request")
-	}
-
-	if request.PaymentID == "" || request.CartID == "" {
-		return webutil.StatusBadRequest(c, "Missing payment_id or cart_id")
-	}
-
-	// Load cart
-	cart, err := db.Cart(c.Context(), request.CartID)
-	if err != nil {
-		log.ErrorStack(err)
-		return webutil.StatusBadRequest(c, "Cart not found")
-	}
-
-	// Load PortOne settings
-	settings, err := queries.GetSettingByGroup[models.Portone](c.Context(), db)
-	if err != nil {
-		log.ErrorStack(err)
-		return webutil.StatusInternalServerError(c)
-	}
-
-	// Call PortOne API and parse response
-	resp, err := callPortoneAPI("/payments/"+request.PaymentID, settings.ApiSecret)
-	if err != nil {
-		log.ErrorStack(err)
-		return webutil.StatusInternalServerError(c)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNotFound {
-		return webutil.StatusBadRequest(c, "Payment not found")
-	}
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		log.Error().Msgf("PortOne API error: %d %s", resp.StatusCode, string(body))
-		return webutil.StatusInternalServerError(c)
-	}
-
-	var payment struct {
-		ID     string `json:"id"`
-		Status string `json:"status"`
-		Amount struct {
-			Total    int    `json:"total"`
-			Currency string `json:"currency"`
-		} `json:"amount"`
-		CustomData string `json:"customData"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&payment); err != nil {
-		log.ErrorStack(err)
-		return webutil.StatusBadRequest(c, "Failed to decode payment")
-	}
-
-	// Verify payment status
-	if payment.Status != "PAID" && payment.Status != "VIRTUAL_ACCOUNT_ISSUED" {
-		return webutil.StatusBadRequest(c, fmt.Sprintf("Payment not completed: %s", payment.Status))
-	}
-
-	// Validate payment details
-	if err := validatePaymentAmount(payment.Amount.Total, cart.AmountTotal, log); err != nil {
-		return webutil.StatusBadRequest(c, err.Error())
-	}
-
-	if err := validatePaymentCurrency(payment.Amount.Currency, cart.Currency, log); err != nil {
-		return webutil.StatusBadRequest(c, err.Error())
-	}
-
-	if err := validateCartID(payment.CustomData, request.CartID, log); err != nil {
-		log.ErrorStack(err)
-		return webutil.StatusBadRequest(c, err.Error())
-	}
-
-	// Update cart status
-	cart.PaymentID = request.PaymentID
+// markPortonePaid records on the cart that PortOne payment paymentID paid for it.
+func markPortonePaid(ctx context.Context, db *queries.Base, cart *models.Cart, paymentID string) error {
+	cart.PaymentID = paymentID
 	cart.PaymentStatus = "paid"
 	cart.PaymentSystem = "portone"
-	if err := db.UpdateCart(c.Context(), cart); err != nil {
-		log.ErrorStack(err)
-		return webutil.StatusInternalServerError(c)
-	}
-
-	return webutil.Response(c, fiber.StatusOK, "Payment verified", map[string]string{
-		"status": payment.Status,
-	})
-}
-
-// verifyWebhookSignature verifies webhook signature using HMAC-SHA256
-func verifyWebhookSignature(body []byte, signature string, secret string) bool {
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(body)
-	expectedSignature := hex.EncodeToString(mac.Sum(nil))
-	return hmac.Equal([]byte(signature), []byte(expectedSignature))
-}
-
-// PortoneWebhook handles PortOne webhook notifications
-//
-// @Summary      PortOne webhook
-// @Description  Handle PortOne webhook notifications for payment events
-// @Tags         Cart
-// @Accept       json
-// @Produce      json
-// @Param        PortOne-Signature header string true "Webhook signature"
-// @Success      200 {string} string "OK"
-// @Failure      401 {string} string "Unauthorized"
-// @Router       /api/payment/portone/webhook [post]
-func PortoneWebhook(c fiber.Ctx) error {
-	db := queries.DB()
-	log := logging.New()
-
-	// Read raw body for signature verification
-	body := c.Body()
-
-	// Load PortOne settings
-	settings, err := queries.GetSettingByGroup[models.Portone](c.Context(), db)
-	if err != nil {
-		log.ErrorStack(err)
-		return c.SendStatus(fiber.StatusInternalServerError)
-	}
-
-	// Verify webhook signature
-	signature := c.Get("PortOne-Signature")
-	if signature == "" {
-		log.Error().Msg("Missing webhook signature")
-		return c.SendStatus(fiber.StatusUnauthorized)
-	}
-
-	if !verifyWebhookSignature(body, signature, settings.ApiSecret) {
-		log.Error().Msg("Invalid webhook signature")
-		return c.SendStatus(fiber.StatusUnauthorized)
-	}
-
-	// Parse webhook payload
-	var webhook struct {
-		Type string `json:"type"`
-		Data struct {
-			PaymentID string `json:"paymentId"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(body, &webhook); err != nil {
-		log.ErrorStack(err)
-		return c.SendStatus(fiber.StatusBadRequest)
-	}
-
-	// Extract payment_id
-	paymentID := webhook.Data.PaymentID
-	if paymentID == "" {
-		log.Error().Msg("Missing payment_id in webhook")
-		return c.SendStatus(fiber.StatusBadRequest)
-	}
-
-	// Get payment to extract cart_id
-	resp, err := callPortoneAPI("/payments/"+paymentID, settings.ApiSecret)
-	if err != nil {
-		log.ErrorStack(err)
-		return c.SendStatus(fiber.StatusOK) // Return 200 to prevent retry storms
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		log.Error().Msgf("Failed to get payment from PortOne API: %d", resp.StatusCode)
-		return c.SendStatus(fiber.StatusOK) // Return 200 to prevent retry storms
-	}
-
-	var payment struct {
-		Status     string `json:"status"`
-		CustomData string `json:"customData"`
-		Amount     struct {
-			Total    int    `json:"total"`
-			Currency string `json:"currency"`
-		} `json:"amount"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&payment); err != nil {
-		log.ErrorStack(err)
-		return c.SendStatus(fiber.StatusOK)
-	}
-
-	var customData struct {
-		CartID string `json:"cart_id"`
-	}
-	if err := json.Unmarshal([]byte(payment.CustomData), &customData); err != nil {
-		log.ErrorStack(err)
-		return c.SendStatus(fiber.StatusOK)
-	}
-
-	// Load cart
-	cart, err := db.Cart(c.Context(), customData.CartID)
-	if err != nil {
-		log.ErrorStack(err)
-		return c.SendStatus(fiber.StatusOK)
-	}
-
-	// Verify amount and currency
-	if payment.Amount.Total != int(cart.AmountTotal*100) || payment.Amount.Currency != cart.Currency {
-		log.Error().Msg("Amount/currency mismatch in webhook")
-		return c.SendStatus(fiber.StatusOK)
-	}
-
-	// Update cart status
-	if payment.Status == "PAID" || payment.Status == "VIRTUAL_ACCOUNT_ISSUED" {
-		cart.PaymentID = paymentID
-		cart.PaymentStatus = "paid"
-		cart.PaymentSystem = "portone"
-		if err := db.UpdateCart(c.Context(), cart); err != nil {
-			log.ErrorStack(err)
-		}
-	}
-
-	return c.SendStatus(fiber.StatusOK)
+	return db.UpdateCart(ctx, cart)
 }

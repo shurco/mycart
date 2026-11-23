@@ -125,3 +125,31 @@ func TestStatusPayment_Stripe(t *testing.T) {
 		}
 	}
 }
+
+// A 200 answer that lacks the session fields must produce an error, not a
+// panic on the missing keys.
+func TestStripe_Pay_UnexpectedResponse(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"object": "list"}`))
+	}))
+	t.Cleanup(srv.Close)
+	redirectHTTPClient(t, srv, "https://api.stripe.com/")
+
+	p, err := New("https://cb.test", "https://ok.test", "https://cancel.test").Stripe("sk_test_123").Pay(stripeCart("usd"))
+	if err == nil {
+		t.Fatalf("Pay returned %+v, want an error", p)
+	}
+}
+
+func TestStripe_Checkout_UnexpectedResponse(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"object": "list"}`))
+	}))
+	t.Cleanup(srv.Close)
+	redirectHTTPClient(t, srv, "https://api.stripe.com/")
+
+	p, err := New("https://cb.test", "https://ok.test", "https://cancel.test").Stripe("sk_test_123").Checkout(&Payment{}, "cs_1")
+	if err == nil {
+		t.Fatalf("Checkout returned %+v, want an error", p)
+	}
+}

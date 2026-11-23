@@ -1,6 +1,9 @@
 package models
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func validProduct() Product {
 	return Product{
@@ -46,21 +49,33 @@ func TestProduct_Validate(t *testing.T) {
 	}
 }
 
-// Metadata.Validate applies validation.Min (an int rule) to Value (a
-// string). The current behaviour is therefore "always errors with
-// 'cannot convert string to int64'" — almost certainly a typo, but we
-// lock the behaviour here so callers see a consistent failure mode until
-// the model is intentionally fixed.
-func TestMetadata_Validate_CurrentQuirk(t *testing.T) {
+// Metadata is free text on both sides: the admin form sends the value as a
+// string. It once ran validation.Min(0), an int rule, over that string, so every
+// product saved with a metadata row failed with "cannot convert string to int64".
+func TestMetadata_Validate(t *testing.T) {
 	t.Parallel()
 
-	err := (Metadata{Key: "k", Value: "v"}).Validate()
-	if err == nil {
-		t.Fatal("Metadata.Validate stopped returning the Min-on-string quirk: please update this test")
+	tests := []struct {
+		name    string
+		in      Metadata
+		wantErr bool
+	}{
+		{"text value", Metadata{Key: "k", Value: "v"}, false},
+		{"numeric looking value", Metadata{Key: "weight", Value: "12"}, false},
+		{"negative looking value", Metadata{Key: "temp", Value: "-5"}, false},
+		{"missing key", Metadata{Value: "v"}, true},
+		{"key too long", Metadata{Key: strings.Repeat("k", 21), Value: "v"}, true},
+		{"missing value", Metadata{Key: "k"}, true},
+		{"empty", Metadata{}, true},
 	}
-	// Missing key still fails first.
-	if err := (Metadata{}).Validate(); err == nil {
-		t.Error("missing key must fail")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := tc.in.Validate()
+			if (err != nil) != tc.wantErr {
+				t.Errorf("err=%v wantErr=%v", err, tc.wantErr)
+			}
+		})
 	}
 }
 
@@ -294,5 +309,16 @@ func TestProductValidationWithVariants(t *testing.T) {
 				t.Errorf("Product.Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+// The path the admin form takes: a product that carries a metadata row.
+func TestProduct_Validate_WithMetadata(t *testing.T) {
+	t.Parallel()
+
+	p := validProduct()
+	p.Metadata = []Metadata{{Key: "material", Value: "cotton"}}
+	if err := p.Validate(); err != nil {
+		t.Errorf("product with a metadata row: %v", err)
 	}
 }

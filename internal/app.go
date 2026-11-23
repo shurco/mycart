@@ -1,30 +1,18 @@
 package app
 
 import (
-	"context"
-	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
-	"net"
 	"os"
-	"os/signal"
-	"strconv"
-	"strings"
 	"sync/atomic"
-	"time"
-
-	"golang.org/x/crypto/acme/autocert"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/static"
 
 	"github.com/shurco/mycart/internal/database"
 	"github.com/shurco/mycart/internal/middleware"
-	"github.com/shurco/mycart/internal/queries"
 	"github.com/shurco/mycart/internal/routes"
 	"github.com/shurco/mycart/pkg/logging"
-	"github.com/shurco/mycart/pkg/webutil"
 )
 
 const (
@@ -168,160 +156,5 @@ func printStartupInfo(w io.Writer, schema, mainAddr string, noSite bool, dbCfg d
 		fmt.Fprintf(w, "└─ API Docs: %s://%s/swagger/index.html\n", schema, mainAddr)
 	} else {
 		fmt.Fprint(w, "└─ Swagger UI: disabled (use --dev flag to enable)\n")
-	}
-}
-
-// startHTTPS starts the server with HTTPS support and automatic TLS.
-func startHTTPS(app *fiber.App, mainAddr, httpsAddr string) error {
-	hostOnly := extractHostOnly(mainAddr)
-	manager := &autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist(hostOnly),
-		Cache:      autocert.DirCache("./lc_certs"),
-	}
-
-	cfgTLS := &tls.Config{
-		GetCertificate: manager.GetCertificate,
-		NextProtos:     []string{"http/1.1", "acme-tls/1"},
-	}
-
-	listenAddr := DefaultHTTPSPort
-	if httpsAddr != "" {
-		listenAddr = httpsAddr
-	}
-
-	ln, err := tls.Listen("tcp", listenAddr, cfgTLS)
-	if err != nil {
-		logger().Err(err).Send()
-		os.Exit(1)
-	}
-
-	if err := app.Listener(ln, fiber.ListenConfig{DisableStartupMessage: true}); err != nil {
-		logger().Err(err).Send()
-		os.Exit(1)
-	}
-
-	return nil
-}
-
-// extractHostOnly extracts only the host from the address, removing the port.
-func extractHostOnly(addr string) string {
-	if !strings.Contains(addr, ":") {
-		return addr
-	}
-
-	if host, _, err := net.SplitHostPort(addr); err == nil {
-		return host
-	}
-
-	return addr
-}
-
-// startHTTP starts the HTTP server with graceful shutdown support.
-func startHTTP(mainAddr string, app *fiber.App) error {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if DevMode() {
-		return StartServer(ctx, mainAddr, app)
-	}
-
-	idleConnsClosed := make(chan struct{})
-
-	go handleShutdown(ctx, app, idleConnsClosed)
-	go func() {
-		if err := StartServer(ctx, mainAddr, app); err != nil {
-			logger().Err(err).Send()
-		}
-	}()
-
-	<-idleConnsClosed
-	return nil
-}
-
-// handleShutdown handles application shutdown signals.
-func handleShutdown(ctx context.Context, app *fiber.App, idleConnsClosed chan struct{}) {
-	sigint := make(chan os.Signal, 1)
-	signal.Notify(sigint, os.Interrupt)
-	<-sigint
-
-	if err := app.Shutdown(); err != nil {
-		logger().Err(err).Send()
-	}
-
-	close(idleConnsClosed)
-}
-
-// InstallCheck checks the installation status and redirects to the installation page if necessary.
-func InstallCheck(c fiber.Ctx) error {
-	db := queries.DB()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	response, err := db.GetSettingByKey(ctx, "installed")
-	if err != nil {
-		return webutil.StatusInternalServerError(c)
-	}
-
-	install, _ := strconv.ParseBool(fmt.Sprint(response["installed"].Value))
-	path := c.Path()
-
-	if !install {
-		if !isInstallPath(path) {
-			if strings.HasPrefix(path, "/api/") {
-				return webutil.StatusBadRequest(c, "application not installed")
-			}
-			return c.Redirect().To("/_/install")
-		}
-	} else if strings.HasPrefix(path, "/_/install") {
-		return c.Redirect().To("/_")
-	}
-
-	return c.Next()
-}
-
-// isInstallPath reports paths that are reachable before the cart is installed.
-func isInstallPath(path string) bool {
-	if strings.HasPrefix(path, "/_/install") ||
-		strings.HasPrefix(path, "/_/assets") ||
-		strings.HasPrefix(path, "/_/_app") ||
-		strings.HasPrefix(path, "/_app") ||
-		strings.HasPrefix(path, "/uploads") {
-		return true
-	}
-	if strings.HasPrefix(path, "/api/install") {
-		return true
-	}
-	// Storefront public APIs stay available during first-time setup.
-	return path == "/ping" ||
-		strings.HasPrefix(path, "/api/settings") ||
-		strings.HasPrefix(path, "/api/pages/") ||
-		strings.HasPrefix(path, "/api/products") ||
-		strings.HasPrefix(path, "/api/cart") ||
-		strings.HasPrefix(path, "/cart/")
-}
-
-// StartServer starts the server and handles graceful shutdown.
-func StartServer(ctx context.Context, addr string, a *fiber.App) error {
-	// Buffered, so the listen goroutine can always report its error and exit.
-	// Unbuffered it blocks on the send forever when the shutdown path below has
-	// already returned — a goroutine leaked for the life of the process.
-	errCh := make(chan error, 1)
-
-	go func() {
-		if err := a.Listen(addr, fiber.ListenConfig{DisableStartupMessage: true}); err != nil {
-			logger().Err(err).Send()
-			errCh <- err
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		err := errors.New("shutdown signal received, closing server")
-		logger().Err(err).Send()
-		return a.Shutdown()
-	case err := <-errCh:
-		return err
 	}
 }

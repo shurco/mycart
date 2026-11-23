@@ -19,10 +19,7 @@ describe('toggleCartItem', () => {
         amount: 1000,
         brief: 'Brief',
         description: 'Description',
-        active: true,
-        images: [{ name: 'image', ext: 'jpg' }],
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01'
+        images: [{ name: 'image', ext: 'jpg' }]
       }
 
       const cartItems: CartItem[] = []
@@ -44,10 +41,7 @@ describe('toggleCartItem', () => {
         amount: 1000,
         brief: 'Brief',
         description: 'Description',
-        active: true,
-        images: [{ name: 'test-image', ext: 'png' }],
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01'
+        images: [{ name: 'test-image', ext: 'png' }]
       }
 
       toggleCartItem(product, [])
@@ -64,10 +58,7 @@ describe('toggleCartItem', () => {
         amount: 1000,
         brief: 'Brief',
         description: 'Description',
-        active: true,
-        images: [],
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01'
+        images: []
       }
 
       toggleCartItem(product, [])
@@ -86,10 +77,7 @@ describe('toggleCartItem', () => {
         amount: 1000,
         brief: 'Brief',
         description: 'Description',
-        active: true,
-        images: [],
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01'
+        images: []
       }
 
       const cartItems: CartItem[] = [
@@ -98,6 +86,7 @@ describe('toggleCartItem', () => {
           name: 'Test Product',
           slug: 'test-product',
           amount: 1000,
+          quantity: 1,
           image: null
         }
       ]
@@ -120,10 +109,7 @@ describe('toggleCartItem', () => {
         amount: 1000,
         brief: 'Brief',
         description: 'Description',
-        active: true,
-        images: [],
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01'
+        images: []
       }
 
       const cartItem1: CartItem = {
@@ -131,6 +117,7 @@ describe('toggleCartItem', () => {
         name: 'Product 1',
         slug: 'product-1',
         amount: 1000,
+        quantity: 1,
         image: null
       }
 
@@ -139,6 +126,7 @@ describe('toggleCartItem', () => {
         name: 'Product 2',
         slug: 'product-2',
         amount: 2000,
+        quantity: 1,
         image: null
       }
 
@@ -163,10 +151,7 @@ describe('toggleCartItem', () => {
         amount: 1000,
         brief: 'Brief',
         description: 'Description',
-        active: true,
-        images: [],
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01'
+        images: []
       }
 
       // First toggle - add
@@ -189,10 +174,7 @@ describe('toggleCartItem', () => {
         amount: 1000,
         brief: 'Brief',
         description: 'Description',
-        active: true,
-        images: [],
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01'
+        images: []
       }
 
       const product2: Product = {
@@ -202,10 +184,7 @@ describe('toggleCartItem', () => {
         amount: 2000,
         brief: 'Brief',
         description: 'Description',
-        active: true,
-        images: [],
-        created_at: '2024-01-01',
-        updated_at: '2024-01-01'
+        images: []
       }
 
       toggleCartItem(product1, [])

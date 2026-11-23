@@ -5,9 +5,9 @@
 
   const NOTIFICATION_DURATION = 4000
 
-  const handleNotification = (eventName, notificationType) => {
-    const callback = (e) => {
-      const message = e.detail
+  const handleNotification = (eventName: string, notificationType: string) => {
+    const callback = (e: Event) => {
+      const message = (e as CustomEvent<string>).detail
       const options = {
         duration: NOTIFICATION_DURATION,
         style:

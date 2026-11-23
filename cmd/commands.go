@@ -1,0 +1,108 @@
+package main
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/spf13/cobra"
+
+	app "github.com/shurco/mycart/internal"
+	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/pkg/update"
+)
+
+// cmdServe creates and returns the serve command.
+func cmdServe() *cobra.Command {
+	var noSite, devMode bool
+	var httpAddr, httpsAddr string
+
+	cmd := &cobra.Command{
+		Use:   "serve [flags]",
+		Short: "Starts the web server (default to 0.0.0.0:8080)",
+		Run: func(_ *cobra.Command, _ []string) {
+			handleCommandError(app.NewApp(resolveDB(), httpAddr, httpsAddr, noSite, devMode))
+		},
+	}
+
+	cmd.PersistentFlags().StringVar(&httpAddr, "http", "0.0.0.0:8080", "server address")
+	cmd.PersistentFlags().StringVar(&httpsAddr, "https", "", "https server address (auto TLS)")
+	cmd.PersistentFlags().BoolVar(&noSite, "no-site", false, "disable create site")
+	cmd.PersistentFlags().BoolVar(&devMode, "dev", false, "develop mode")
+
+	if err := cmd.PersistentFlags().MarkHidden("dev"); err != nil {
+		fmt.Println("warning: failed to hide dev flag:", err)
+	}
+
+	return cmd
+}
+
+// cmdInstall creates and returns the install command.
+func cmdInstall() *cobra.Command {
+	var email, password, domain string
+
+	cmd := &cobra.Command{
+		Use:   "install",
+		Short: "Create the admin account (first-time setup)",
+		Run: func(_ *cobra.Command, _ []string) {
+			handleCommandError(app.InstallAdmin(context.Background(), resolveDB(), &models.Install{
+				Email:    email,
+				Password: password,
+				Domain:   domain,
+			}))
+			fmt.Println("Cart installed successfully")
+		},
+	}
+
+	cmd.Flags().StringVar(&email, "email", "", "admin email address")
+	cmd.Flags().StringVar(&password, "password", "", "admin password (6-72 chars)")
+	cmd.Flags().StringVar(&domain, "domain", "localhost", "public store domain")
+	_ = cmd.MarkFlagRequired("email")
+	_ = cmd.MarkFlagRequired("password")
+
+	return cmd
+}
+
+// cmdInit creates and returns the init command.
+func cmdInit() *cobra.Command {
+	return &cobra.Command{
+		Use:   "init",
+		Short: "Creating the basic structure",
+		Run: func(_ *cobra.Command, _ []string) {
+			handleCommandError(app.Init(resolveDB()))
+		},
+	}
+}
+
+// cmdUpdate creates and returns the update command.
+func cmdUpdate() *cobra.Command {
+	return &cobra.Command{
+		Use:   "update",
+		Short: "Updating the application to the latest version",
+		Run: func(_ *cobra.Command, _ []string) {
+			cfg := &update.Config{
+				Owner:             "shurco",
+				Repo:              "mycart",
+				CurrentVersion:    version,
+				ArchiveExecutable: "mycart",
+			}
+
+			if err := update.Init(cfg); err != nil {
+				handleCommandError(err)
+				return
+			}
+
+			handleCommandError(app.Migrate(resolveDB()))
+		},
+	}
+}
+
+// cmdMigrate creates and returns the migrate command.
+func cmdMigrate() *cobra.Command {
+	return &cobra.Command{
+		Use:   "migrate",
+		Short: "Migrate on the latest version of database schema",
+		Run: func(_ *cobra.Command, _ []string) {
+			handleCommandError(app.Migrate(resolveDB()))
+		},
+	}
+}

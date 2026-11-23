@@ -183,7 +183,13 @@
     "testingConnection": "Probando…",
     "testConnectionFirst": "Prueba la conexión antes de instalar",
     "connectionOk": "Conexión correcta",
-    "connectionFailed": "Error de conexión"
+    "connectionFailed": "Error de conexión",
+    "errors": {
+      "databaseAlreadyInstalled": "La base de datos seleccionada ya contiene un carrito instalado",
+      "databaseConnectionFailed": "No se pudo conectar con la base de datos seleccionada",
+      "databaseInspectionFailed": "No se pudo inspeccionar la base de datos seleccionada",
+      "migrationsFailed": "Error en la migración del esquema de la base de datos. Consulte los registros del servidor para más detalles"
+    }
   },
   "products": {
     "title": "Productos",

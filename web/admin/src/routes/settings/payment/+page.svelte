@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import Main from '$lib/layouts/Main.svelte'
-  import TruncationSettings from '$lib/components/TruncationSettings.svelte'
   import Stripe from '$lib/components/payment/Stripe.svelte'
   import Paypal from '$lib/components/payment/Paypal.svelte'
   import Portone from '$lib/components/payment/Portone.svelte'
@@ -14,32 +13,22 @@
     Chip,
     ChipGroup,
     Drawer,
-    DrawerFooter,
-    DrawerHeader,
     FormButton,
-    FormSelect,
-    FormToggle
+    FormSelect
   } from '$lib/components'
+  import NumberFormatForm from './NumberFormatForm.svelte'
+  import SymbolDisplayForm from './SymbolDisplayForm.svelte'
+  import PriceDisplayForm from './PriceDisplayForm.svelte'
+  import { incrementSettingsVersion, defaultTruncation, ensureDefaults } from './paymentDisplay'
   import { systemStore } from '$lib/stores/system'
   import { paymentSettingsStore } from '$lib/stores/payment'
   import { loadSettings as loadSettingsHelper, saveSettings } from '$lib/utils/settingsHelpers'
   import { loadData } from '$lib/utils/apiHelpers'
-  import { formatCurrency } from '$lib/utils/currency'
   import { translate } from '$lib/i18n'
   import { CURRENCIES } from '$lib/config/currencies'
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
   import { createDelayedReset } from '$lib/utils/delayedReset'
-  import type { PaymentSettings, TruncationSettings as TruncationSettingsType, CurrencyTruncationSettings, SymbolDisplaySettings } from '$lib/types/models'
-
-  // Settings version key for cache invalidation (localStorage is shared across tabs)
-  const SETTINGS_VERSION_KEY = 'settings_version'
-
-  // Increment settings version to invalidate storefront cache
-  function incrementSettingsVersion() {
-    if (typeof localStorage === 'undefined') return
-    const currentVersion = parseInt(localStorage.getItem(SETTINGS_VERSION_KEY) || '1', 10)
-    localStorage.setItem(SETTINGS_VERSION_KEY, (currentVersion + 1).toString())
-  }
+  import type { PaymentSettings, CurrencyTruncationSettings, SymbolDisplaySettings } from '$lib/types/models'
 
   // Reactive translation function
   let t = $derived($translate)
@@ -80,28 +69,6 @@
   })
 
   const currencyOptions = CURRENCIES.map(c => c.code)
-
-  // Initialize truncation settings with defaults
-  const defaultTruncation = (): TruncationSettingsType => ({
-    admin: {},
-    storefront: {}
-  })
-
-  // Ensure all currencies have default 'none' mode
-  function ensureDefaults(truncation: TruncationSettingsType | undefined): TruncationSettingsType {
-    const result = truncation || defaultTruncation()
-
-    CURRENCIES.forEach(curr => {
-      if (!result.admin[curr.code]) {
-        result.admin[curr.code] = { mode: 'none' }
-      }
-      if (!result.storefront[curr.code]) {
-        result.storefront[curr.code] = { mode: 'none' }
-      }
-    })
-
-    return result
-  }
 
   let unsubscribe: (() => void) | null = null
 
@@ -195,14 +162,6 @@
     incrementSettingsVersion()
   }
 
-  function formatPreview(value: number): string {
-    const nf = {
-      decimal_precision: parseInt(decimalPrecision) as 0 | 1 | 2,
-      show_trailing_zeros: showTrailingZeros
-    }
-    return formatCurrency(value, payment.currency || 'USD', nf)
-  }
-
   async function handleNumberFormatSubmit() {
     payment.number_format = {
       decimal_precision: parseInt(decimalPrecision) as 0 | 1 | 2,
@@ -285,118 +244,22 @@
 {#if drawerOpen}
   <Drawer isOpen={drawerOpen} onclose={closeDrawer} maxWidth={drawerWidth}>
     {#if drawerMode === 'number-format'}
-      <DrawerHeader title={t('settings.numberFormatting')} />
-
-      <form onsubmit={(e) => { e.preventDefault(); handleNumberFormatSubmit() }}>
-        <div class="flow-root">
-          <dl class="mx-auto -my-3 mt-2 mb-0 space-y-4 text-sm">
-            <FormSelect
-              id="decimal-precision"
-              title={t('settings.decimalPrecision')}
-              options={['0', '1', '2']}
-              bind:value={decimalPrecision}
-              ico="hash"
-            />
-          </dl>
-
-          <div class="mt-2 mb-4 flex items-center justify-between gap-4">
-            <div>
-              <h3>{t('settings.showTrailingZeros')}</h3>
-              <p class="text-sm text-gray-500">{t('settings.showTrailingZerosDesc')}</p>
-            </div>
-            <FormToggle id="trailing-zeros" bind:value={showTrailingZeros} />
-          </div>
-
-          <div class="mt-3 text-sm text-gray-600">
-            <div>{t('settings.preview')}: 1.00 → {formatPreview(1.0)}</div>
-            <div>{t('settings.preview')}: 1.23 → {formatPreview(1.23)}</div>
-          </div>
-        </div>
-
-        <DrawerFooter onclose={closeDrawer} submitLabel={t('common.save')} />
-      </form>
+      <NumberFormatForm
+        bind:decimalPrecision
+        bind:showTrailingZeros
+        currency={payment.currency}
+        onsubmit={handleNumberFormatSubmit}
+        onclose={closeDrawer}
+      />
     {:else if drawerMode === 'currency-display'}
-      <DrawerHeader title={t('settings.currencyDisplay')} />
-
-      <form onsubmit={(e) => { e.preventDefault(); handleSymbolDisplaySubmit() }}>
-        <div class="flow-root">
-          <div class="mb-5">
-            <h3>{t('settings.adminPanelDisplay')}</h3>
-            <ChipGroup class="mt-3">
-              <Chip
-                class="flex-1 py-3 text-center"
-                active={symbolDisplay.admin === 'currency'}
-                onclick={() => symbolDisplay.admin = 'currency'}
-              >
-                {t('settings.currencySymbol')}
-                <span class="mt-1 block text-xs text-gray-500">$130</span>
-              </Chip>
-              <Chip
-                class="flex-1 py-3 text-center"
-                active={symbolDisplay.admin === 'language'}
-                onclick={() => symbolDisplay.admin = 'language'}
-              >
-                {t('settings.languageSymbol')}
-                <span class="mt-1 block text-xs text-gray-500">130 Dollar</span>
-              </Chip>
-            </ChipGroup>
-          </div>
-
-          <div class="mb-5">
-            <h3>{t('settings.storefrontDisplay')}</h3>
-            <ChipGroup class="mt-3">
-              <Chip
-                class="flex-1 py-3 text-center"
-                active={symbolDisplay.storefront === 'currency'}
-                onclick={() => symbolDisplay.storefront = 'currency'}
-              >
-                {t('settings.currencySymbol')}
-                <span class="mt-1 block text-xs text-gray-500">$130</span>
-              </Chip>
-              <Chip
-                class="flex-1 py-3 text-center"
-                active={symbolDisplay.storefront === 'language'}
-                onclick={() => symbolDisplay.storefront = 'language'}
-              >
-                {t('settings.languageSymbol')}
-                <span class="mt-1 block text-xs text-gray-500">130 Dollar</span>
-              </Chip>
-            </ChipGroup>
-          </div>
-        </div>
-
-        <DrawerFooter onclose={closeDrawer} submitLabel={t('common.save')} />
-      </form>
+      <SymbolDisplayForm bind:symbolDisplay onsubmit={handleSymbolDisplaySubmit} onclose={closeDrawer} />
     {:else if drawerMode === 'price-display' && payment.currency}
-      <DrawerHeader title={t('settings.priceDisplaySettings')} />
-
-      <form onsubmit={(e) => { e.preventDefault(); handleTruncationSubmit() }}>
-        <div class="space-y-6">
-          <div class="space-y-3">
-            <h3>{t('settings.adminPanel')}</h3>
-            <TruncationSettings
-              currency={payment.currency}
-              context="admin"
-              value={payment.truncation?.admin[payment.currency] || { mode: 'none' }}
-              onChange={(settings) => handleTruncationChange('admin', payment.currency, settings)}
-              numberFormat={payment.number_format}
-            />
-          </div>
-
-          <div class="space-y-3">
-            <h3>{t('settings.storefront')}</h3>
-            <TruncationSettings
-              currency={payment.currency}
-              context="storefront"
-              value={payment.truncation?.storefront[payment.currency] || { mode: 'none' }}
-              onChange={(settings) => handleTruncationChange('storefront', payment.currency, settings)}
-              numberFormat={payment.number_format}
-            />
-          </div>
-        </div>
-
-        <DrawerFooter onclose={closeDrawer} submitLabel={t('common.save')} />
-      </form>
+      <PriceDisplayForm
+        {payment}
+        onchange={handleTruncationChange}
+        onsubmit={handleTruncationSubmit}
+        onclose={closeDrawer}
+      />
     {:else if drawerMode === 'stripe'}
       <Stripe onclose={closeDrawer} />
     {:else if drawerMode === 'paypal'}

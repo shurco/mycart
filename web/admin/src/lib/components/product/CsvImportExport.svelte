@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { Alert, FormButton, SvgIcon } from '$lib/components'
+  import { FormButton, SvgIcon } from '$lib/components'
   import { translate } from '$lib/i18n'
   import { showMessage } from '$lib/utils'
 
@@ -213,18 +213,18 @@
             <p class="mb-2 font-semibold text-red-600">{t('products.csv.validationErrors')}</p>
             <div class="max-h-60 space-y-2 overflow-y-auto">
               {#each previewResult.errors as error, index (index)}
-                <Alert type="error">
+                <div class="notice notice-danger">
                   <strong>{t('products.csv.line')} {error.line}:</strong> {error.message}
-                </Alert>
+                </div>
               {/each}
             </div>
           </div>
         {/if}
 
         {#if previewResult.errors?.length === 0 && previewResult.total_rows > 0}
-          <Alert type="success">
+          <div class="notice notice-info">
             {t('products.csv.readyToImport')}
-          </Alert>
+          </div>
         {/if}
       </div>
     {/if}

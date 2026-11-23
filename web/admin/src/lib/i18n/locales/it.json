@@ -183,7 +183,13 @@
     "testingConnection": "Verifica in corso…",
     "testConnectionFirst": "Prova la connessione prima di installare",
     "connectionOk": "Connessione riuscita",
-    "connectionFailed": "Connessione non riuscita"
+    "connectionFailed": "Connessione non riuscita",
+    "errors": {
+      "databaseAlreadyInstalled": "Il database selezionato contiene già un carrello installato",
+      "databaseConnectionFailed": "Impossibile connettersi al database selezionato",
+      "databaseInspectionFailed": "Impossibile ispezionare il database selezionato",
+      "migrationsFailed": "Migrazione dello schema del database non riuscita. Controlla i log del server per i dettagli"
+    }
   },
   "products": {
     "title": "Prodotti",

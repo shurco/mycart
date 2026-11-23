@@ -42,7 +42,7 @@ export interface Product {
   description?: string
   has_variants?: boolean
   quantity?: number
-  images?: Array<{ name: string; ext: string }>
+  images?: Array<{ id?: string; name: string; ext: string }>
   attributes?: string[]
   options?: ProductOption[]
   variants?: ProductVariant[]
@@ -63,6 +63,8 @@ export interface CartItem {
   image?: { name: string; ext: string } | null
   variant_id?: string
   variant_name?: string
+  // Set by applyCartCorrections when the server reports the line is no longer sold
+  needsDeletion?: boolean
   // What the line is, carried from the product so a cart that outlives the tab
   // still knows whether it holds a download. Items put in a cart before this
   // was stored have none, and are read as goods the shop ships — which is what

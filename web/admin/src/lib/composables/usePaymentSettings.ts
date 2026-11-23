@@ -1,9 +1,17 @@
 import { apiGet, apiUpdate, showMessage } from '$lib/utils'
 import { systemStore } from '$lib/stores/system'
 import { t } from '$lib/i18n'
-import type { StripeSettings, PaypalSettings, SpectrocoinSettings, CoinbaseSettings } from '$lib/types/models'
+import type {
+  StripeSettings,
+  PaypalSettings,
+  SpectrocoinSettings,
+  CoinbaseSettings,
+  PortoneSettings
+} from '$lib/types/models'
 
-export async function loadPaymentSettings<T extends StripeSettings | PaypalSettings | SpectrocoinSettings | CoinbaseSettings>(
+type ProviderSettings = StripeSettings | PaypalSettings | SpectrocoinSettings | CoinbaseSettings | PortoneSettings
+
+export async function loadPaymentSettings<T extends ProviderSettings>(
   endpoint: string,
   defaultSettings: T
 ): Promise<T> {
@@ -20,7 +28,7 @@ export async function loadPaymentSettings<T extends StripeSettings | PaypalSetti
   }
 }
 
-export async function savePaymentSettings<T extends StripeSettings | PaypalSettings | SpectrocoinSettings | CoinbaseSettings>(
+export async function savePaymentSettings<T extends ProviderSettings>(
   endpoint: string,
   settings: T
 ): Promise<boolean> {
@@ -39,7 +47,7 @@ export async function savePaymentSettings<T extends StripeSettings | PaypalSetti
 }
 
 export async function togglePaymentActive(
-  providerName: 'stripe' | 'paypal' | 'spectrocoin' | 'coinbase',
+  providerName: 'stripe' | 'paypal' | 'spectrocoin' | 'coinbase' | 'portone',
   active: boolean
 ): Promise<boolean> {
   try {

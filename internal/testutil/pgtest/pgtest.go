@@ -30,6 +30,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -60,8 +61,37 @@ const FixturesTable = "migrate_fixtures_version"
 // The path is anchored to this source file rather than to the working
 // directory: the suite runs tests in a temporary directory of their own, so a
 // relative path would find nothing.
+//
+// Developer overlays (*_private.sql, gitignored) are left out: they carry one
+// machine's domain and payment credentials for `scripts/migration dev up`, and
+// a suite that loaded them would assert against that machine instead of the
+// shipped fixtures.
 func FixturesFS() fs.FS {
-	return os.DirFS(filepath.Join(repoRoot(), FixturesDir, "migration"))
+	return publicFixtures{os.DirFS(filepath.Join(repoRoot(), FixturesDir, "migration"))}
+}
+
+// privateFixtureSuffix names the developer overlays; it mirrors the .gitignore
+// entry fixtures/migration/*_private.sql.
+const privateFixtureSuffix = "_private.sql"
+
+// publicFixtures hides the developer overlays from whoever reads the fixtures.
+type publicFixtures struct{ fs.FS }
+
+func (f publicFixtures) Open(name string) (fs.File, error) {
+	if strings.HasSuffix(name, privateFixtureSuffix) {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+	}
+	return f.FS.Open(name)
+}
+
+func (f publicFixtures) ReadDir(name string) ([]fs.DirEntry, error) {
+	entries, err := fs.ReadDir(f.FS, name)
+	if err != nil {
+		return nil, err
+	}
+	return slices.DeleteFunc(entries, func(e fs.DirEntry) bool {
+		return strings.HasSuffix(e.Name(), privateFixtureSuffix)
+	}), nil
 }
 
 // EmptyDSN returns the DSN of a fresh database with nothing in it: no tables,

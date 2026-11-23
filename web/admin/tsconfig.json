@@ -9,5 +9,9 @@
 		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true
-	}
+	},
+	// The *.browser.test.ts files drive WebdriverIO's `browser` global, which
+	// `vitest/browser` does not export, so they cannot be type-checked until they
+	// are ported to Vitest's browser API. They run only via vitest.browser.config.ts.
+	"exclude": ["node_modules/**", "src/**/*.browser.test.ts"]
 }

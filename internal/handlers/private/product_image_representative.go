@@ -33,7 +33,7 @@ func SetProductRepresentativeImage(c fiber.Ctx) error {
 		// Check if it's a "not found" error
 		errMsg := err.Error()
 		if errMsg == "image not found: "+imageID ||
-		   errMsg == "image does not belong to product: image_id="+imageID+", product_id="+productID {
+			errMsg == "image does not belong to product: image_id="+imageID+", product_id="+productID {
 			return webutil.StatusNotFound(c)
 		}
 		return webutil.StatusInternalServerError(c)

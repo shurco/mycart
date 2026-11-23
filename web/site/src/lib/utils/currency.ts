@@ -90,11 +90,12 @@ export function formatCurrencyWithTruncation(
   }
 
   // Fixed mode: use specified unit
-  if (settings.mode === 'fixed' && settings.fixed_unit) {
+  const fixedUnit = settings.fixed_unit
+  if (settings.mode === 'fixed' && fixedUnit) {
     const unit = pattern.units.find(u => {
       const label = getUnitLabel(u.value, currencyCode, currentLocale)
-      return label === settings.fixed_unit ||
-             Object.values(u.keys).includes(settings.fixed_unit)
+      return label === fixedUnit ||
+             Object.values(u.keys).includes(fixedUnit)
     })
 
     if (unit && amount >= unit.value * 100) {

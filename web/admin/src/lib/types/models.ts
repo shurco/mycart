@@ -151,6 +151,10 @@ export interface CartItem {
   slug: string
   amount: number
   quantity: number
+  variant_id?: string
+  variant_sku?: string
+  variant_options?: Record<string, string>
+  variant_price_surcharge?: number
   image?: {
     id: string
     name: string
