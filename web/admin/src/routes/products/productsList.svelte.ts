@@ -67,7 +67,7 @@ export class ProductsList {
         this.products[index] = { ...this.products[index], active: originalActive }
         showMessage(res.message || t('products.failedToUpdateProduct'), 'connextError')
       } else {
-        showMessage(t('products.productStatusUpdated') || res.message, 'connextSuccess')
+        showMessage(t('products.productStatusUpdated'), 'connextSuccess')
       }
     } catch (error) {
       // Revert on error

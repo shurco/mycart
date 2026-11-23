@@ -215,7 +215,7 @@
                     <span class="flex-1">{dataItem.content}</span>
                     <span
                       class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800"
-                      title={t('digital.codeSold', { cart_id: dataItem.cart_id })}
+                      title={t('digital.codeSold', { cart_id: dataItem.cart_id ?? '' })}
                     >
                       {t('digital.sold')}
                     </span>

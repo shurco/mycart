@@ -7,9 +7,9 @@ export interface DrawerState<T = unknown> {
 }
 
 export function useDrawer<T = unknown>(initialMode = 'view') {
-  const isOpen = $state(false)
-  const mode = $state(initialMode)
-  const data = $state<T | null>(null)
+  let isOpen = $state(false)
+  let mode = $state(initialMode)
+  let data = $state<T | null>(null)
 
   function open(newMode: string, newData: T | null = null) {
     mode = newMode

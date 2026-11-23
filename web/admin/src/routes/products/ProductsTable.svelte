@@ -74,7 +74,7 @@
             <span class="font-bold text-green-600">free</span>
           {:else}
             {formatCurrencyWithTruncation(
-              product.amount,
+              Number(product.amount),
               currency || 'USD',
               'admin',
               paymentSettings?.truncation,

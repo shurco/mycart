@@ -183,7 +183,13 @@
     "testingConnection": "Test en cours…",
     "testConnectionFirst": "Testez la connexion avant d'installer",
     "connectionOk": "Connexion réussie",
-    "connectionFailed": "Échec de la connexion"
+    "connectionFailed": "Échec de la connexion",
+    "errors": {
+      "databaseAlreadyInstalled": "La base de données sélectionnée contient déjà un panier installé",
+      "databaseConnectionFailed": "Échec de la connexion à la base de données sélectionnée",
+      "databaseInspectionFailed": "Échec de l'inspection de la base de données sélectionnée",
+      "migrationsFailed": "Échec de la migration du schéma de la base de données. Consultez les journaux du serveur pour plus de détails"
+    }
   },
   "products": {
     "title": "Produits",

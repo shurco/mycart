@@ -245,8 +245,8 @@
     <div class="pt-8">
       <div class="flex">
         <div class="flex-none">
-          <FormButton type="submit" name={mode === 'add' ? t('common.add') : t('common.save')} color="green" />
-          <FormButton type="button" name={t('common.close')} color="gray" onclick={onclose} />
+          <FormButton type="submit" name={mode === 'add' ? t('common.add') : t('common.save')} />
+          <FormButton type="button" name={t('common.close')} variant="secondary" onclick={onclose} />
         </div>
         <div class="grow"></div>
         {#if mode === 'edit' && product}

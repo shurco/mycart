@@ -183,7 +183,13 @@
     "testingConnection": "Wird getestet…",
     "testConnectionFirst": "Testen Sie die Verbindung vor der Installation",
     "connectionOk": "Verbindung erfolgreich",
-    "connectionFailed": "Verbindung fehlgeschlagen"
+    "connectionFailed": "Verbindung fehlgeschlagen",
+    "errors": {
+      "databaseAlreadyInstalled": "Die ausgewählte Datenbank enthält bereits einen installierten Warenkorb",
+      "databaseConnectionFailed": "Verbindung zur ausgewählten Datenbank fehlgeschlagen",
+      "databaseInspectionFailed": "Prüfung der ausgewählten Datenbank fehlgeschlagen",
+      "migrationsFailed": "Migration des Datenbankschemas fehlgeschlagen. Details finden Sie in den Serverprotokollen"
+    }
   },
   "products": {
     "title": "Produkte",

@@ -91,7 +91,7 @@
             <span class="font-bold text-green-600">{t('carts.free')}</span>
           {:else}
             {formatCurrencyWithTruncation(
-              product.amount,
+              Number(product.amount),
               drawer.currency || 'USD',
               'admin',
               paymentSettings?.truncation,

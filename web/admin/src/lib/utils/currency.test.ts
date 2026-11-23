@@ -5,7 +5,7 @@ describe('formatCurrencyWithTruncation', () => {
   describe('None mode', () => {
     it('should format USD with full precision when mode is none', () => {
       const result = formatCurrencyWithTruncation(
-        135200, // $1352.00
+        135200, // $1,352.00 (en-US digit grouping)
         'USD',
         'admin',
         {
@@ -14,19 +14,20 @@ describe('formatCurrencyWithTruncation', () => {
         },
         'en'
       )
-      expect(result).toBe('$1352.00')
+      expect(result).toBe('$1,352.00')
     })
 
-    it('should format KRW with full precision when mode is none', () => {
+    it('should format KRW with the configured decimal precision when mode is none', () => {
       const result = formatCurrencyWithTruncation(
-        1352,
+        135200, // amounts are minor units: ₩1,352
         'KRW',
         'admin',
         {
           admin: { KRW: { mode: 'none' } },
           storefront: {}
         },
-        'ko'
+        'ko',
+        { decimal_precision: 0, show_trailing_zeros: true }
       )
       expect(result).toBe('₩1,352')
     })
@@ -75,9 +76,9 @@ describe('formatCurrencyWithTruncation', () => {
       expect(result).toBe('₩1.00만')
     })
 
-    it('should truncate KRW to 10K with English locale', () => {
+    it('should keep KRW native units regardless of the UI locale', () => {
       const result = formatCurrencyWithTruncation(
-        1000000, // ₩10,000.00 → ₩1.0010K
+        1000000, // ₩10,000.00 → ₩1.00만 (KRW always uses its native unit labels)
         'KRW',
         'storefront',
         {
@@ -86,7 +87,7 @@ describe('formatCurrencyWithTruncation', () => {
         },
         'en'
       )
-      expect(result).toBe('₩1.0010K')
+      expect(result).toBe('₩1.00만')
     })
   })
 
@@ -147,9 +148,9 @@ describe('formatCurrencyWithTruncation', () => {
       expect(result).toBe('₩1.50천만')
     })
 
-    it('should auto-select appropriate KRW unit with English locale', () => {
+    it('should auto-select native KRW unit regardless of the UI locale', () => {
       const result = formatCurrencyWithTruncation(
-        1500000000, // ₩15,000,000.00 → ₩15.00M
+        1500000000, // ₩15,000,000.00 → ₩1.50천만 (native unit, not M)
         'KRW',
         'storefront',
         {
@@ -158,7 +159,7 @@ describe('formatCurrencyWithTruncation', () => {
         },
         'en'
       )
-      expect(result).toBe('₩15.00M')
+      expect(result).toBe('₩1.50천만')
     })
   })
 
@@ -185,7 +186,7 @@ describe('formatCurrencyWithTruncation', () => {
         undefined,
         'en'
       )
-      expect(result).toBe('$1352.00')
+      expect(result).toBe('$1,352.00')
     })
 
     it('should fallback to none mode when currency missing from settings', () => {
@@ -199,12 +200,12 @@ describe('formatCurrencyWithTruncation', () => {
         },
         'en'
       )
-      expect(result).toBe('£1352.00')
+      expect(result).toBe('£1,352.00')
     })
 
     it('should handle very large amounts', () => {
       const result = formatCurrencyWithTruncation(
-        99999999990000, // $999,999,999.00 → $9999999.99M
+        99999999990000, // $999,999,999,900.00 → $1000.00B (largest unit is B)
         'USD',
         'storefront',
         {
@@ -213,7 +214,7 @@ describe('formatCurrencyWithTruncation', () => {
         },
         'en'
       )
-      expect(result).toBe('$9999999.99M')
+      expect(result).toBe('$1000.00B')
     })
   })
 })

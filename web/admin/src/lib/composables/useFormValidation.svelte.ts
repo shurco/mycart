@@ -2,7 +2,7 @@ import { validateFields, validators, type ValidationRule } from '$lib/utils/vali
 import { MIN_NAME_LENGTH, MIN_SLUG_LENGTH, ERROR_MESSAGES } from '$lib/constants/validation'
 
 export function useFormValidation() {
-  const errors = $state<Record<string, string>>({})
+  let errors = $state<Record<string, string>>({})
 
   function validate(data: Record<string, any>, rules: ValidationRule[]): boolean {
     errors = validateFields(data, rules)

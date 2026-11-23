@@ -123,7 +123,7 @@
 
             {#if image.is_representative}
               <div class="representative-badge">
-                <SvgIcon name="star" className="h-4 w-4 text-yellow-500" fill="currentColor" />
+                <SvgIcon name="star" className="h-4 w-4 text-yellow-500" />
               </div>
             {/if}
 
@@ -134,11 +134,7 @@
                 onclick={() => handleSetRepresentative(image.id)}
                 aria-label="Set as representative image"
               >
-                <SvgIcon
-                  name="star"
-                  className="h-5 w-5"
-                  fill={image.is_representative ? 'currentColor' : 'none'}
-                />
+                <SvgIcon name="star" className="h-5 w-5" />
                 <span class="text-xs">
                   {image.is_representative ? 'Main' : 'Set Main'}
                 </span>

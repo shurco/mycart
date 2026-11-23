@@ -9,7 +9,8 @@ export interface ProductFormData {
   brief: string
   description: string
   amount: string | number
-  quantity?: number
+  // Kept as the text of the input it is bound to; prepareSubmitData converts it.
+  quantity?: string
   sku?: string
   has_variants?: boolean
   active: boolean
@@ -29,7 +30,7 @@ export function emptyProductForm(): ProductFormData {
     brief: '',
     description: '',
     amount: DEFAULT_AMOUNT,
-    quantity: 0,
+    quantity: '0',
     sku: '',
     has_variants: false,
     active: true,
@@ -55,7 +56,7 @@ export function convertProductToFormData(product: Product): ProductFormData {
     brief: product.brief || '',
     description: product.description || '',
     amount: amountStr,
-    quantity: product.quantity || 0,
+    quantity: String(product.quantity || 0),
     sku: product.sku || '',
     has_variants: product.has_variants || false,
     active: product.active !== undefined ? product.active : true,
@@ -95,6 +96,7 @@ export function prepareSubmitData(formData: ProductFormData): Partial<Product> {
   return {
     ...formData,
     amount: amountInCents,
+    quantity: Number(formData.quantity) || 0,
     options: formData.options ? JSON.parse(JSON.stringify(formData.options)) : [],
     variants: formData.variants ? JSON.parse(JSON.stringify(formData.variants)) : []
   }

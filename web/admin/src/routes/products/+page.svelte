@@ -237,7 +237,7 @@
     <h1>{t('products.title')}</h1>
     <div class="flex gap-2">
       <FormButton name={`${t('products.csv.import')} / ${t('products.csv.export')}`} variant="secondary" ico="arrow-path" onclick={openCsv} />
-      <FormButton name={t('products.addProduct')} color="green" ico="plus" onclick={openAdd} />
+      <FormButton name={t('products.addProduct')} ico="plus" onclick={openAdd} />
     </div>
   </div>
 
