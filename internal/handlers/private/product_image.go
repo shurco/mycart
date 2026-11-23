@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
+	"github.com/shurco/mycart/internal/models"
 	"github.com/shurco/mycart/internal/queries"
 	"github.com/shurco/mycart/pkg/imageutil"
 	"github.com/shurco/mycart/pkg/logging"
@@ -136,7 +137,10 @@ func AddProductImage(c fiber.Ctx) error {
 		return webutil.StatusInternalServerError(c)
 	}
 
-	addedImage, err := db.AddImage(c.Context(), productID, fileUUID, fileExt, fileOrigName)
+	// swag resolves models.File in this file's annotations through its imports,
+	// so the type is named here instead of being inferred.
+	var addedImage *models.File
+	addedImage, err = db.AddImage(c.Context(), productID, fileUUID, fileExt, fileOrigName)
 	if err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusInternalServerError(c)
