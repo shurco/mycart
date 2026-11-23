@@ -38,7 +38,7 @@ COPY --from=frontend-build /app/web/site/build ./web/site/build
 
 # Build the binary for the target platform requested by the builder
 ARG TARGETARCH
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-w -s" -o /go/bin/mycart ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} go build -ldflags="-w -s" -o /go/bin/mycart ./cmd
 
 # Stage 3: Final runtime image (non-root)
 # The binary and its workdir are owned by nonroot so the app can create its
