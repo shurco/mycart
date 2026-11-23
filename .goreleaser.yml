@@ -30,7 +30,7 @@ builds:
       - -X "main.version=v{{.Version}}"
       - -X "main.gitCommit={{.ShortCommit}}"
       - -X "main.buildDate={{.Now.Format "2006-01-02"}}"
-    main: ./cmd/main.go
+    main: ./cmd
     binary: mycart
 
 archives:
