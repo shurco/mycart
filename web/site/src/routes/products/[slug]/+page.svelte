@@ -3,10 +3,8 @@
   import { apiGet } from '$lib/utils/api'
   import type { Product } from '$lib/types/models'
   import { cartStore } from '$lib/stores/cart'
-  import { costFormat } from '$lib/utils/costFormat'
   import { formatCurrencyWithTruncation } from '$lib/utils/currency'
   import { settingsStore } from '$lib/stores/settings'
-  import { getProductImageUrl } from '$lib/utils/imageUrl'
   import { toggleCartItem } from '$lib/utils/cart'
   import { chargesStock } from '$lib/utils/digital'
   import { updateSEOTags } from '$lib/utils/seo'
@@ -14,6 +12,9 @@
   import NotFoundPage from '$lib/components/NotFoundPage.svelte'
   import VariantSelector from '$lib/components/VariantSelector.svelte'
   import QuantityInput from '$lib/components/QuantityInput.svelte'
+  import ProductGallery from '$lib/components/ProductGallery.svelte'
+  import ProductDownloadNotice from '$lib/components/ProductDownloadNotice.svelte'
+  import ProductCartButton from '$lib/components/ProductCartButton.svelte'
   import CartItemCard from '$lib/components/CartItemCard.svelte'
   import { translate, locale } from '$lib/i18n'
   import { sanitizeHTML } from '$lib/utils/sanitize'
@@ -27,7 +28,6 @@
   let load = $state(false)
   let notFound = $state(false)
   let loading = $state(true)
-  let currentSlide = $state(0)
   let selectedVariant = $state<ProductVariant | null>(null)
   let selectedQuantity = $state(1)
   // Guards against a stale response from a previous slug overwriting the
@@ -85,7 +85,6 @@
       product = null
       load = false
       notFound = false
-      currentSlide = 0
       selectedVariant = null
       loading = true
       latestSlugRequest = slug
@@ -159,14 +158,6 @@
     if (product.has_variants && !selectedVariant) return
     toggleCartItem(product, cart, selectedVariant, selectedQuantity)
   }
-
-  function nextSlide(length: number) {
-    currentSlide = (currentSlide + 1) % length
-  }
-
-  function prevSlide(length: number) {
-    currentSlide = (currentSlide + length - 1) % length
-  }
 </script>
 
 {#if loading}
@@ -184,53 +175,7 @@
         {product.name}
       </h1>
       <div class="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
-        <!-- Product Images -->
-        <div>
-          {#if !product.images || product.images.length === 0}
-            <div class="relative h-[400px] border-4 border-black bg-white sm:h-[500px]">
-              <img src="/assets/img/noimage.png" alt="" class="absolute inset-0 h-full w-full object-cover" />
-            </div>
-          {:else if product.images.length === 1}
-            <div class="relative h-[400px] overflow-hidden border-4 border-black bg-white sm:h-[500px]">
-              <img
-                src={getProductImageUrl(product.images[0], 'md')}
-                alt={product.name}
-                class="absolute inset-0 h-full w-full object-cover"
-              />
-            </div>
-          {:else}
-            <div class="relative h-[400px] overflow-hidden border-4 border-black bg-white sm:h-[500px]">
-              <div
-                class="flex h-full w-full transition-transform duration-500 ease-in-out"
-                style="transform: translateX(-{currentSlide * 100}%)"
-              >
-                {#each product.images as image (image.id || image.name)}
-                  <div class="h-full w-full flex-shrink-0">
-                    <img
-                      src={getProductImageUrl(image, 'md')}
-                      alt={product.name}
-                      class="block h-full w-full object-cover"
-                    />
-                  </div>
-                {/each}
-              </div>
-              <button
-                onclick={() => prevSlide(product.images.length)}
-                class="absolute top-1/2 left-4 cursor-pointer border-4 border-black bg-yellow-300 p-3 text-xl font-black text-black transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
-                aria-label={t('product.previousImage')}
-              >
-                ←
-              </button>
-              <button
-                onclick={() => nextSlide(product.images.length)}
-                class="absolute top-1/2 right-4 cursor-pointer border-4 border-black bg-yellow-300 p-3 text-xl font-black text-black transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
-                aria-label={t('product.nextImage')}
-              >
-                →
-              </button>
-            </div>
-          {/if}
-        </div>
+        <ProductGallery images={product.images} name={product.name} />
 
         <!-- Product Info -->
         <div class="space-y-6">
@@ -289,69 +234,19 @@
                   {t('product.quantity')}
                 </label>
                 <div class="flex justify-center">
-                  {#if inCart}
-                    <QuantityInput
-                      quantity={currentQuantity}
-                      onIncrement={handleQuantityIncrement}
-                      onDecrement={handleQuantityDecrement}
-                      onChange={handleQuantityChange}
-                    />
-                  {:else}
-                    <QuantityInput
-                      quantity={selectedQuantity}
-                      onIncrement={handleQuantityIncrement}
-                      onDecrement={handleQuantityDecrement}
-                      onChange={handleQuantityChange}
-                    />
-                  {/if}
+                  <QuantityInput
+                    quantity={inCart ? currentQuantity : selectedQuantity}
+                    onIncrement={handleQuantityIncrement}
+                    onDecrement={handleQuantityDecrement}
+                    onChange={handleQuantityChange}
+                  />
                 </div>
               </div>
             {:else}
-              <!-- A download has no quantity to choose, so the stepper gives way
-                   to what the buyer needs to know instead: nothing arrives by
-                   post, and the link reaches them either way. The second
-                   sentence is about the cabinet, and is said only where the
-                   cabinet is switched on. -->
-              <div class="mb-6 border-4 border-black bg-blue-100 p-4">
-                <span
-                  class="mb-3 inline-block border-4 border-black bg-yellow-300 px-3 py-1 text-xs font-black tracking-wider text-black uppercase"
-                >
-                  {t('product.download')}
-                </span>
-                <p class="text-sm leading-relaxed font-bold text-black">
-                  {t('product.downloadDelivery')}
-                </p>
-                {#if accountEnabled}
-                  <p class="mt-2 text-sm leading-relaxed text-black">
-                    {t('product.downloadInAccount')}
-                  </p>
-                {/if}
-              </div>
+              <ProductDownloadNotice {accountEnabled} />
             {/if}
 
-            <button
-              onclick={handleToggleCart}
-              disabled={!canAddToCart}
-              class="w-full cursor-pointer border-4 border-black px-8 py-4 text-lg font-black tracking-wider uppercase transition-all duration-200 hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] disabled:cursor-not-allowed disabled:opacity-50 {inCart
-                ? 'bg-red-500 text-white'
-                : 'bg-green-500 text-white'}"
-            >
-              {#if !inCart}
-                <span class="flex items-center justify-center gap-3">
-                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <use href="/assets/img/sprite.svg#plus" />
-                  </svg>
-                  <span>{t('product.addToCart')}</span>
-                </span>
-              {:else}
-                <span class="flex items-center justify-center gap-3">
-                  <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <use href="/assets/img/sprite.svg#minus" />
-                  </svg>
-                  <span>{t('product.removeFromCart')}</span>
-                </span>
-              {/if}
-            </button>
+            <ProductCartButton {inCart} disabled={!canAddToCart} onToggle={handleToggleCart} />
           </div>
         </div>
       </div>
