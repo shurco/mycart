@@ -7,10 +7,11 @@
   import FormInput from '$lib/components/form/Input.svelte'
   import FormSelect from '$lib/components/form/Select.svelte'
   import Editor from '$lib/components/Editor.svelte'
+  import PagesTable from './PagesTable.svelte'
   import Pagination from '$lib/components/Pagination.svelte'
-  import { PageHeader, PageState, DrawerHeader, DrawerFooter, FormGroup, IconButton } from '$lib/components'
+  import { PageHeader, PageState, DrawerHeader, DrawerFooter, FormGroup } from '$lib/components'
   import { loadData, saveData, deleteData, toggleActive as toggleActiveApi } from '$lib/utils/apiHelpers'
-  import { formatDate, confirmDelete } from '$lib/utils'
+  import { confirmDelete } from '$lib/utils'
   import { validators, validateFields } from '$lib/utils/validation'
   import { MIN_NAME_LENGTH, MIN_SLUG_LENGTH, ERROR_MESSAGES } from '$lib/constants/validation'
   import type { Page } from '$lib/types/models'
@@ -30,6 +31,16 @@
   import { DRAWER_CLOSE_DELAY_MS } from '$lib/constants/ui'
   import { createDelayedReset } from '$lib/utils/delayedReset'
 
+  type PageForm = Omit<Page, 'id' | 'created' | 'updated' | 'seo'>
+
+  const emptyForm = (): PageForm => ({
+    name: '',
+    slug: '',
+    position: 'header',
+    content: '',
+    active: true
+  })
+
   let pages = $state<Page[]>([])
   let loading = $state(true)
   let drawerOpen = $state(false)
@@ -39,13 +50,7 @@
   let limit = $state(DEFAULT_PAGE_SIZE)
   let total = $state(0)
 
-  let formData = $state<Omit<Page, 'id' | 'created' | 'updated' | 'seo'>>({
-    name: '',
-    slug: '',
-    position: 'header',
-    content: '',
-    active: true
-  })
+  let formData = $state<PageForm>(emptyForm())
 
   const positionOptions = ['header', 'footer']
   let formErrors = $state<Record<string, string>>({})
@@ -73,13 +78,7 @@
   }
 
   function openAdd() {
-    formData = {
-      name: '',
-      slug: '',
-      position: 'header',
-      content: '',
-      active: true
-    }
+    formData = emptyForm()
     formErrors = {}
     drawerPage = null
     drawerMode = 'add'
@@ -211,50 +210,7 @@
   {:else if pages.length === 0}
     <PageState kind="empty" message={t('pages.noPages')} />
   {:else}
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>{t('pages.name')}</th>
-            <th class="w-32">{t('pages.position')}</th>
-            <th class="w-32">{t('pages.slug')}</th>
-            <th class="w-48">{t('common.created')}</th>
-            <th class="w-48">{t('common.updated')}</th>
-            <th class="w-24"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each pages as page, index (page.id)}
-            <tr class:opacity-30={!page.active}>
-              <td>{page.name}</td>
-              <td>{page.position || '-'}</td>
-              <td>
-                <a href="/{page.slug}" target="_blank" class="a-link">{page.slug}</a>
-              </td>
-              <td>
-                {formatDate(page.created)}
-              </td>
-              <td>
-                {#if page.updated}
-                  {formatDate(page.updated)}
-                {/if}
-              </td>
-              <td>
-                <div class="flex items-center gap-2">
-                  <IconButton ico="pencil-square" label={t('common.edit')} onclick={() => openEdit(page)} />
-                  <IconButton ico="rocket" label={t('pages.seo')} onclick={() => openSeo(page)} />
-                  <IconButton
-                    ico={page.active ? 'eye' : 'eye-slash'}
-                    label={t('pages.toggleActive')}
-                    onclick={() => toggleActive(page, index)}
-                  />
-                </div>
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+    <PagesTable {pages} onedit={openEdit} onseo={openSeo} ontoggle={toggleActive} />
 
     {#if total > 0}
       <Pagination
