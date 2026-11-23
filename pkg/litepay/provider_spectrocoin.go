@@ -127,12 +127,25 @@ func (c *spectrocoin) Pay(cart Cart) (*Payment, error) {
 		return nil, err
 	}
 
-	receiveAmount, _ := strconv.ParseFloat(data["receiveAmount"].(string), 64)
+	amount, err := field[string](data, "receiveAmount")
+	if err != nil {
+		return nil, err
+	}
+	currency, err := field[string](data, "receiveCurrency")
+	if err != nil {
+		return nil, err
+	}
+	redirectURL, err := field[string](data, "redirectUrl")
+	if err != nil {
+		return nil, err
+	}
+
+	receiveAmount, _ := strconv.ParseFloat(amount, 64)
 	checkout := &Payment{
 		AmountTotal:   int(receiveAmount * 100),
-		Currency:      data["receiveCurrency"].(string),
+		Currency:      currency,
 		Status:        PROCESSED,
-		URL:           data["redirectUrl"].(string),
+		URL:           redirectURL,
 		PaymentSystem: c.paymentSystem,
 	}
 

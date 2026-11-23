@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io"
 	"slices"
 	"strings"
@@ -70,6 +71,17 @@ func parseBody(r io.Reader) (map[string]any, error) {
 	}
 
 	return data, nil
+}
+
+// field reads a typed value out of a decoded provider response. A provider that
+// answers with an error body instead of the expected object is an error for
+// the caller, never a panic.
+func field[T any](data map[string]any, key string) (T, error) {
+	v, ok := data[key].(T)
+	if !ok {
+		return v, fmt.Errorf("provider response has no %q of the expected type", key)
+	}
+	return v, nil
 }
 
 var (

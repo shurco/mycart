@@ -63,7 +63,7 @@ type Metadata struct {
 func (v Metadata) Validate() error {
 	return validation.ValidateStruct(&v,
 		validation.Field(&v.Key, validation.Required, validation.Length(1, 20)),
-		validation.Field(&v.Value, validation.Required, validation.Min(0)),
+		validation.Field(&v.Value, validation.Required),
 	)
 }
 

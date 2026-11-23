@@ -1,9 +1,12 @@
 package pgtest
 
 import (
+	"errors"
 	"io/fs"
+	"slices"
 	"strings"
 	"testing"
+	"testing/fstest"
 )
 
 func TestParseConfig(t *testing.T) {
@@ -156,5 +159,34 @@ func TestFixturesFSFindsTheFixtureMigration(t *testing.T) {
 	}
 	if sql == 0 {
 		t.Fatal("no fixture migrations found")
+	}
+}
+
+// A developer overlay must never reach the suite, whichever way the loader
+// reads the directory.
+func TestPublicFixturesHidesPrivateOverlays(t *testing.T) {
+	fsys := publicFixtures{fstest.MapFS{
+		"1_shipped.sql": {Data: []byte("-- shipped")},
+		"9_private.sql": {Data: []byte("-- overlay")},
+		"9_other.sql":   {Data: []byte("-- not an overlay")},
+	}}
+
+	entries, err := fs.ReadDir(fsys, ".")
+	if err != nil {
+		t.Fatalf("read dir: %v", err)
+	}
+	var names []string
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	if want := []string{"1_shipped.sql", "9_other.sql"}; !slices.Equal(names, want) {
+		t.Errorf("listed %v, want %v", names, want)
+	}
+
+	if _, err := fs.ReadFile(fsys, "9_private.sql"); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("opening the overlay: err = %v, want fs.ErrNotExist", err)
+	}
+	if _, err := fs.ReadFile(fsys, "1_shipped.sql"); err != nil {
+		t.Errorf("opening a shipped fixture: %v", err)
 	}
 }

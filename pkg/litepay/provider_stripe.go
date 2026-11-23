@@ -91,12 +91,33 @@ func (c *stripe) Pay(cart Cart) (*Payment, error) {
 		return nil, err
 	}
 
+	id, err := field[string](data, "id")
+	if err != nil {
+		return nil, err
+	}
+	amount, err := field[float64](data, "amount_total")
+	if err != nil {
+		return nil, err
+	}
+	paidCurrency, err := field[string](data, "currency")
+	if err != nil {
+		return nil, err
+	}
+	status, err := field[string](data, "payment_status")
+	if err != nil {
+		return nil, err
+	}
+	redirectURL, err := field[string](data, "url")
+	if err != nil {
+		return nil, err
+	}
+
 	checkout := &Payment{
-		MerchantID:    data["id"].(string),
-		AmountTotal:   int(data["amount_total"].(float64)),
-		Currency:      strings.ToUpper(data["currency"].(string)),
-		Status:        StatusPayment(STRIPE, data["payment_status"].(string)),
-		URL:           data["url"].(string),
+		MerchantID:    id,
+		AmountTotal:   int(amount),
+		Currency:      strings.ToUpper(paidCurrency),
+		Status:        StatusPayment(STRIPE, status),
+		URL:           redirectURL,
 		PaymentSystem: c.paymentSystem,
 	}
 
@@ -129,10 +150,27 @@ func (c *stripe) Checkout(payment *Payment, session string) (*Payment, error) {
 		return nil, err
 	}
 
-	payment.MerchantID = data["payment_intent"].(string)
-	payment.AmountTotal = int(data["amount_total"].(float64))
-	payment.Currency = strings.ToUpper(data["currency"].(string))
-	payment.Status = StatusPayment(STRIPE, data["payment_status"].(string))
+	intent, err := field[string](data, "payment_intent")
+	if err != nil {
+		return nil, err
+	}
+	amount, err := field[float64](data, "amount_total")
+	if err != nil {
+		return nil, err
+	}
+	currency, err := field[string](data, "currency")
+	if err != nil {
+		return nil, err
+	}
+	status, err := field[string](data, "payment_status")
+	if err != nil {
+		return nil, err
+	}
+
+	payment.MerchantID = intent
+	payment.AmountTotal = int(amount)
+	payment.Currency = strings.ToUpper(currency)
+	payment.Status = StatusPayment(STRIPE, status)
 
 	return payment, nil
 }

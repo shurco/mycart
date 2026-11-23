@@ -109,3 +109,23 @@ func TestStatusPayment_Spectrocoin(t *testing.T) {
 		}
 	}
 }
+
+// A provider that answers with an error object instead of an order must
+// produce an error, not a panic on the missing fields.
+func TestSpectrocoin_Pay_UnexpectedResponse(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"code": 4, "message": "invalid merchant"}`))
+	}))
+	t.Cleanup(srv.Close)
+	redirectHTTPClient(t, srv, "https://spectrocoin.com/")
+
+	provider := New("cb", "ok", "cancel").Spectrocoin("merchant-1", "project-1", genRSAPEM(t))
+	p, err := provider.Pay(Cart{
+		ID:       "SC1234567890123",
+		Currency: "EUR",
+		Items:    []Item{{PriceData: Price{UnitAmount: 1000}, Quantity: 1}},
+	})
+	if err == nil {
+		t.Fatalf("Pay returned %+v, want an error", p)
+	}
+}
