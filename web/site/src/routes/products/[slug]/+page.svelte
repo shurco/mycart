@@ -41,29 +41,22 @@
   let cart = $derived($cartStore)
   let accountEnabled = $derived($settingsStore?.account?.enabled === true)
 
-  let cartItem = $derived(
-    !product ? null :
-    product.has_variants ? (
-      !selectedVariant ? null :
-      cart.find((item) => item.id === product.id && item.variant_id === selectedVariant.id)
-    ) :
-    cart.find((item) => item.id === product.id && !item.variant_id)
-  )
+  let cartItem = $derived.by(() => {
+    const p = product
+    if (!p) return null
+    if (p.has_variants) {
+      const v = selectedVariant
+      return v ? cart.find((item) => item.id === p.id && item.variant_id === v.id) : null
+    }
+    return cart.find((item) => item.id === p.id && !item.variant_id)
+  })
 
   let inCart = $derived(!!cartItem)
   let currentQuantity = $derived(cartItem?.quantity || 1)
 
-  let productCartItems = $derived(
-    !product ? [] :
-    cart.filter((item) => item.id === product.id)
-  )
-
-  let displayPrice = $derived.by(() => {
-    if (!product) return 0
-    if (product.has_variants && selectedVariant) {
-      return product.amount + selectedVariant.price_surcharge
-    }
-    return product.amount
+  let productCartItems = $derived.by(() => {
+    const p = product
+    return p ? cart.filter((item) => item.id === p.id) : []
   })
 
   let canAddToCart = $derived.by(() => {

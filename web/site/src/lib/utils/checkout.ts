@@ -100,7 +100,13 @@ async function createCartRecord(
   debugLog: Log
 ): Promise<string> {
   debugLog('Creating cart record...')
-  const cartCreateRes = await apiPost<{ cart_id: string; amount_total: number; currency: string }>('/api/cart/create', {
+  const cartCreateRes = await apiPost<{
+    cart_id: string
+    amount_total: number
+    currency: string
+    validation_errors?: any[]
+    corrected_cart?: any[]
+  }>('/api/cart/create', {
     email: email,
     provider: 'portone',
     products: cart.map((item) => ({
@@ -185,13 +191,13 @@ export async function handlePortonePayment(
   // Currency comes from store settings (backend gates PortOne by
   // SupportedCurrencies); payMethod is only meaningful for KRW channels —
   // otherwise the PortOne payment window lets the buyer choose.
-  const paymentRequest: Record<string, unknown> = {
+  const paymentRequest: Partial<PortOne.PaymentRequest> = {
     storeId: config.storeId,
     channelKey: config.channelKey,
     paymentId: paymentId,
     orderName: `Order ${cart.length} items`,
     totalAmount: cartTotal,
-    currency: currency.toUpperCase(),
+    currency: currency.toUpperCase() as PortOne.Currency,
     customData: { cart_id: cartId }
   }
   if (currency.toUpperCase() === 'KRW') {
@@ -200,8 +206,14 @@ export async function handlePortonePayment(
   debugLog('Payment request object:', paymentRequest)
 
   // Call PortOne SDK
-  const response = await PortOne.requestPayment(paymentRequest)
+  // payMethod is set only for KRW (above), so the Partial is narrowed back to the SDK's type here.
+  const response = await PortOne.requestPayment(paymentRequest as PortOne.PaymentRequest)
   debugLog('PortOne payment response received:', response)
+
+  // The SDK resolves with nothing when the payment window is closed without a result
+  if (!response) {
+    throw new Error('Payment was not completed')
+  }
 
   // Check for payment errors
   if (response.code != null) {

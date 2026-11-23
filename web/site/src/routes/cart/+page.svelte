@@ -121,7 +121,7 @@
     }
   }
 
-  onMount(async () => {
+  onMount(() => {
     // Always reload cart from localStorage on mount to ensure fresh data
     cartStore.reload()
 
@@ -130,7 +130,7 @@
     // If cart is not free, load payment methods
     // $effect will also handle this, but we load here on initial mount to avoid delay
     if (!isFree && !hasPaymentProviders(payments)) {
-      await loadPaymentMethods().catch(() => {
+      loadPaymentMethods().catch(() => {
         error = 'Failed to load payment methods. Please refresh the page.'
         showOverlay = true
       })

@@ -20,6 +20,9 @@
     amount: number
     quantity: number
     image?: { name: string; ext: string } | null
+    variant_id?: string
+    variant_options?: Record<string, string>
+    variant_sku?: string
   }
 
   interface CartData {

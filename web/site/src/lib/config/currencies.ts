@@ -4,11 +4,7 @@ export interface CurrencyConfig {
   symbol: string         // Display symbol
   decimals: number       // Decimal places for display
   name: string          // English name
-  names: {              // Localized names
-    en: string
-    ko: string
-    zh: string
-  }
+  names: Record<string, string>  // Localized names by locale (en, ko, zh)
 }
 
 export const CURRENCIES: CurrencyConfig[] = [

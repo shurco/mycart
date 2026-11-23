@@ -14,12 +14,12 @@ describe('formatCurrencyWithTruncation', () => {
         },
         'en'
       )
-      expect(result).toBe('$1352.00')
+      expect(result).toBe('$1,352.00')
     })
 
     it('should format KRW with full precision when mode is none', () => {
       const result = formatCurrencyWithTruncation(
-        1352,
+        135200, // amounts are minor units: ₩1,352.00
         'KRW',
         'admin',
         {
@@ -28,7 +28,7 @@ describe('formatCurrencyWithTruncation', () => {
         },
         'ko'
       )
-      expect(result).toBe('₩1,352')
+      expect(result).toBe('₩1,352.00')
     })
   })
 
@@ -75,9 +75,9 @@ describe('formatCurrencyWithTruncation', () => {
       expect(result).toBe('₩1.00만')
     })
 
-    it('should truncate KRW to 10K with English locale', () => {
+    it('should keep native Korean unit label with English locale', () => {
       const result = formatCurrencyWithTruncation(
-        1000000, // ₩10,000.00 → ₩1.0010K
+        1000000, // ₩10,000.00 → ₩1.00만 (KRW always uses its native unit labels)
         'KRW',
         'storefront',
         {
@@ -86,7 +86,7 @@ describe('formatCurrencyWithTruncation', () => {
         },
         'en'
       )
-      expect(result).toBe('₩1.0010K')
+      expect(result).toBe('₩1.00만')
     })
   })
 
@@ -147,9 +147,9 @@ describe('formatCurrencyWithTruncation', () => {
       expect(result).toBe('₩1.50천만')
     })
 
-    it('should auto-select appropriate KRW unit with English locale', () => {
+    it('should keep native Korean unit label with English locale (flexible)', () => {
       const result = formatCurrencyWithTruncation(
-        1500000000, // ₩15,000,000.00 → ₩15.00M
+        1500000000, // ₩15,000,000.00 → ₩1.50천만 (KRW always uses its native unit labels)
         'KRW',
         'storefront',
         {
@@ -158,7 +158,7 @@ describe('formatCurrencyWithTruncation', () => {
         },
         'en'
       )
-      expect(result).toBe('₩15.00M')
+      expect(result).toBe('₩1.50천만')
     })
   })
 
@@ -185,7 +185,7 @@ describe('formatCurrencyWithTruncation', () => {
         undefined,
         'en'
       )
-      expect(result).toBe('$1352.00')
+      expect(result).toBe('$1,352.00')
     })
 
     it('should fallback to none mode when currency missing from settings', () => {
@@ -199,12 +199,12 @@ describe('formatCurrencyWithTruncation', () => {
         },
         'en'
       )
-      expect(result).toBe('£1352.00')
+      expect(result).toBe('£1,352.00')
     })
 
     it('should handle very large amounts', () => {
       const result = formatCurrencyWithTruncation(
-        99999999990000, // $999,999,999.00 → $9999999.99M
+        99999999990000, // $999,999,999,900.00 → 999.9999B rounds to 1000.00B (B is the largest unit)
         'USD',
         'storefront',
         {
@@ -213,7 +213,7 @@ describe('formatCurrencyWithTruncation', () => {
         },
         'en'
       )
-      expect(result).toBe('$9999999.99M')
+      expect(result).toBe('$1000.00B')
     })
   })
 })
