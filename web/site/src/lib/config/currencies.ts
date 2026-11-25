@@ -33,6 +33,10 @@ export const CURRENCIES: CurrencyConfig[] = [
     names: { en: 'Dollar', ko: '달러', zh: '澳元' }
   },
   {
+    code: 'NZD', symbol: 'NZ$', decimals: 2, name: 'New Zealand Dollar',
+    names: { en: 'Dollar', ko: '달러', zh: '新西兰元' }
+  },
+  {
     code: 'CAD', symbol: 'C$', decimals: 2, name: 'Canadian Dollar',
     names: { en: 'Dollar', ko: '달러', zh: '加元' }
   },

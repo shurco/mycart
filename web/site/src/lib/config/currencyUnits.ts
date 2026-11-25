@@ -53,6 +53,7 @@ export const CURRENCY_PATTERNS: Record<string, CurrencyPattern> = {
   'EUR': USD_PATTERN,
   'CAD': USD_PATTERN,
   'AUD': USD_PATTERN,
+  'NZD': USD_PATTERN,
   'CHF': USD_PATTERN,
   'CNY': USD_PATTERN,
   'SEK': USD_PATTERN,
