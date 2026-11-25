@@ -32,6 +32,6 @@
     "vitepress-plugin-qrcode": "^0.12.0",
     "vitepress-plugin-steps": "^0.12.0",
     "vitepress-plugin-tabs": "^0.9.1",
-    "vitepress-plugin-video": "^0.12.0"
+    "vitepress-plugin-video": "^0.12.1"
   }
 }
