@@ -45,8 +45,11 @@ func CDNMiddleware() fiber.Handler {
 		}
 
 		// Find matching rule (longest prefix wins).
+		// Match path exactly or as prefix: "/products/" matches "/products" and "/products/item"
+		path := c.Path()
 		for _, r := range *rules {
-			if strings.HasPrefix(c.Path(), r.Prefix) {
+			pfx := strings.TrimSuffix(r.Prefix, "/")
+			if path == pfx || strings.HasPrefix(path, r.Prefix) {
 				s := int(r.TTL.Seconds())
 				// Edge caches for TTL; browsers revalidate after 60s max.
 				c.Set(fiber.HeaderCacheControl, fmt.Sprintf("public, max-age=%d, s-maxage=%d", min(s, 60), s))
