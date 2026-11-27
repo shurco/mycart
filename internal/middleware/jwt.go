@@ -14,14 +14,16 @@ import (
 
 	"github.com/shurco/mycart/internal/models"
 	"github.com/shurco/mycart/internal/queries"
+	"github.com/shurco/mycart/pkg/jwtutil"
 	"github.com/shurco/mycart/pkg/webutil"
 )
 
 func JWTProtected() fiber.Handler {
 	config := jwtMiddleware.Config{
-		KeyFunc:      customKeyFunc(),
-		ErrorHandler: jwtError,
-		Extractor:    extractors.Chain(extractors.FromAuthHeader("Bearer"), extractors.FromCookie("token")),
+		KeyFunc:       customKeyFunc(),
+		ErrorHandler:  jwtError,
+		Extractor:     extractors.Chain(extractors.FromAuthHeader("Bearer"), extractors.FromCookie("token")),
+		ParserOptions: jwtutil.ParserOptions(),
 	}
 
 	return jwtMiddleware.New(config)
@@ -48,6 +50,9 @@ func customKeyFunc() jwt.Keyfunc {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
+		if err := jwtutil.ValidateHeader(t); err != nil {
+			return nil, err
+		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -71,9 +76,9 @@ func customKeyFunc() jwt.Keyfunc {
 		if !ok {
 			return nil, fmt.Errorf("invalid token claims")
 		}
-		sessionID, ok := claims["id"].(string)
-		if !ok || sessionID == "" {
-			return nil, fmt.Errorf("token has no session id")
+		sessionID, err := jwtutil.SessionID(claims)
+		if err != nil {
+			return nil, err
 		}
 		value, err := db.GetSession(ctx, sessionID)
 		if err != nil {

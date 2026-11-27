@@ -56,6 +56,20 @@ func TestExtractTokenMetadata_HappyPath(t *testing.T) {
 		t.Fatalf("GenerateNewToken: %v", err)
 	}
 
+	parsed, _, err := new(jwt.Parser).ParseUnverified(tok, jwt.MapClaims{})
+	if err != nil {
+		t.Fatalf("ParseUnverified: %v", err)
+	}
+	if parsed.Header["typ"] != TokenType {
+		t.Errorf("typ: got %v, want %q", parsed.Header["typ"], TokenType)
+	}
+	claims := parsed.Claims.(jwt.MapClaims)
+	for _, claim := range []string{"iss", "aud", "sub", "iat", "exp", "jti", "client_id"} {
+		if _, ok := claims[claim]; !ok {
+			t.Errorf("generated token is missing %q", claim)
+		}
+	}
+
 	meta, err := parseWithCookie(t, tok)
 	if err != nil {
 		t.Fatalf("ExtractTokenMetadata: %v", err)

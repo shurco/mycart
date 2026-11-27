@@ -50,7 +50,7 @@ func (q *InstallQueries) Install(ctx context.Context, i *models.Install) error {
 	if err != nil {
 		return err
 	}
-	jwt_secret, err := security.NewToken(passwordHash)
+	jwt_secret, err := security.NewSigningKey()
 	if err != nil {
 		return err
 	}
