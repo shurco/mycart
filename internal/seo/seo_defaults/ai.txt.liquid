@@ -21,12 +21,12 @@ Disallow-Content-Type: audio
 Disallow-Content-Type: video
 Disallow-Content-Type: code
 
-# Restrict sensitive, authenticated, and proprietary directories globally
+# Restrict sensitive, authenticated, and admin directories globally
 Disallow: /_/
-Disallow: /api/
+Disallow: /api/_/
+Disallow: /api/sign/
+Disallow: /api/customer/
 Disallow: /cart/
-Disallow: /checkout/
-Disallow: /account/
 
 # ------------------------------------------------------------------------------
 # 2. SEARCH, ANSWER ENGINES & REAL-TIME RAG AGENTS (Retrieval Permitted)

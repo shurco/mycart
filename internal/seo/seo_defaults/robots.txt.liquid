@@ -15,20 +15,19 @@ Disallow: /
 User-agent: Googlebot
 Disallow: /_/
 Disallow: /cart/
-Disallow: /checkout/
-Disallow: /account/
+Disallow: /api/customer/
 Disallow: /*?sort=
 Disallow: /*?filter=
 
 # Default rules for all other crawlers
 User-agent: *
 Disallow: /_/
-Disallow: /api/
+Disallow: /api/_/
+Disallow: /api/sign/
+Disallow: /api/customer/
 Disallow: /cart/
-Disallow: /checkout/
-Disallow: /account/
-Disallow: /search
-Disallow: /*?
+Disallow: /*?sort=
+Disallow: /*?filter=
 Crawl-delay: 5
 
 Sitemap: {{ site.url }}/sitemap.xml
