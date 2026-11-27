@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
@@ -56,8 +58,18 @@ func SEOPreview(c fiber.Ctx) error {
 		}
 		content = out
 	case "openapi.json":
-		// Placeholder for task 10 (OpenAPI filtering).
-		content = `{"note": "OpenAPI preview not yet implemented"}`
+		baseDir := os.Getenv("LITECART_BASE")
+		if baseDir == "" {
+			baseDir = "./lc_base"
+		}
+		spec, err := os.ReadFile(filepath.Join(baseDir, "swagger", "swagger.json"))
+		if err != nil {
+			content = `{"error": "Spec not generated yet"}`
+		} else {
+			m := seo.NewMatcher(s.OpenAPIInclude, s.OpenAPIExclude)
+			filtered, _ := seo.FilterSpec(spec, m)
+			content = string(filtered)
+		}
 	default:
 		return webutil.StatusBadRequest(c, "unknown file")
 	}

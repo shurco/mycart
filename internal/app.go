@@ -121,15 +121,14 @@ func setupRoutes(app *fiber.App, noSite bool) {
 	// (/api/_/products/:id/digital/:file_id/download).
 	app.Use("/uploads", static.New("./lc_uploads"))
 
-	// Swagger documentation (development mode only)
-	if DevMode() {
-		app.Use("/swagger", static.New("./docs/swagger", static.Config{
-			Browse: true,
-		}))
-	}
-
 	// CDN middleware (runs on every request; must be before routes).
 	app.Use(seo.CDNMiddleware())
+
+	// Register gofiber-swagger for OpenAPI spec generation.
+	// Serves UI at /_/swagger (admin-only), generates spec at startup.
+	if err := routes.RegisterSwagger(app); err != nil {
+		logging.New().ErrorStack(fmt.Errorf("register swagger: %w", err))
+	}
 
 	// Register API routes before InstallCheck so /api/install is reachable on first boot.
 	routes.ApiPrivateRoutes(app)
@@ -175,9 +174,5 @@ func printStartupInfo(w io.Writer, schema, mainAddr string, noSite bool, dbCfg d
 	}
 	fmt.Fprintf(w, "├─ Admin UI: %s://%s/_/\n", schema, mainAddr)
 	fmt.Fprintf(w, "├─ Database: %s (%s)\n", dbCfg.Driver, dbCfg.Redacted())
-	if DevMode() {
-		fmt.Fprintf(w, "└─ API Docs: %s://%s/swagger/index.html\n", schema, mainAddr)
-	} else {
-		fmt.Fprint(w, "└─ Swagger UI: disabled (use --dev flag to enable)\n")
-	}
+	fmt.Fprintf(w, "└─ API Docs: %s://%s/_/swagger\n", schema, mainAddr)
 }
