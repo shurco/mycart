@@ -50,7 +50,7 @@ func (q *CustomerQueries) AccountSecret(ctx context.Context) (string, error) {
 		return value, nil
 	}
 
-	token, err := security.NewToken(security.RandomString())
+	token, err := security.NewSigningKey()
 	if err != nil {
 		return "", err
 	}

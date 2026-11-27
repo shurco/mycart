@@ -11,6 +11,7 @@ import (
 
 	"github.com/shurco/mycart/internal/queries"
 	"github.com/shurco/mycart/pkg/errors"
+	"github.com/shurco/mycart/pkg/jwtutil"
 	"github.com/shurco/mycart/pkg/logging"
 	"github.com/shurco/mycart/pkg/webutil"
 )
@@ -126,14 +127,17 @@ func CustomerJWTProtected() fiber.Handler {
 			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 			}
+			if err := jwtutil.ValidateHeader(t); err != nil {
+				return nil, err
+			}
 			return []byte(secret), nil
-		})
+		}, jwtutil.ParserOptions()...)
 		if err != nil || !token.Valid {
 			return customerUnauthorized(c)
 		}
 
-		sessionID, _ := claims["id"].(string)
-		if sessionID == "" {
+		sessionID, err := jwtutil.SessionID(claims)
+		if err != nil {
 			return customerUnauthorized(c)
 		}
 

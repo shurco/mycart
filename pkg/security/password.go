@@ -1,6 +1,7 @@
 package security
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 
@@ -40,9 +41,20 @@ func ComparePasswords(hashedPwd, inputPwd string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPwd), []byte(inputPwd)) == nil
 }
 
+// NewSigningKey returns a 256-bit cryptographically random signing key. Unlike
+// passwords, JWT keys do not need to be derived from user input or slowed by a
+// password hash.
+func NewSigningKey() (string, error) {
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		return "", fmt.Errorf("generate signing key: %w", err)
+	}
+	return hex.EncodeToString(key), nil
+}
+
 // NewToken returns a deterministic-looking but unpredictable token derived from
-// the input. It is used to materialize non-password secrets (e.g. JWT signing
-// keys bootstrapped during install).
+// the input. Password-derived JWT signing keys should use NewSigningKey instead;
+// this helper remains for callers that intentionally need derivation from input.
 //
 // Construction: bcrypt(input, DefaultCost) -> hex encoding.
 // bcrypt supplies a random salt (128 bits) and produces a cryptographically

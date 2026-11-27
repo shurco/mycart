@@ -14,15 +14,15 @@ import (
 	"github.com/shurco/mycart/pkg/webutil"
 )
 
-// SignIn authenticates a user and returns a JWT token.
+// SignIn authenticates a user and sets an HttpOnly JWT session cookie.
 //
 // @Summary      Sign in
-// @Description  Authenticate admin user with email and password, returns JWT token
+// @Description  Authenticate an admin user with email and password and set the session cookie
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
 // @Param        request body models.SignIn true "Credentials"
-// @Success      200 {object} webutil.HTTPResponse{result=string} "JWT token"
+// @Success      200 {object} webutil.HTTPResponse "Signed in"
 // @Failure      400 {object} webutil.HTTPResponse "Invalid credentials or validation error"
 // @Failure      500 {object} webutil.HTTPResponse "Internal server error"
 // @Router       /api/sign/in [post]
@@ -55,7 +55,7 @@ func SignIn(c fiber.Ctx) error {
 		return webutil.StatusBadRequest(c, "wrong user email address or password")
 	}
 
-	// Generate a new pair of access and refresh tokens.
+	// Create a server-revocable first-party session token.
 	settingJWT, err := queries.GetSettingByGroup[models.JWT](c.Context(), db)
 	if err != nil {
 		log.ErrorStack(err)
@@ -87,7 +87,7 @@ func SignIn(c fiber.Ctx) error {
 		SameSite: "Strict",
 	})
 
-	return webutil.StatusOK(c, "Token", token)
+	return webutil.StatusOK(c, "Signed in", nil)
 }
 
 // SignOut invalidates the user session and clears the authentication token.

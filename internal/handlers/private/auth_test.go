@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/shurco/mycart/internal/testutil"
@@ -70,6 +72,13 @@ func TestSignIn_SetsCookie(t *testing.T) {
 	}
 	if cookie := resp.Header.Get("Set-Cookie"); cookie == "" {
 		t.Fatal("expected token cookie to be set")
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+	if strings.Contains(string(body), "eyJ") || strings.Contains(string(body), `"result"`) {
+		t.Fatalf("sign-in response exposes the JWT: %s", body)
 	}
 }
 
