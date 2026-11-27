@@ -90,12 +90,27 @@ func SEODefaults(c fiber.Ctx) error {
 		sitemapInclude = append(sitemapInclude, "/"+p.Slug)
 	}
 
+	// Default CDN rules: static assets long-lived, dynamic content short-lived
+	cdnRules := []string{
+		"# Static assets",
+		"/uploads/*|30d",
+		"# SEO files",
+		"/sitemap.xml|1d",
+		"/robots.txt|7d",
+		"/llms.txt|7d",
+		"/ai.txt|7d",
+		"# Products & pages (update frequently)",
+		"/products/*|1h",
+		"/|1h",
+	}
+
 	defaults := fiber.Map{
 		"llms":             seo.Default("llms"),
 		"ai":               seo.Default("ai"),
 		"robots":           seo.Default("robots"),
 		"sitemap_include":  strings.Join(sitemapInclude, "\n"),
 		"openapi_exclude":  "/api/_/*\n/api/install*\n/api/customer/*\n/cart/*",
+		"cdn_rules":        strings.Join(cdnRules, "\n"),
 	}
 
 	return webutil.Response(c, fiber.StatusOK, "defaults", defaults)
