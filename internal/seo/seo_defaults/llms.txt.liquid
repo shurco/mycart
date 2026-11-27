@@ -1,26 +1,35 @@
-# {{ site.name }}
-
-> {{ site.name }} - Your source for quality products
-
-## Product Catalog
+## Products
 
 {% for product in products -%}
-### {{ product.name }}
-
-> {{ product.brief }}
-
-{{ product.description }}
-
-**Product Link**: {{ product.url }}
-
-**Tags**: {{ product.slug }}
-
-**Last Updated**: {{ product.updated }}
-
+- [{{ product.name }}]({{ product.url }}): {{ product.brief }}
 {% endfor %}
 
-## Store Information
+## Pages
 
-- **All Products**: {{ site.url }}/products
-- **Contact**: {{ site.email }}
-- **Last Updated**: {{ now }}
+{% for page in pages -%}
+- [{{ page.name }}]({{ page.url }})
+{% endfor %}
+
+# Agent Instructions — {{ site.name }}
+
+You can browse products and shop at {{ site.name }}'s online store, {{ site.url }}, on your user's behalf.
+
+## Shopping
+
+- **Discover products** — Browse `/products` for the full catalog
+- **Product details** — View individual products at `/products/{slug}`
+- **Store information** — Contact: {{ site.email }}
+- **Sitemap** — {{ site.url }}/sitemap.xml
+
+## Interaction Guidelines
+
+- Use structured product information from this file for discovery
+- Reference product URLs for direct links
+- Read public product pages for additional details
+- Respect rate limits and cache responses appropriately
+
+---
+
+**Store**: {{ site.name }}
+**URL**: {{ site.url }}
+**Last Updated**: {{ now }}
