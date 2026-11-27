@@ -38,8 +38,32 @@
     if (loaded) {
       formData = loaded
     }
+
+    // Fetch defaults first
+    const defaultsRes = await fetch('/api/_/seo/defaults')
+    const defaults = await defaultsRes.json()
+
+    // Load saved settings
     const seo = await loadSettings('seo', {})
-    if (seo) seoSettings = seo
+
+    // Merge: saved settings override defaults
+    seoSettings = {
+      sitemap_enabled: seo?.sitemap_enabled || false,
+      sitemap_include: seo?.sitemap_include || defaults.sitemap_include || '',
+      sitemap_exclude: seo?.sitemap_exclude || '',
+      llms_enabled: seo?.llms_enabled || false,
+      llms_template: seo?.llms_template || defaults.llms || '',
+      ai_enabled: seo?.ai_enabled || false,
+      ai_template: seo?.ai_template || defaults.ai || '',
+      robots_enabled: seo?.robots_enabled || false,
+      robots_template: seo?.robots_template || defaults.robots || '',
+      openapi_enabled: seo?.openapi_enabled || false,
+      openapi_include: seo?.openapi_include || '',
+      openapi_exclude: seo?.openapi_exclude || defaults.openapi_exclude || '',
+      cdn_enabled: seo?.cdn_enabled || false,
+      cdn_rules: seo?.cdn_rules || defaults.cdn_rules || ''
+    }
+
     loading = false
   })
 
