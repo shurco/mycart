@@ -37,6 +37,8 @@ func (q *SettingQueries) GroupFieldMap(settings any) map[string]any {
 		return brandingFields(s)
 	case *models.Account:
 		return accountFields(s)
+	case *models.SEO:
+		return seoFields(s)
 	default:
 		return nil
 	}
@@ -181,5 +183,25 @@ func accountFields(s *models.Account) map[string]any {
 	return map[string]any{
 		"account_enabled":          &s.Enabled,
 		"account_jwt_expire_hours": &s.ExpireHours,
+	}
+}
+
+// seoFields maps the keys of the SEO setting group to its fields.
+func seoFields(s *models.SEO) map[string]any {
+	return map[string]any{
+		"seo_sitemap_enabled": &s.SitemapEnabled,
+		"seo_sitemap_include": &s.SitemapInclude,
+		"seo_sitemap_exclude": &s.SitemapExclude,
+		"seo_llms_enabled":    &s.LlmsEnabled,
+		"seo_llms_template":   &s.LlmsTemplate,
+		"seo_ai_enabled":      &s.AiEnabled,
+		"seo_ai_template":     &s.AiTemplate,
+		"seo_robots_enabled":  &s.RobotsEnabled,
+		"seo_robots_template": &s.RobotsTemplate,
+		"seo_openapi_enabled": &s.OpenAPIEnabled,
+		"seo_openapi_include": &s.OpenAPIInclude,
+		"seo_openapi_exclude": &s.OpenAPIExclude,
+		"seo_cdn_enabled":     &s.CDNEnabled,
+		"seo_cdn_rules":       &s.CDNRules,
 	}
 }

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -11,7 +12,10 @@ import (
 
 	"github.com/shurco/mycart/internal/database"
 	"github.com/shurco/mycart/internal/middleware"
+	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/internal/queries"
 	"github.com/shurco/mycart/internal/routes"
+	"github.com/shurco/mycart/internal/seo"
 	"github.com/shurco/mycart/pkg/logging"
 )
 
@@ -59,6 +63,9 @@ func NewApp(dbCfg database.Config, httpAddr, httpsAddr string, noSite, appDev bo
 	if err := Init(dbCfg); err != nil {
 		return err
 	}
+
+	// Load CDN rules on startup.
+	loadCDNRules()
 
 	app, err := setupFiberApp(noSite)
 	if err != nil {
@@ -121,6 +128,9 @@ func setupRoutes(app *fiber.App, noSite bool) {
 		}))
 	}
 
+	// CDN middleware (runs on every request; must be before routes).
+	app.Use(seo.CDNMiddleware())
+
 	// Register API routes before InstallCheck so /api/install is reachable on first boot.
 	routes.ApiPrivateRoutes(app)
 	if !noSite {
@@ -138,6 +148,19 @@ func setupRoutes(app *fiber.App, noSite bool) {
 	routes.AdminRoutes(app)
 
 	routes.NotFoundRoute(app, noSite)
+}
+
+// loadCDNRules loads SEO CDN rules from the database on startup.
+func loadCDNRules() {
+	db := queries.DB()
+	if db == nil {
+		return // Database not yet initialized.
+	}
+	ctx := context.Background()
+	s, err := queries.GetSettingByGroup[models.SEO](ctx, db)
+	if err == nil {
+		seo.StoreCDN(s)
+	}
 }
 
 // printStartupInfo writes the application startup information to w.

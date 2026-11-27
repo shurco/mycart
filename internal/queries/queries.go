@@ -28,6 +28,7 @@ type Base struct {
 	ProductQueries
 	CartQueries
 	CustomerQueries
+	SEOQueries
 }
 
 // NewBase wires every query group to conn.
@@ -41,6 +42,7 @@ func NewBase(conn *database.Conn) *Base {
 		ProductQueries:  ProductQueries{DB: conn},
 		CartQueries:     CartQueries{DB: conn},
 		CustomerQueries: CustomerQueries{DB: conn},
+		SEOQueries:      SEOQueries{DB: conn},
 	}
 }
 

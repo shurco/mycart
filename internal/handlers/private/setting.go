@@ -11,6 +11,7 @@ import (
 
 	"github.com/shurco/mycart/internal/mailer"
 	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/internal/seo"
 	"github.com/shurco/mycart/internal/queries"
 	"github.com/shurco/mycart/pkg/errors"
 	"github.com/shurco/mycart/pkg/logging"
@@ -267,6 +268,13 @@ func UpdateSetting(c fiber.Ctx) error {
 	if err := db.UpdateSettingByGroup(c.Context(), request); err != nil {
 		log.ErrorStack(err)
 		return webutil.StatusInternalServerError(c)
+	}
+
+	// Reload CDN rules when SEO settings change.
+	if settingKey == "seo" {
+		if s, ok := request.(*models.SEO); ok {
+			seo.StoreCDN(s)
+		}
 	}
 
 	return webutil.Response(c, fiber.StatusOK, "Setting group updated", nil)

@@ -1,0 +1,21 @@
+# {{ site.name }}
+
+> {{ site.tagline }}
+
+## Products
+{% for product in products %}
+- [{{ product.name }}]({{ product.url }}): {{ product.brief }}
+{% endfor %}
+
+## Pages
+{% for page in pages %}
+- [{{ page.name }}]({{ page.url }})
+{% endfor %}
+
+## Contact
+
+{{ site.email }}
+
+## Last Updated
+
+{{ now }}

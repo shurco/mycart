@@ -33,6 +33,7 @@ var settingRegistry = map[string]settingFactory{
 	"dummy":       func() any { return &models.Dummy{} },
 	"mail":        func() any { return &models.Mail{} },
 	"account":     func() any { return &models.Account{} },
+	"seo":         func() any { return &models.SEO{} },
 }
 
 // settingModelFor returns a fresh zero-valued model for the given key, or

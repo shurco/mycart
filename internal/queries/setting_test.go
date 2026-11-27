@@ -31,8 +31,8 @@ func TestGroupFieldMap_AllKnownTypes(t *testing.T) {
 	types := []any{
 		&models.Main{}, &models.Auth{}, &models.JWT{}, &models.Social{},
 		&models.Payment{}, &models.Stripe{}, &models.Paypal{}, &models.Spectrocoin{},
-		&models.Coinbase{}, &models.Dummy{}, &models.Webhook{}, &models.Mail{},
-		&models.Account{}, &models.Branding{},
+		&models.Coinbase{}, &models.Portone{}, &models.Dummy{}, &models.Webhook{},
+		&models.Mail{}, &models.Account{}, &models.Branding{}, &models.SEO{},
 	}
 	for _, v := range types {
 		v := v
@@ -81,6 +81,35 @@ func TestGetAndUpdateSettingByGroup_Stripe(t *testing.T) {
 		t.Fatalf("GetSettingByGroup[Stripe]: %v", err)
 	}
 	if out.SecretKey != newKey || !out.Active {
+		t.Errorf("persisted wrong values: %+v", out)
+	}
+}
+
+func TestGetAndUpdateSettingByGroup_SEO(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	in := &models.SEO{
+		SitemapEnabled: true,
+		SitemapInclude: "/\n/products/*",
+		SitemapExclude: "/admin",
+		LlmsEnabled:    true,
+		LlmsTemplate:   "# {{ site.name }}",
+		CDNEnabled:     true,
+		CDNRules:       "/products/*|24h",
+	}
+	err := db.UpdateSettingByGroup(ctx, in)
+	if err != nil {
+		t.Fatalf("UpdateSettingByGroup: %v", err)
+	}
+
+	out, err := GetSettingByGroup[models.SEO](ctx, db)
+	if err != nil {
+		t.Fatalf("GetSettingByGroup[SEO]: %v", err)
+	}
+	if !out.SitemapEnabled || out.SitemapInclude != in.SitemapInclude ||
+		out.SitemapExclude != in.SitemapExclude || !out.LlmsEnabled ||
+		out.LlmsTemplate != in.LlmsTemplate || !out.CDNEnabled ||
+		out.CDNRules != in.CDNRules {
 		t.Errorf("persisted wrong values: %+v", out)
 	}
 }
