@@ -41,7 +41,8 @@
 
     // Fetch defaults first
     const defaultsRes = await fetch('/api/_/seo/defaults')
-    const defaults = await defaultsRes.json()
+    const defaultsData = await defaultsRes.json()
+    const defaults = defaultsData.Result || defaultsData
 
     // Load saved settings
     const seo = await loadSettings('seo', {})
