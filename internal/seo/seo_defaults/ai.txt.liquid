@@ -1,10 +1,26 @@
 # ai.txt for {{ site.name }}
-# Policy on how AI systems may use this site's content.
+# Last-Updated: {{ now }}
 
 User-Agent: *
-Allow: /products/
-Disallow: /_
-Disallow: /api/
-Disallow-Training: /
 
+# Allowed Public Storefront Pages
+Allow: /products/
+Allow: /pages/
+
+# Restricted Private & Transactional Pages
+Disallow: /cart/
+Disallow: /checkout/
+Disallow: /account/
+Disallow: /orders/
+Disallow: /_/
+Disallow: /api/
+
+# AI Usage & Training Policy
+Content-Usage: search=yes, ai-training=no
+Attribution: Required with direct link to product page
+Policy: {{ site.url }}/pages/terms
 Contact: {{ site.email }}
+
+# Store Metadata
+Site-Name: {{ site.name }}
+Sitemap: {{ site.url }}/sitemap.xml

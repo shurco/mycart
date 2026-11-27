@@ -1,21 +1,26 @@
 # {{ site.name }}
 
-> {{ site.tagline }}
+> {{ site.name }} - Your source for quality products
 
-## Products
-{% for product in products %}
-- [{{ product.name }}]({{ product.url }}): {{ product.brief }}
+## Product Catalog
+
+{% for product in products -%}
+### {{ product.name }}
+
+> {{ product.brief }}
+
+{{ product.description }}
+
+**Product Link**: {{ product.url }}
+
+**Tags**: {{ product.slug }}
+
+**Last Updated**: {{ product.updated }}
+
 {% endfor %}
 
-## Pages
-{% for page in pages %}
-- [{{ page.name }}]({{ page.url }})
-{% endfor %}
+## Store Information
 
-## Contact
-
-{{ site.email }}
-
-## Last Updated
-
-{{ now }}
+- **All Products**: {{ site.url }}/products
+- **Contact**: {{ site.email }}
+- **Last Updated**: {{ now }}

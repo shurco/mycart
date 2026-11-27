@@ -50,7 +50,7 @@
     seoSettings = {
       sitemap_enabled: seo?.sitemap_enabled || false,
       sitemap_include: seo?.sitemap_include || defaults.sitemap_include || '',
-      sitemap_exclude: seo?.sitemap_exclude || '',
+      sitemap_exclude: seo?.sitemap_exclude || defaults.sitemap_exclude || '',
       llms_enabled: seo?.llms_enabled || false,
       llms_template: seo?.llms_template || defaults.llms || '',
       ai_enabled: seo?.ai_enabled || false,

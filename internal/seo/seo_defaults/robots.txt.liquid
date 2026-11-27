@@ -1,10 +1,11 @@
 User-agent: *
-Disallow: /_
-Disallow: /api/
 Disallow: /cart/
+Disallow: /checkout/
 Disallow: /account/
-
-User-agent: GPTBot
-Disallow: /
+Disallow: /search
+Disallow: /*?sort=
+Disallow: /*?filter=
+Disallow: /_/
+Disallow: /api/
 
 Sitemap: {{ site.url }}/sitemap.xml

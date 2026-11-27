@@ -84,24 +84,30 @@ func SEODefaults(c fiber.Ctx) error {
 		return webutil.StatusInternalServerError(c)
 	}
 
-	// Generate default sitemap include rules: "/", "/products/*", plus one per active page.
-	sitemapInclude := []string{"/", "/products/*"}
+	// Generate default sitemap include rules
+	sitemapInclude := []string{"/products/*", "/"}
 	for _, p := range data.Pages {
 		sitemapInclude = append(sitemapInclude, "/"+p.Slug)
 	}
 
-	// Default CDN rules: static assets long-lived, dynamic content short-lived
+	// Sitemap exclude: admin, cart, APIs
+	sitemapExclude := []string{
+		"/_/swagger",
+		"/cart/*",
+		"/api/_/*",
+		"/api/*",
+		"/_/*",
+	}
+
+	// Default CDN rules: zero-cache dynamic, 24h static
 	cdnRules := []string{
-		"# Static assets",
-		"/uploads/*|30d",
-		"# SEO files",
-		"/sitemap.xml|1d",
-		"/robots.txt|7d",
-		"/llms.txt|7d",
-		"/ai.txt|7d",
-		"# Products & pages (update frequently)",
-		"/products/*|1h",
-		"/|1h",
+		"/products/*|24h",
+		"/|24h",
+		"/_/swagger|0",
+		"/cart/*|0",
+		"/api/_/*|0",
+		"/api/*|0",
+		"/_/*|0",
 	}
 
 	defaults := fiber.Map{
@@ -109,6 +115,7 @@ func SEODefaults(c fiber.Ctx) error {
 		"ai":               seo.Default("ai"),
 		"robots":           seo.Default("robots"),
 		"sitemap_include":  strings.Join(sitemapInclude, "\n"),
+		"sitemap_exclude":  strings.Join(sitemapExclude, "\n"),
 		"openapi_exclude":  "/api/_/*\n/api/install*\n/api/customer/*\n/cart/*",
 		"cdn_rules":        strings.Join(cdnRules, "\n"),
 	}
