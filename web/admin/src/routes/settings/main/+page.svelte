@@ -42,10 +42,12 @@
     // Fetch defaults first
     const defaultsRes = await fetch('/api/_/seo/defaults')
     const defaultsData = await defaultsRes.json()
-    const defaults = defaultsData.Result || defaultsData
+    const defaults = defaultsData.result || defaultsData.Result || defaultsData
+    console.log('SEO Defaults:', defaults)
 
     // Load saved settings
     const seo = await loadSettings('seo', {})
+    console.log('SEO Settings:', seo)
 
     // Merge: saved settings override defaults
     seoSettings = {
