@@ -160,8 +160,10 @@ func TestUpdatePassword_UserNotFound_WrongPassword_Success(t *testing.T) {
 		t.Error("expected wrong-password error")
 	}
 
-	// Happy path.
-	err = db.UpdatePassword(ctx, &models.Password{Old: "initialpass", New: "newpassword"})
+	// Happy path with fresh context (previous operations consumed the deadline).
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel2()
+	err = db.UpdatePassword(ctx2, &models.Password{Old: "initialpass", New: "newpassword"})
 	if err != nil {
 		t.Fatalf("UpdatePassword happy path: %v", err)
 	}
