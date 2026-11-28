@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -11,7 +12,10 @@ import (
 
 	"github.com/shurco/mycart/internal/database"
 	"github.com/shurco/mycart/internal/middleware"
+	"github.com/shurco/mycart/internal/models"
+	"github.com/shurco/mycart/internal/queries"
 	"github.com/shurco/mycart/internal/routes"
+	"github.com/shurco/mycart/internal/seo"
 	"github.com/shurco/mycart/pkg/logging"
 )
 
@@ -59,6 +63,9 @@ func NewApp(dbCfg database.Config, httpAddr, httpsAddr string, noSite, appDev bo
 	if err := Init(dbCfg); err != nil {
 		return err
 	}
+
+	// Load CDN rules on startup.
+	loadCDNRules()
 
 	app, err := setupFiberApp(noSite)
 	if err != nil {
@@ -114,11 +121,13 @@ func setupRoutes(app *fiber.App, noSite bool) {
 	// (/api/_/products/:id/digital/:file_id/download).
 	app.Use("/uploads", static.New("./lc_uploads"))
 
-	// Swagger documentation (development mode only)
-	if DevMode() {
-		app.Use("/swagger", static.New("./docs/swagger", static.Config{
-			Browse: true,
-		}))
+	// CDN middleware (runs on every request; must be before routes).
+	app.Use(seo.CDNMiddleware())
+
+	// Register gofiber-swagger for OpenAPI spec generation.
+	// Serves UI at /_/swagger (admin-only), generates spec at startup.
+	if err := routes.RegisterSwagger(app); err != nil {
+		logging.New().ErrorStack(fmt.Errorf("register swagger: %w", err))
 	}
 
 	// Register API routes before InstallCheck so /api/install is reachable on first boot.
@@ -140,6 +149,19 @@ func setupRoutes(app *fiber.App, noSite bool) {
 	routes.NotFoundRoute(app, noSite)
 }
 
+// loadCDNRules loads SEO CDN rules from the database on startup.
+func loadCDNRules() {
+	db := queries.DB()
+	if db == nil {
+		return // Database not yet initialized.
+	}
+	ctx := context.Background()
+	s, err := queries.GetSettingByGroup[models.SEO](ctx, db)
+	if err == nil {
+		seo.StoreCDN(s)
+	}
+}
+
 // printStartupInfo writes the application startup information to w.
 //
 // The writer is a parameter rather than stdout directly so the banner can be
@@ -152,9 +174,5 @@ func printStartupInfo(w io.Writer, schema, mainAddr string, noSite bool, dbCfg d
 	}
 	fmt.Fprintf(w, "├─ Admin UI: %s://%s/_/\n", schema, mainAddr)
 	fmt.Fprintf(w, "├─ Database: %s (%s)\n", dbCfg.Driver, dbCfg.Redacted())
-	if DevMode() {
-		fmt.Fprintf(w, "└─ API Docs: %s://%s/swagger/index.html\n", schema, mainAddr)
-	} else {
-		fmt.Fprint(w, "└─ Swagger UI: disabled (use --dev flag to enable)\n")
-	}
+	fmt.Fprintf(w, "└─ API Docs: %s://%s/_/swagger\n", schema, mainAddr)
 }

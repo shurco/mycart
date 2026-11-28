@@ -31,8 +31,8 @@ func TestGroupFieldMap_AllKnownTypes(t *testing.T) {
 	types := []any{
 		&models.Main{}, &models.Auth{}, &models.JWT{}, &models.Social{},
 		&models.Payment{}, &models.Stripe{}, &models.Paypal{}, &models.Spectrocoin{},
-		&models.Coinbase{}, &models.Dummy{}, &models.Webhook{}, &models.Mail{},
-		&models.Account{}, &models.Branding{},
+		&models.Coinbase{}, &models.Portone{}, &models.Dummy{}, &models.Webhook{},
+		&models.Mail{}, &models.Account{}, &models.Branding{}, &models.SEO{},
 	}
 	for _, v := range types {
 		v := v
@@ -85,6 +85,35 @@ func TestGetAndUpdateSettingByGroup_Stripe(t *testing.T) {
 	}
 }
 
+func TestGetAndUpdateSettingByGroup_SEO(t *testing.T) {
+	db, ctx := bootstrap(t)
+
+	in := &models.SEO{
+		SitemapEnabled: true,
+		SitemapInclude: "/\n/products/*",
+		SitemapExclude: "/admin",
+		LlmsEnabled:    true,
+		LlmsTemplate:   "# {{ site.name }}",
+		CDNEnabled:     true,
+		CDNRules:       "/products/*|24h",
+	}
+	err := db.UpdateSettingByGroup(ctx, in)
+	if err != nil {
+		t.Fatalf("UpdateSettingByGroup: %v", err)
+	}
+
+	out, err := GetSettingByGroup[models.SEO](ctx, db)
+	if err != nil {
+		t.Fatalf("GetSettingByGroup[SEO]: %v", err)
+	}
+	if !out.SitemapEnabled || out.SitemapInclude != in.SitemapInclude ||
+		out.SitemapExclude != in.SitemapExclude || !out.LlmsEnabled ||
+		out.LlmsTemplate != in.LlmsTemplate || !out.CDNEnabled ||
+		out.CDNRules != in.CDNRules {
+		t.Errorf("persisted wrong values: %+v", out)
+	}
+}
+
 func TestGetSettingByGroup_UnsupportedType(t *testing.T) {
 	db, ctx := bootstrap(t)
 	if _, err := db.GetSettingByGroup(ctx, &struct{}{}); err == nil {
@@ -131,8 +160,10 @@ func TestUpdatePassword_UserNotFound_WrongPassword_Success(t *testing.T) {
 		t.Error("expected wrong-password error")
 	}
 
-	// Happy path.
-	err = db.UpdatePassword(ctx, &models.Password{Old: "initialpass", New: "newpassword"})
+	// Happy path with fresh context (previous operations consumed the deadline).
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel2()
+	err = db.UpdatePassword(ctx2, &models.Password{Old: "initialpass", New: "newpassword"})
 	if err != nil {
 		t.Fatalf("UpdatePassword happy path: %v", err)
 	}

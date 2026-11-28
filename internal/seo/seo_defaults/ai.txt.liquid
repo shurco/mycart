@@ -1,0 +1,85 @@
+# ==============================================================================
+# ai.txt - AI Data Mining, Retrieval, and Attribution Policy
+# Domain: {{ site.url }}
+# Last-Updated: {{ now }}
+# Contact: {{ site.email }}
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. GLOBAL DEFAULT POLICY (Applies to all unspecified AI crawlers & agents)
+# ------------------------------------------------------------------------------
+User-agent: *
+
+# Block all commercial model training and dataset scraping by default
+Disallow: /
+NoTrain: /
+
+# Granular Media-Type Permissions
+Disallow-Content-Type: text
+Disallow-Content-Type: images
+Disallow-Content-Type: audio
+Disallow-Content-Type: video
+Disallow-Content-Type: code
+
+# Restrict sensitive, authenticated, and admin directories globally
+Disallow: /_/
+Disallow: /api/_/
+Disallow: /api/sign/
+Disallow: /api/customer/
+Disallow: /cart/
+
+# ------------------------------------------------------------------------------
+# 2. SEARCH, ANSWER ENGINES & REAL-TIME RAG AGENTS (Retrieval Permitted)
+# ------------------------------------------------------------------------------
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: Claude-Web
+User-agent: PerplexityBot
+User-agent: Google-Extended
+
+# Permit real-time indexing and answer generation on public content
+Allow: /products/
+Allow: /pages/
+Allow: /llms.txt
+
+# Explicitly forbid using retrieved content for foundation model fine-tuning
+NoTrain: /products/
+NoTrain: /pages/
+
+# Attribution, Caching & Rate Limits
+Attribution: "{{ site.name }} ({{ site.url }})"
+Attribution-Required: true
+Cache-TTL: 3600
+Crawl-Delay: 2
+
+# ------------------------------------------------------------------------------
+# 3. COMMERCIAL TRAINING CRAWLERS (Strict Opt-Out)
+# ------------------------------------------------------------------------------
+User-agent: GPTBot
+User-agent: CCBot
+User-agent: Bytespider
+User-agent: anthropic-ai
+User-agent: Meta-ExternalAgent
+
+# Complete block across all paths and media formats
+Disallow: /
+NoTrain: /
+
+# ------------------------------------------------------------------------------
+# 4. OPEN-SOURCE & ACADEMIC RESEARCH BOTS (Conditional Access)
+# ------------------------------------------------------------------------------
+User-agent: AcademicResearchBot
+User-agent: OpenScienceCrawler
+
+# Allow text mining on public product information
+Allow: /products/
+Allow: /pages/
+Allow-Content-Type: text
+
+# Block proprietary media assets even for research
+Disallow-Content-Type: images
+Disallow-Content-Type: video
+
+# Licensing & Reference
+Sitemap: {{ site.url }}/sitemap.xml
+OpenAPI: {{ site.url }}/swagger.json

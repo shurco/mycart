@@ -1,0 +1,33 @@
+# Block AI training scrapers while allowing search indexing
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+# Custom rules for Googlebot
+User-agent: Googlebot
+Disallow: /_/
+Disallow: /cart/
+Disallow: /api/customer/
+Disallow: /*?sort=
+Disallow: /*?filter=
+
+# Default rules for all other crawlers
+User-agent: *
+Disallow: /_/
+Disallow: /api/_/
+Disallow: /api/sign/
+Disallow: /api/customer/
+Disallow: /cart/
+Disallow: /*?sort=
+Disallow: /*?filter=
+Crawl-delay: 5
+
+Sitemap: {{ site.url }}/sitemap.xml

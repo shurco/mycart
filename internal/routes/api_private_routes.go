@@ -36,6 +36,10 @@ func ApiPrivateRoutes(c *fiber.App) {
 	settings.Get("/:setting_key", handlers.GetSetting)
 	settings.Patch("/:setting_key", handlers.UpdateSetting)
 
+	seo := c.Group("/api/_/seo", middleware.JWTProtected())
+	seo.Post("/preview/:file", handlers.SEOPreview)
+	seo.Get("/defaults", handlers.SEODefaults)
+
 	test := c.Group("/api/_/test", middleware.JWTProtected())
 	test.Get("/letter/:letter_name", handlers.TestLetter)
 

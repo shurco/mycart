@@ -114,13 +114,10 @@ func TestPrintStartupInfo(t *testing.T) {
 		setDevMode(false)
 		out := startupBanner(t, "http", "site.com:80", false, cfg)
 
-		for _, want := range []string{"Cart UI: http://site.com:80/", "Admin UI: http://site.com:80/_/", "Database: postgres"} {
+		for _, want := range []string{"Cart UI: http://site.com:80/", "Admin UI: http://site.com:80/_/", "Database: postgres", "API Docs: http://site.com:80/_/swagger"} {
 			if !strings.Contains(out, want) {
 				t.Errorf("startup output does not mention %q:\n%s", want, out)
 			}
-		}
-		if !strings.Contains(out, "Swagger UI: disabled") {
-			t.Errorf("production output should say swagger is disabled:\n%s", out)
 		}
 		if strings.Contains(out, "secret") {
 			t.Errorf("the connection string password leaked into the startup output:\n%s", out)
@@ -132,8 +129,8 @@ func TestPrintStartupInfo(t *testing.T) {
 		defer func() { setDevMode(false) }()
 
 		out := startupBanner(t, "https", "site.com:443", false, cfg)
-		if !strings.Contains(out, "API Docs: https://site.com:443/swagger/index.html") {
-			t.Errorf("dev output should point at the swagger UI:\n%s", out)
+		if !strings.Contains(out, "API Docs: https://site.com:443/_/swagger") {
+			t.Errorf("output should point at the swagger UI:\n%s", out)
 		}
 	})
 
