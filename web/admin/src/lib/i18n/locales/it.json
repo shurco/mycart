@@ -139,7 +139,11 @@
     "cdnRules": "Regole (percorso|durata)",
     "cdnRulesFormat": "Formato: /percorso|durata (es: 24h, 10d)",
     "cdnRulesDesc": "Applica intestazioni Cache-Control a tutte le richieste corrispondenti alle regole seguenti",
-    "resetToDefault": "Ripristina predefiniti"
+    "resetToDefault": "Ripristina predefiniti",
+    "enableOpenAPI": "Abilita OpenAPI/Swagger",
+    "openAPIInclude": "Route da includere",
+    "openAPIExclude": "Route da escludere",
+    "viewSwaggerUI": "Visualizza Swagger UI"
   },
   "branding": {
     "title": "Marchio",

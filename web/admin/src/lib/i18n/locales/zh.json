@@ -139,7 +139,11 @@
     "cdnRules": "规则（路径|持续时间）",
     "cdnRulesFormat": "格式：/path|duration（例如：24h, 10d）",
     "cdnRulesDesc": "为所有匹配以下规则的请求应用 Cache-Control 标头",
-    "resetToDefault": "重置为默认值"
+    "resetToDefault": "重置为默认值",
+    "enableOpenAPI": "启用 OpenAPI/Swagger",
+    "openAPIInclude": "包含路由",
+    "openAPIExclude": "排除路由",
+    "viewSwaggerUI": "查看 Swagger UI"
   },
   "branding": {
     "title": "品牌",

@@ -139,7 +139,11 @@
     "cdnRules": "규칙 (경로|지속시간)",
     "cdnRulesFormat": "형식: /path|duration (예: 24h, 10d)",
     "cdnRulesDesc": "아래 규칙과 일치하는 모든 요청에 Cache-Control 헤더 적용",
-    "resetToDefault": "기본값으로 재설정"
+    "resetToDefault": "기본값으로 재설정",
+    "enableOpenAPI": "OpenAPI/Swagger 활성화",
+    "openAPIInclude": "포함 경로",
+    "openAPIExclude": "제외 경로",
+    "viewSwaggerUI": "Swagger UI 보기"
   },
   "branding": {
     "title": "브랜딩",

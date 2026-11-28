@@ -139,7 +139,11 @@
     "cdnRules": "Règles (chemin|durée)",
     "cdnRulesFormat": "Format : /chemin|durée (ex: 24h, 10d)",
     "cdnRulesDesc": "Applique les en-têtes Cache-Control à toutes les requêtes correspondant aux règles ci-dessous",
-    "resetToDefault": "Réinitialiser par défaut"
+    "resetToDefault": "Réinitialiser par défaut",
+    "enableOpenAPI": "Activer OpenAPI/Swagger",
+    "openAPIInclude": "Routes à inclure",
+    "openAPIExclude": "Routes à exclure",
+    "viewSwaggerUI": "Voir Swagger UI"
   },
   "branding": {
     "title": "Image de marque",

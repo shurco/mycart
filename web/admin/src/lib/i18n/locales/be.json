@@ -139,7 +139,11 @@
     "cdnRules": "Правілы (шлях|працягласць)",
     "cdnRulesFormat": "Фармат: /шлях|працягласць (напр.: 24h, 10d)",
     "cdnRulesDesc": "Прымяняе загалоўкі Cache-Control да ўсіх запытаў, якія адпавядаюць правілам ніжэй",
-    "resetToDefault": "Скінуць да стандартных"
+    "resetToDefault": "Скінуць да стандартных",
+    "enableOpenAPI": "Уключыць OpenAPI/Swagger",
+    "openAPIInclude": "Уключыць маршруты",
+    "openAPIExclude": "Выключыць маршруты",
+    "viewSwaggerUI": "Паказаць Swagger UI"
   },
   "branding": {
     "title": "Брэнд",

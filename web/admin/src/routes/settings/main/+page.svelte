@@ -7,6 +7,7 @@
   import { translate, locale, availableLocales, type Locale } from '$lib/i18n'
   import SeoTextForm from './SeoTextForm.svelte'
   import SeoSitemapForm from './SeoSitemapForm.svelte'
+  import SeoOpenApiForm from './SeoOpenApiForm.svelte'
   import SeoCdnForm from './SeoCdnForm.svelte'
 
   // Reactive translation function
@@ -14,7 +15,7 @@
   let currentLocale = $derived($locale)
   let locales = $derived($availableLocales)
 
-  type SeoDrawerMode = 'sitemap' | 'llms' | 'ai' | 'robots' | 'cdn'
+  type SeoDrawerMode = 'sitemap' | 'llms' | 'ai' | 'robots' | 'openapi' | 'cdn'
   let seoDrawerOpen = $state(false)
   let seoDrawerMode = $state<SeoDrawerMode | null>(null)
   let seoSettings = $state<any>(null)
@@ -145,6 +146,7 @@
         <Chip active={seoSettings?.llms_enabled} onclick={() => openSeoDrawer('llms')}>llms.txt</Chip>
         <Chip active={seoSettings?.ai_enabled} onclick={() => openSeoDrawer('ai')}>ai.txt</Chip>
         <Chip active={seoSettings?.robots_enabled} onclick={() => openSeoDrawer('robots')}>robots.txt</Chip>
+        <Chip active={seoSettings?.openapi_enabled} onclick={() => openSeoDrawer('openapi')}>OpenAPI</Chip>
         <Chip active={seoSettings?.cdn_enabled} onclick={() => openSeoDrawer('cdn')}>CDN</Chip>
       </ChipGroup>
     </Section>
@@ -156,6 +158,8 @@
       <SeoSitemapForm bind:settings={seoSettings} onsubmit={saveSeoSettings} onclose={() => seoDrawerOpen = false} />
     {:else if seoDrawerMode === 'llms' || seoDrawerMode === 'ai' || seoDrawerMode === 'robots'}
       <SeoTextForm file={seoDrawerMode} bind:settings={seoSettings} onsubmit={saveSeoSettings} onclose={() => seoDrawerOpen = false} />
+    {:else if seoDrawerMode === 'openapi'}
+      <SeoOpenApiForm bind:settings={seoSettings} onsubmit={saveSeoSettings} onclose={() => seoDrawerOpen = false} />
     {:else if seoDrawerMode === 'cdn'}
       <SeoCdnForm bind:settings={seoSettings} onsubmit={saveSeoSettings} onclose={() => seoDrawerOpen = false} />
     {/if}

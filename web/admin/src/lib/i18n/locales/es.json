@@ -139,7 +139,11 @@
     "cdnRules": "Reglas (ruta|duración)",
     "cdnRulesFormat": "Formato: /ruta|duración (ej: 24h, 10d)",
     "cdnRulesDesc": "Aplica encabezados Cache-Control a todas las solicitudes que coincidan con las reglas a continuación",
-    "resetToDefault": "Restablecer valores predeterminados"
+    "resetToDefault": "Restablecer valores predeterminados",
+    "enableOpenAPI": "Habilitar OpenAPI/Swagger",
+    "openAPIInclude": "Rutas a incluir",
+    "openAPIExclude": "Rutas a excluir",
+    "viewSwaggerUI": "Ver Swagger UI"
   },
   "branding": {
     "title": "Marca",

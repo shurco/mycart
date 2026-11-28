@@ -139,7 +139,11 @@
     "cdnRules": "Regeln (Pfad|Dauer)",
     "cdnRulesFormat": "Format: /pfad|dauer (z.B.: 24h, 10d)",
     "cdnRulesDesc": "Wendet Cache-Control-Header auf alle Anfragen an, die den folgenden Regeln entsprechen",
-    "resetToDefault": "Auf Standard zurücksetzen"
+    "resetToDefault": "Auf Standard zurücksetzen",
+    "enableOpenAPI": "OpenAPI/Swagger aktivieren",
+    "openAPIInclude": "Einzuschließende Routen",
+    "openAPIExclude": "Auszuschließende Routen",
+    "viewSwaggerUI": "Swagger UI anzeigen"
   },
   "branding": {
     "title": "Marke",
