@@ -39,9 +39,9 @@ Start the server in development mode:
 go run ./cmd serve --dev
 ```
 
-Then visit: **http://localhost:8080/swagger/** or **http://localhost:8080/swagger/index.html**
+Then visit: **http://localhost:8080/_/swagger/** or **http://localhost:8080/_/swagger/index.html**
 
-The Swagger UI is **only available with the `--dev` flag** and is disabled in production.
+The Swagger UI is available at `/_/swagger/` in all modes. Access to OpenAPI endpoints (`/swagger.json`, `/openapi.json`) is controlled via SEO settings.
 
 **Note:** This project uses Fiber v3, which is not yet supported by fiber-swagger. The Swagger UI is served using Fiber's static middleware instead.
 
@@ -49,7 +49,9 @@ The Swagger UI is **only available with the `--dev` flag** and is disabled in pr
 
 API documentation is automatically published to GitHub Pages whenever code is pushed to the `main` branch, as part of the comprehensive documentation deployment.
 
-**Live documentation:** `https://<username>.github.io/<repo>/swagger/`
+**Live documentation:**
+- **Local:** `http://localhost:8080/_/swagger/`
+- **GitHub Pages:** `https://<username>.github.io/<repo>/swagger/`
 
 ### How It Works
 

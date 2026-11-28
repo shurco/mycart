@@ -24,11 +24,7 @@ func OpenAPISpec(c fiber.Ctx) error {
 	}
 	
 	specOnce.Do(func() {
-		baseDir := os.Getenv("LITECART_BASE")
-		if baseDir == "" {
-			baseDir = "./lc_base"
-		}
-		specPath := filepath.Join(baseDir, "swagger", "swagger.json")
+		specPath := filepath.Join("docs", "swagger", "swagger.json")
 		specData, _ = os.ReadFile(specPath)
 	})
 	
