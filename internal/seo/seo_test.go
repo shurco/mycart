@@ -16,8 +16,8 @@ func TestDefault(t *testing.T) {
 		want string
 	}{
 		{"robots", "User-agent: *"},
-		{"llms", "# {{ site.name }}"},
-		{"ai", "# ai.txt for"},
+		{"llms", "# Agent Instructions"},
+		{"ai", "# ai.txt - AI Data Mining"},
 		{"nonexistent", ""},
 	}
 	for _, tt := range tests {

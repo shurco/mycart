@@ -33,22 +33,8 @@
   let formErrors = $state<Record<string, string>>({})
   let loading = $state(true)
 
-  onMount(async () => {
-    const loaded = await loadSettings<MainSettings>('main', formData)
-    if (loaded) {
-      formData = loaded
-    }
-
-    // Fetch defaults first
-    const defaultsRes = await fetch('/api/_/seo/defaults')
-    const defaultsData = await defaultsRes.json()
-    const defaults = defaultsData.result || defaultsData.Result || defaultsData
-
-    // Load saved settings
-    const seo = await loadSettings('seo', {})
-
-    // Merge: saved settings override defaults
-    seoSettings = {
+  function mergeSeoDefaults(seo: any, defaults: any) {
+    return {
       sitemap_enabled: seo?.sitemap_enabled || false,
       sitemap_include: seo?.sitemap_include || defaults.sitemap_include || '',
       sitemap_exclude: seo?.sitemap_exclude || defaults.sitemap_exclude || '',
@@ -64,6 +50,20 @@
       cdn_enabled: seo?.cdn_enabled || false,
       cdn_rules: seo?.cdn_rules || defaults.cdn_rules || ''
     }
+  }
+
+  onMount(async () => {
+    const loaded = await loadSettings<MainSettings>('main', formData)
+    if (loaded) {
+      formData = loaded
+    }
+
+    const defaultsRes = await fetch('/api/_/seo/defaults')
+    const defaultsData = await defaultsRes.json()
+    const defaults = defaultsData.result || defaultsData.Result || defaultsData
+
+    const seo = await loadSettings('seo', {})
+    seoSettings = mergeSeoDefaults(seo, defaults)
 
     loading = false
   })
